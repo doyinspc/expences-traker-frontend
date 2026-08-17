@@ -13,7 +13,7 @@ export interface TableColumn {
     showForm: boolean;
     showTable: boolean;
     editable: boolean;
-    element: any;
+    element: React.ReactNode | ((props: any) => any) | null; // FIXED: Allow function or null
     isSelect?: boolean;
     options?: string;
     isToggle?: boolean;
@@ -125,7 +125,7 @@ export const buildTableDataFromMapping = (tableName: string): TableColumn[] => {
         const isSelect = field.type === 'select';
 
         // Build element for table cell rendering
-        let element = null;
+        let element: React.ReactNode | ((props: any) => any) | null = null; // FIXED: Explicit type
         if (isSelect || field.type === 'toggle') {
             element = null;
         } else if (field.type === 'number') {
@@ -137,9 +137,10 @@ export const buildTableDataFromMapping = (tableName: string): TableColumn[] => {
         }
 
         // Get width (convert string to number if needed)
-        let width = field.tableWidth || 'auto';
+        let width: string | number = field.tableWidth || 'auto'; // FIXED: Explicit type
         if (typeof width === 'string' && width !== 'auto') {
-            width = parseInt(width, 10) || 'auto';
+            const parsed = parseInt(width, 10);
+            width = isNaN(parsed) ? 'auto' : parsed;
         }
 
         tableData.push({
@@ -248,7 +249,7 @@ export const buildTanStackColumns = (
         },
     });
 
-    let columns = [];
+    let columns: any[] = []; // FIXED: Explicitly typed as any[]
 
     // Add select column if enabled
     if (showSelect === true) {
@@ -278,11 +279,16 @@ export const buildTanStackColumns = (
                 },
                 size: columnSize,
                 cell: element.format 
-                    ? (props: any) => {
-                        const { getValue } = props;
-                        return element.format(getValue());
-                    }
-                    : ({ getValue }: any) => getValue(),
+    ? (props: any) => {
+        const { getValue } = props;
+        const value = getValue();
+        // Type guard to ensure format exists
+        if (typeof element.format === 'function') {
+            return element.format(value);
+        }
+        return value;
+    }
+    : ({ getValue }: any) => getValue(),
             });
             columns.push(row);
         }
@@ -295,6 +301,7 @@ export const buildTanStackColumns = (
             header: 'Actions',
             size: tableWidth?.action ?? 2,
             cell: ({ row }) => {
+                if (!tableAction) return null; // FIXED: Added null check
                 return tableAction({ row: row.original, ...actions });
             },
         });
