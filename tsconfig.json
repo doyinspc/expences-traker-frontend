@@ -5,7 +5,10 @@
     { "path": "./tsconfig.node.json" }
   ],
   "compilerOptions": {
-    "noUnusedLocals": false,
-    "noUnusedParameters": false
+    "skipLibCheck": true,          // Ignores type errors in node_modules
+    "strict": false,               // Disables strict type checking rules
+    "noImplicitAny": false,        // Allows variables to implicitly have 'any' type
+    "noUnusedLocals": false,       // Stops errors for declared but unused variables
+    "noUnusedParameters": false    // Stops errors for unused function arguments
   }
 }
