@@ -37,13 +37,11 @@ interface LoginResponse {
 interface FormData {
     email: string;
     password: string;
-    tenant_db: string;
 }
 
 interface Errors {
     email?: string;
     password?: string;
-    tenant_db?: string;
 }
 
 export default function SignInForm(): React.ReactElement {
@@ -59,19 +57,23 @@ export default function SignInForm(): React.ReactElement {
     const [loginType, setLoginType] = useState<'tenant' | 'admin'>('tenant');
     const [formData, setFormData] = useState<FormData>({
         email: '',
-        password: '',
-        tenant_db: ''
+        password: ''
     });
     const [errors, setErrors] = useState<Errors>({});
 
     // Get environment variables
     const appName: string = import.meta.env.VITE_APP_NAME || 'Expense Tracker';
-    const appLogo: string = import.meta.env.VITE_APP_LOGO || '/logo.svg';
+    const appLogo: string = '/images/logo/logo.svg';
     const appDescription: string = import.meta.env.VITE_APP_DESCRIPTION || 'Manage your expenses efficiently';
     const defaultTenantDB: string = import.meta.env.VITE_APP_TENANT_DB || 'expences1';
     const googleClientId: string = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
     const xClientId: string = import.meta.env.VITE_X_CLIENT_ID || '';
     const xRedirectUri: string = import.meta.env.VITE_X_REDIRECT_URI || (window as any).location.origin + '/auth/x/callback';
+
+    // Set dark mode by default
+    useEffect(() => {
+        document.documentElement.classList.add('dark');
+    }, []);
 
     // Check auth on mount
     useEffect(() => {
@@ -80,8 +82,7 @@ export default function SignInForm(): React.ReactElement {
         }
     }, [dispatch]);
 
-    // Redirect if already logged in - ONLY redirect when authenticated
-    // DO NOT redirect to signin when not authenticated (we're already here)
+    // Redirect if already logged in
     useEffect(() => {
         if (isAuthenticated) {
             if (userType === USER_TYPES?.ADMIN) {
@@ -92,8 +93,6 @@ export default function SignInForm(): React.ReactElement {
                 navigate('/');
             }
         }
-        // Remove the else clause that redirects to /signin
-        // We're already on the signin page, no need to redirect
     }, [isAuthenticated, userType, navigate]);
 
     // Show error from Redux if any
@@ -105,7 +104,6 @@ export default function SignInForm(): React.ReactElement {
                 text: error,
                 confirmButtonColor: '#3085d6',
             });
-            // Clear error after showing
             if (authActions?.clearError) {
                 dispatch(authActions.clearError());
             }
@@ -124,7 +122,6 @@ export default function SignInForm(): React.ReactElement {
     // Toggle login type
     const toggleLoginType = useCallback((): void => {
         setLoginType(prev => prev === 'tenant' ? 'admin' : 'tenant');
-        setFormData(prev => ({ ...prev, tenant_db: '' }));
     }, []);
 
     // Validate form
@@ -142,14 +139,10 @@ export default function SignInForm(): React.ReactElement {
         } else if (formData.password.length < 6) {
             newErrors.password = 'Password must be at least 6 characters';
         }
-
-        if (loginType === 'tenant' && !formData.tenant_db) {
-            newErrors.tenant_db = 'Tenant database is required';
-        }
         
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
-    }, [formData, loginType]);
+    }, [formData]);
 
     // Handle login submission
     const handleSubmit = useCallback(async (e: React.FormEvent): Promise<void> => {
@@ -159,12 +152,12 @@ export default function SignInForm(): React.ReactElement {
         
         let result: LoginResponse | undefined;
         
-        // Create FormData object (renamed to avoid conflict with state)
+        // Create FormData object
         const loginFormData = new FormData();
         loginFormData.append('table', 'login');
         
         if (loginType === 'admin') {
-            // Admin login - use state values
+            // Admin login
             loginFormData.append('cat', 'login_admin');
             loginFormData.append('username', formData.email);
             loginFormData.append('password', formData.password);
@@ -172,39 +165,35 @@ export default function SignInForm(): React.ReactElement {
             
             result = await dispatch(adminLogin(loginFormData)) as unknown as LoginResponse;
         } else {
-            // Tenant login - use state values
-            const tenantDb = formData.tenant_db || defaultTenantDB;
+            // Tenant login - use tenant_db from env
             loginFormData.append('cat', 'login_tenant');
             loginFormData.append('username', formData.email);
             loginFormData.append('password', formData.password);
-            loginFormData.append('tenant_db', tenantDb);
+            loginFormData.append('tenant_db', defaultTenantDB);
             loginFormData.append('remember', isChecked ? '1' : '0');
             
             result = await dispatch(tenantLogin(loginFormData)) as unknown as LoginResponse;
         }
         
         if (result?.success) {
-            // Success - redirect handled by useEffect
             console.log('Login successful');
         }
     }, [formData, isChecked, loginType, validateForm, dispatch, defaultTenantDB]);
 
     // Handle Google login callback
     const handleGoogleCallback = useCallback(async (response: any): Promise<void> => {
-        // Create FormData for Google login
         const loginFormData = new FormData();
         loginFormData.append('table', 'login');
         loginFormData.append('cat', 'login_google');
         loginFormData.append('credential', response.credential);
-        loginFormData.append('tenant_db', formData.tenant_db || defaultTenantDB);
+        loginFormData.append('tenant_db', defaultTenantDB);
         
         const result = await dispatch(googleLogin(loginFormData)) as unknown as LoginResponse;
         
         if (result?.success) {
-            // Redirect handled by useEffect
             console.log('Google login successful');
         }
-    }, [dispatch, formData.tenant_db, defaultTenantDB]);
+    }, [dispatch, defaultTenantDB]);
 
     // Handle X (Twitter) login
     const handleXLogin = useCallback((): void => {
@@ -217,16 +206,8 @@ export default function SignInForm(): React.ReactElement {
             return;
         }
 
-        // Create FormData for X login
-        const formDataObj = new FormData();
-        formDataObj.append('table', 'login');
-        formDataObj.append('cat', 'login_x');
-        formDataObj.append('tenant_db', formData.tenant_db || defaultTenantDB);
-        formDataObj.append('redirect_uri', xRedirectUri);
-        
-        // Store for callback
         sessionStorage.setItem('x_login_data', JSON.stringify({
-            tenant_db: formData.tenant_db || defaultTenantDB
+            tenant_db: defaultTenantDB
         }));
 
         const state = Math.random().toString(36).substring(7);
@@ -235,7 +216,7 @@ export default function SignInForm(): React.ReactElement {
         const authUrl = `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${xClientId}&redirect_uri=${encodeURIComponent(xRedirectUri)}&scope=tweet.read%20users.read%20offline.access&state=${state}&code_challenge_method=plain&code_challenge=challenge`;
         
         window.location.href = authUrl;
-    }, [xClientId, xRedirectUri, defaultTenantDB, formData]);
+    }, [xClientId, xRedirectUri, defaultTenantDB]);
 
     // Initialize Google OAuth
     useEffect(() => {
@@ -296,7 +277,7 @@ export default function SignInForm(): React.ReactElement {
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                             {loginType === 'admin' 
                                 ? 'Sign in with your admin credentials' 
-                                : `Sign in to ${formData.tenant_db || 'tenant'} database`}
+                                : `Sign in to ${defaultTenantDB} database`}
                         </p>
                     </div>
                     
@@ -393,28 +374,6 @@ export default function SignInForm(): React.ReactElement {
                                         <p className="mt-1 text-sm text-red-500">{errors.email}</p>
                                     )}
                                 </div>
-
-                                {loginType === 'tenant' && (
-                                    <div>
-                                        <Label>
-                                            Tenant Database <span className="text-error-500">*</span>
-                                        </Label>
-                                        <Input
-                                            name="tenant_db"
-                                            type="text"
-                                            placeholder="Enter tenant database name"
-                                            value={formData.tenant_db}
-                                            onChange={handleInputChange}
-                                            className={errors.tenant_db ? 'border-red-500' : ''}
-                                        />
-                                        {errors.tenant_db && (
-                                            <p className="mt-1 text-sm text-red-500">{errors.tenant_db}</p>
-                                        )}
-                                        <p className="mt-1 text-xs text-gray-400">
-                                            Default: {defaultTenantDB}
-                                        </p>
-                                    </div>
-                                )}
 
                                 <div>
                                     <Label>
