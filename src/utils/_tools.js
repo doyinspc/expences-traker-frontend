@@ -1,0 +1,1 @@
+export const brand = {logo:'logo', sygnet:'sygnet'}

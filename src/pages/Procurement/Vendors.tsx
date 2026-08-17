@@ -1,0 +1,23 @@
+﻿import React from "react";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
+import ComponentCard from "../../components/common/ComponentCard";
+
+const Vendors: React.FC = () => {
+  return (
+    <>
+      <PageBreadcrumb pageTitle="Vendors" />
+      <div className="space-y-6">
+        <ComponentCard title="Vendors">
+          <div className="p-4">
+            <p className="text-gray-500 dark:text-gray-400">
+              Vendors page content goes here.
+            </p>
+          </div>
+        </ComponentCard>
+      </div>
+    </>
+  );
+};
+
+export default Vendors;
+
