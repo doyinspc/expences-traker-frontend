@@ -65,7 +65,7 @@ export default function SignInForm(): React.ReactElement {
     const appName: string = import.meta.env.VITE_APP_NAME || 'Expense Tracker';
     const appLogo: string = '/images/logo/logo.svg';
     const appDescription: string = import.meta.env.VITE_APP_DESCRIPTION || 'Manage your expenses efficiently';
-    const defaultTenantDB: string = import.meta.env.VITE_APP_TENANT_DB || 'expences1';
+    const defaultTenantDB: string = import.meta.env.VITE_APP_TENANT_DB || 'stresert_expences1';
     const googleClientId: string = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
     const xClientId: string = import.meta.env.VITE_X_CLIENT_ID || '';
     const xRedirectUri: string = import.meta.env.VITE_X_REDIRECT_URI || (window as any).location.origin + '/auth/x/callback';
