@@ -3,38 +3,12 @@ import { Link, useLocation } from "react-router";
 
 // Imported icons from Lucide React
 import {
-  LayoutGrid,
-  ShoppingCart,
   Banknote,
-  ReceiptText,
-  Package,
-  PieChart,
   Users,
   Settings,
   ChevronDown,
   MoreHorizontal,
-  FileText,
-  Activity,
-  ThumbsUp,
-  ClipboardList,
-  Flag,
-  GitBranch,
-  Bell,
-  ArrowUpCircle,
-  XCircle,
-  Folder,
-  Database,
-  Building2,
-  UserCog,
-  MapPin,
-  User,
-  Shield,
-  DollarSign,
-  UserCheck,
-  UserPlus,
-  Lock,
-  CreditCard,
-  Globe,
+  Database
 } from "lucide-react";
 
 import { useSidebar } from "../context/SidebarContext";
