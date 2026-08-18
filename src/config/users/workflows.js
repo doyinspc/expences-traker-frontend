@@ -64,7 +64,7 @@ const workflows = {
             description: 'Maximum amount for this workflow (0 = unlimited)',
             showInTable: true,
             tableWidth: '120px',
-            tableFormat: (value) => value === 0 ? 'Unlimited' : `$${Number(value).toLocaleString()}`,
+            tableFormat: (value) => value === 0 ? 'Unlimited' : `${Number(value).toLocaleString()}`,
             filterable: true,
             filterType: 'number',
         },

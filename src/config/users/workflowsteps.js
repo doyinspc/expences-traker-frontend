@@ -99,7 +99,7 @@ const workflowsteps = {
             tableWidth: '150px',
             filterable: false,
         },
-        text_1: {
+        item_id2: {
             label: 'Serial Number',
             type: 'number',
             required: true,
@@ -110,7 +110,7 @@ const workflowsteps = {
             filterable: true,
             filterType: 'number',
         },
-        text_2: {
+        item_id3: {
             label: 'Expected Days',
             type: 'number',
             default: 3,
