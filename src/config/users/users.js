@@ -131,6 +131,18 @@ const users = {
             filterType: 'text',
             analyzable: false,
         },
+        email: {
+            label: 'Email',
+            placeholder: 'info@company.com',
+            type: 'text',
+            description: 'Primary email',
+            showInTable: true,
+            showInForm: true,
+            tableWidth: '150px',
+            filterable: true,
+            filterType: 'text',
+            analyzable: false,
+        },
         date_of_birth: {
             label: 'Date of Birth',
             type: 'date',
