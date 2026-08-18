@@ -71,6 +71,7 @@ export interface ItemsTableProps {
   isLoading: boolean;
   currency: string;
   statusData: any[];
+  documentTypeId:any;
   budgetCategories?: BudgetCategory[];
   budgetCategoryItems?: BudgetItem[];
   formatCurrency: (amount: number | string | undefined, currency: string) => string;
@@ -119,6 +120,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
   showResolveFromStock = true,
   showApproveReject = true,
   showBudgetInfo = false,
+  documentTypeId,
 }) => {
   const [expandedRowId, setExpandedRowId] = useState<string | number | null>(null);
   const [imageLoading, setImageLoading] = useState<Record<string | number, boolean>>({});
@@ -586,7 +588,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                 Total
               </th>
               <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Settled
+                {parseInt(documentTypeId) == 1 ? "Approved" : "Resolved"}
               </th>
               <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Actions
@@ -599,9 +601,9 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
             {items.map((item, index) => {
               const isProcessingItem = isProcessing(item.id);
-              const isSettled = item.resolved === 1;
-              const isRejected = item.resolved === 2;
-              const isPending = item.resolved === 0;
+              const isSettled = parseInt(documentTypeId) == 1 ? item.approved === 1 :  item.resolved === 1;
+              const isRejected = parseInt(documentTypeId) == 2 ? item.approved === 2 : item.resolved === 2;
+              const isPending = parseInt(documentTypeId) == 0 ? item.approved === 0 :item.resolved === 0;
               const isExpanded = expandedRowId === item.id;
               const hasDoc = item?.doc_path && item.doc_path !== '';
               const budget = getBudgetInfo(item);

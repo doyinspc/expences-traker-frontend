@@ -657,6 +657,7 @@ const DisplayOageChild: React.FC<DisplayOageChildProps> = ({
           statusData={statusData || []}
           priorityData={priorityData || []}
           documentType={documentType}
+          documentTypeId={documentTypeId}
           currency={currency}
           formatCurrency={formatCurrency}
           formatDate={formatDate}
@@ -718,6 +719,7 @@ const DisplayOageChild: React.FC<DisplayOageChildProps> = ({
     showBudgetInfo ={true}
     processingItemId={processingItemId}
     title={`${documentType} Items`}
+    documentTypeId={documentTypeId}
     emptyMessage={`No items found for this ${documentType.toLowerCase()}`}
   />
 )}
