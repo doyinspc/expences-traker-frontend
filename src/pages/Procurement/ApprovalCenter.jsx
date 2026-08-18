@@ -10,7 +10,10 @@ import {
     FileText, ShoppingCart, Wallet, PieChart, 
     Users, ArrowRightLeft, Bell, Filter,
     RefreshCw, Building2, Eye,
-    History, UserCheck, ChevronDown
+    History, UserCheck, ChevronDown,
+    Info, BookOpen, Lightbulb, Shield,
+    Play, HelpCircle,
+    BarChart
 } from 'lucide-react';
 import useReduxApiData from "../../hooks/useTanstackQuery";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
@@ -47,7 +50,227 @@ const getStatusColorFromData = (statusesData, id) => {
     return status?.text_1 || null;
 };
 
-// ==================== COMPONENT ====================
+// ==================== INFO PANEL COMPONENT ====================
+const InfoPanel = ({ isExpanded, onToggle }) => {
+    if (!isExpanded) {
+        return (
+            <button
+                onClick={onToggle}
+                className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl border border-blue-200 dark:border-blue-800 hover:shadow-md transition-all group"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                        <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="text-left">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                            Understanding the Approval Center
+                        </h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                            Learn how approvals work, what you can do, and how to navigate this page
+                        </p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-blue-600 dark:text-blue-400 font-medium group-hover:text-blue-700">
+                        Learn More
+                    </span>
+                    <ChevronDown className="w-4 h-4 text-blue-600 dark:text-blue-400 group-hover:translate-y-0.5 transition-transform" />
+                </div>
+            </button>
+        );
+    }
+
+    return (
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            {/* Header */}
+            <button
+                onClick={onToggle}
+                className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-b border-gray-200 dark:border-gray-700 hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 dark:hover:from-blue-900/30 dark:hover:to-purple-900/30 transition-colors"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                        <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="text-left">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                            Approval Center Guide
+                        </h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                            Everything you need to know about managing approvals
+                        </p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                        Hide Guide
+                    </span>
+                    <ChevronDown className="w-4 h-4 text-blue-600 dark:text-blue-400 rotate-180 transition-transform" />
+                </div>
+            </button>
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+                {/* What is Approval Center */}
+                <div>
+                    <div className="flex items-center gap-2 mb-2">
+                        <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                            What is the Approval Center?
+                        </h4>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 pl-7">
+                        The Approval Center is your centralized hub for managing all approval workflows. 
+                        It displays all active workflows where you are the designated approver based on your 
+                        role and location. Here you can review, approve, or reject documents that require 
+                        your attention.
+                    </p>
+                </div>
+
+                {/* How it Works */}
+                <div>
+                    <div className="flex items-center gap-2 mb-2">
+                        <Play className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                            How It Works
+                        </h4>
+                    </div>
+                    <div className="pl-7 space-y-2">
+                        <div className="flex items-start gap-3">
+                            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-bold mt-0.5">1</span>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                <span className="font-medium text-gray-800 dark:text-gray-200">Role-Based Access:</span> 
+                                You only see documents that are assigned to your role at your location. 
+                                This ensures you only review what's relevant to you.
+                            </p>
+                        </div>
+                        <div className="flex items-start gap-3">
+                            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-bold mt-0.5">2</span>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                <span className="font-medium text-gray-800 dark:text-gray-200">Current Active Step:</span> 
+                                Each document follows a multi-step workflow. The "Current Active Step" is the 
+                                step that is currently pending action. If it's your turn, you'll see a 
+                                "Your Turn" indicator.
+                            </p>
+                        </div>
+                        <div className="flex items-start gap-3">
+                            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-bold mt-0.5">3</span>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                <span className="font-medium text-gray-800 dark:text-gray-200">Step Tracking:</span> 
+                                Each document shows its complete step history with visual indicators for 
+                                completed (✓), rejected (✗), and active (highlighted) steps.
+                            </p>
+                        </div>
+                        <div className="flex items-start gap-3">
+                            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-bold mt-0.5">4</span>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                <span className="font-medium text-gray-800 dark:text-gray-200">Action Required:</span> 
+                                When a document has "Your Action Required" badge, you can click on it to 
+                                view details and take action (Approve, Reject, or Add Comments).
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* What You Can Do */}
+                <div>
+                    <div className="flex items-center gap-2 mb-2">
+                        <Lightbulb className="w-5 h-5 text-yellow-500 dark:text-yellow-400" />
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                            What You Can Do
+                        </h4>
+                    </div>
+                    <div className="pl-7 grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                            <Eye className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Review Documents</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">Click on any document to view full details including all items, amounts, and supporting information.</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                            <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Approve</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">If everything looks correct, approve the document to move it to the next step in the workflow.</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                            <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Reject</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">If something needs correction, reject the document with a reason. The requester can then make changes and resubmit.</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-2 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                            <History className="w-4 h-4 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Track Progress</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">View the complete workflow history including who approved, when, and any comments made.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Tips */}
+                <div>
+                    <div className="flex items-center gap-2 mb-2">
+                        <HelpCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                            Pro Tips
+                        </h4>
+                    </div>
+                    <div className="pl-7 space-y-1">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
+                            <span className="text-blue-600 dark:text-blue-400">•</span>
+                            <span><span className="font-medium">Act quickly:</span> Documents awaiting your approval may have deadlines. Check the "Overdue" stats to see what needs immediate attention.</span>
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
+                            <span className="text-blue-600 dark:text-blue-400">•</span>
+                            <span><span className="font-medium">Use filters:</span> Use the filters to focus on specific document types, priorities, or statuses.</span>
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
+                            <span className="text-blue-600 dark:text-blue-400">•</span>
+                            <span><span className="font-medium">Review carefully:</span> As an approver, you are responsible for ensuring the document is accurate and within policy.</span>
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
+                            <span className="text-blue-600 dark:text-blue-400">•</span>
+                            <span><span className="font-medium">Add comments:</span> When approving or rejecting, add comments to provide context or feedback to the requester.</span>
+                        </p>
+                    </div>
+                </div>
+
+                {/* Stats Reference */}
+                <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center gap-2">
+                        <BarChart className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        Understanding the Stats
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                        <div className="flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                            <span className="text-gray-600 dark:text-gray-400">Pending: Awaiting action</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                            <span className="text-gray-600 dark:text-gray-400">Active: In progress</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                            <span className="text-gray-600 dark:text-gray-400">Completed: Done</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                            <span className="text-gray-600 dark:text-gray-400">Overdue: Past deadline</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ==================== MAIN COMPONENT ====================
 const ApprovalCenter = () => {
     const navigate = useNavigate();
     const { user, location_id, role_id } = useSelector((state) => state.authReducer || {});
@@ -60,6 +283,7 @@ const ApprovalCenter = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [showFilters, setShowFilters] = useState(false);
     const [selectedStat, setSelectedStat] = useState(null);
+    const [isInfoExpanded, setIsInfoExpanded] = useState(false);
 
     // ==================== FETCH DATA ====================
     const { data: statusesData, isLoading: statusesLoading } = useReduxApiData({
@@ -688,6 +912,11 @@ const ApprovalCenter = () => {
         <>
             <PageBreadcrumb pageTitle="Approval Center" />
             <div className="space-y-6">
+                {/* Info Panel */}
+                <InfoPanel 
+                    isExpanded={isInfoExpanded} 
+                    onToggle={() => setIsInfoExpanded(!isInfoExpanded)} 
+                />
                 {renderStats()}
                 {renderListView()}
             </div>
