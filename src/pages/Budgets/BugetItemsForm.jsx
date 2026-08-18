@@ -70,6 +70,18 @@ export default function BudgetItemsForm(props) {
     narration: 'get all budgetitems already stored for this particular budget id'
   });
 
+  // ============ HELPER FUNCTIONS ============
+  
+  // Check if an item is a category budget (item_id is null or 0)
+  const isCategoryBudget = useCallback((item) => {
+    return item?.item_id === null || item?.item_id === 0 || item?.item_id === '0';
+  }, []);
+
+  // Check if an item is a child budget (item_id has a valid value)
+  const isChildBudget = useCallback((item) => {
+    return item?.item_id !== null && item?.item_id !== 0 && item?.item_id !== '0';
+  }, []);
+
   // ============ DATA PROCESSING ============
 
   // Build category tree from expense data
@@ -115,17 +127,17 @@ export default function BudgetItemsForm(props) {
       return budgetItems.find(item => item.item_id === expenseId);
     } else {
       return budgetItems.find(
-        item => item.category_id === expenseId && item.item_id === null
+        item => (item.category_id === expenseId && isCategoryBudget(item))
       );
     }
-  }, [budgetItems]);
+  }, [budgetItems, isCategoryBudget]);
 
   // Get all child budgets for a category
   const getChildBudgets = useCallback((categoryId) => {
     return budgetItems.filter(
-      item => item.category_id === categoryId && item.item_id !== null
+      item => item.category_id === categoryId && isChildBudget(item)
     );
-  }, [budgetItems]);
+  }, [budgetItems, isChildBudget]);
 
   // Get category budget amount
   const getCategoryBudgetAmount = useCallback((categoryId) => {
@@ -142,7 +154,7 @@ export default function BudgetItemsForm(props) {
   // Calculate remaining budget for a category
   const getRemainingBudget = useCallback((categoryId) => {
     const categoryAmount = getCategoryBudgetAmount(categoryId);
-    if (categoryAmount === 0) return null;
+    if (categoryAmount === 0) return 0;
     const childTotal = getChildBudgetsTotal(categoryId);
     return categoryAmount - childTotal;
   }, [getCategoryBudgetAmount, getChildBudgetsTotal]);
@@ -150,9 +162,9 @@ export default function BudgetItemsForm(props) {
   // Check if category has budget
   const hasCategoryBudget = useCallback((categoryId) => {
     return budgetItems.some(
-      item => item.category_id === categoryId && item.item_id === null
+      item => item.category_id === categoryId && isCategoryBudget(item)
     );
-  }, [budgetItems]);
+  }, [budgetItems, isCategoryBudget]);
 
   // Get expense item name
   const getExpenseItemName = useCallback((expenseId) => {
@@ -165,22 +177,16 @@ export default function BudgetItemsForm(props) {
     return item?.is_approved === 1;
   }, []);
 
-  // ============ VALIDATION FUNCTIONS ============
+  // Check if item is completed
+  const isItemCompleted = useCallback((item) => {
+    return item?.is_completed === 1;
+  }, []);
+
+  // ============ VALIDATION FUNCTIONS (WITH WARNINGS ONLY) ============
 
   const validateCategoryBudget = useCallback((categoryId, amount, excludeItemId = null) => {
     const childTotal = getChildBudgetsTotal(categoryId);
     const parsedAmount = parseFloat(amount) || 0;
-
-    // Cannot set category budget less than child total
-    if (parsedAmount < childTotal) {
-      return {
-        valid: false,
-        message: `Category budget cannot be less than child budgets total (${currency || '₦'} ${childTotal.toFixed(2)})`,
-        childTotal,
-        remaining: 0,
-        type: 'CATEGORY_LESS_THAN_CHILDREN'
-      };
-    }
 
     // Check against overall budget
     const currentCategoryTotal = budgetItems
@@ -190,34 +196,34 @@ export default function BudgetItemsForm(props) {
     const newOverallTotal = currentCategoryTotal + parsedAmount;
     const budgetTotal = parseFloat(total_amount || 0);
 
+    let warnings = [];
+
+    // Warning: Category budget less than child total
+    if (parsedAmount < childTotal) {
+      warnings.push({
+        type: 'CATEGORY_LESS_THAN_CHILDREN',
+        message: `Warning: Category budget (${currency || '₦'} ${parsedAmount.toFixed(2)}) is less than child budgets total (${currency || '₦'} ${childTotal.toFixed(2)})`
+      });
+    }
+
+    // Warning: Exceeds overall budget
     if (budgetTotal > 0 && newOverallTotal > budgetTotal) {
-      return {
-        valid: false,
-        message: `Total budget (${currency || '₦'} ${newOverallTotal.toFixed(2)}) exceeds overall budget (${currency || '₦'} ${budgetTotal.toFixed(2)})`,
-        remaining: budgetTotal - currentCategoryTotal,
-        type: 'EXCEEDS_OVERALL_BUDGET'
-      };
+      warnings.push({
+        type: 'EXCEEDS_OVERALL_BUDGET',
+        message: `Warning: Total budget (${currency || '₦'} ${newOverallTotal.toFixed(2)}) exceeds overall budget (${currency || '₦'} ${budgetTotal.toFixed(2)})`
+      });
     }
 
     return {
       valid: true,
-      message: 'Valid category budget',
+      warnings,
       childTotal,
-      remaining: parsedAmount - childTotal
+      remaining: parsedAmount - childTotal,
+      overallRemaining: budgetTotal > 0 ? budgetTotal - currentCategoryTotal : null
     };
   }, [getChildBudgetsTotal, budgetItems, total_amount, currency]);
 
   const validateChildBudget = useCallback((categoryId, amount, excludeItemId = null) => {
-    // Check if category budget exists
-    if (!hasCategoryBudget(categoryId)) {
-      return {
-        valid: false,
-        message: 'Please set a category budget first before adding child budgets',
-        remaining: 0,
-        type: 'NO_CATEGORY_BUDGET'
-      };
-    }
-
     const categoryAmount = getCategoryBudgetAmount(categoryId);
     const childBudgets = getChildBudgets(categoryId);
     const currentTotal = childBudgets
@@ -227,30 +233,37 @@ export default function BudgetItemsForm(props) {
     const newTotal = currentTotal + parseFloat(amount || 0);
     const remaining = categoryAmount - currentTotal;
 
-    if (newTotal > categoryAmount) {
-      return {
-        valid: false,
-        message: `Amount exceeds remaining budget. Available: ${currency || '₦'} ${remaining.toFixed(2)}`,
-        remaining,
-        currentTotal,
-        categoryAmount,
-        newTotal,
-        type: 'EXCEEDS_CATEGORY_BUDGET'
-      };
+    let warnings = [];
+
+    // Warning: No category budget
+    if (!hasCategoryBudget(categoryId)) {
+      warnings.push({
+        type: 'NO_CATEGORY_BUDGET',
+        message: 'Warning: No category budget set. Setting a category budget is recommended.'
+      });
+    }
+
+    // Warning: Exceeds category budget
+    if (categoryAmount > 0 && newTotal > categoryAmount) {
+      warnings.push({
+        type: 'EXCEEDS_CATEGORY_BUDGET',
+        message: `Warning: Amount exceeds category budget. Available: ${currency || '₦'} ${Math.max(0, remaining).toFixed(2)}`
+      });
     }
 
     return {
       valid: true,
-      message: 'Valid child budget',
+      warnings,
       remaining,
       currentTotal,
       categoryAmount,
-      newTotal
+      newTotal,
+      willExceed: categoryAmount > 0 && newTotal > categoryAmount
     };
   }, [hasCategoryBudget, getCategoryBudgetAmount, getChildBudgets, currency]);
 
   const validateDelete = useCallback((item) => {
-    if (item.item_id === null) {
+    if (isCategoryBudget(item)) {
       // Category budget deletion
       const childBudgets = getChildBudgets(item.category_id);
       if (childBudgets.length > 0) {
@@ -261,21 +274,18 @@ export default function BudgetItemsForm(props) {
       }
     }
     return { valid: true };
-  }, [getChildBudgets]);
+  }, [getChildBudgets, isCategoryBudget]);
 
   // ============ TOAST NOTIFICATION ============
 
   const showToast = useCallback((message, type = 'success') => {
-    // Clear existing timeout
     if (toastTimeoutRef.current) {
       clearTimeout(toastTimeoutRef.current);
       toastTimeoutRef.current = null;
     }
 
-    // Show toast
     setToast({ show: true, message, type });
 
-    // Auto-hide after 5 seconds
     toastTimeoutRef.current = setTimeout(() => {
       setToast({ show: false, message: '', type: 'success' });
       toastTimeoutRef.current = null;
@@ -283,7 +293,6 @@ export default function BudgetItemsForm(props) {
   }, []);
 
   const hideToast = useCallback(() => {
-    // Clear timeout
     if (toastTimeoutRef.current) {
       clearTimeout(toastTimeoutRef.current);
       toastTimeoutRef.current = null;
@@ -358,9 +367,12 @@ export default function BudgetItemsForm(props) {
     }
 
     const validation = validateCategoryBudget(categoryId, amount);
-    if (!validation.valid) {
-      showToast(validation.message, 'error');
-      return;
+    
+    // Show warnings but allow save
+    if (validation.warnings && validation.warnings.length > 0) {
+      validation.warnings.forEach(warning => {
+        showToast(warning.message, 'error');
+      });
     }
 
     const newItem = {
@@ -369,7 +381,7 @@ export default function BudgetItemsForm(props) {
       description: newItemForm.description,
       amount: amount,
       category_id: categoryId,
-      item_id: null,
+      item_id: 0, // Use 0 instead of null for category budgets
       is_active: 1,
       is_completed: 0,
       is_approved: 0,
@@ -388,13 +400,11 @@ export default function BudgetItemsForm(props) {
         return;
       }
 
-      // Add the new item to state
       const savedItem = response?.data || response;
       if (savedItem?.id) {
         setBudgetItems(prev => [...prev, savedItem]);
       }
 
-      // Reset form
       setNewItemForm({
         show: false,
         category_id: null,
@@ -426,9 +436,12 @@ export default function BudgetItemsForm(props) {
 
     const categoryId = item.category_id;
     const validation = validateCategoryBudget(categoryId, amount, item.id);
-    if (!validation.valid) {
-      showToast(validation.message, 'error');
-      return;
+    
+    // Show warnings but allow update
+    if (validation.warnings && validation.warnings.length > 0) {
+      validation.warnings.forEach(warning => {
+        showToast(warning.message, 'error');
+      });
     }
 
     const updatedItem = {
@@ -438,7 +451,7 @@ export default function BudgetItemsForm(props) {
       description: item.description,
       amount: amount,
       category_id: categoryId,
-      item_id: null,
+      item_id: 0, // Use 0 for category budgets
       is_active: item.is_active || 1,
       is_completed: item.is_completed || 0,
       is_approved: item.is_approved || 0,
@@ -456,7 +469,6 @@ export default function BudgetItemsForm(props) {
         return;
       }
 
-      // Update the item in state
       const savedItem = response?.data || response;
       if (savedItem?.id) {
         setBudgetItems(prev => prev.map(i => 
@@ -474,7 +486,6 @@ export default function BudgetItemsForm(props) {
   }, [user_id, saveBudgetItem, validateCategoryBudget, showToast]);
 
   const handleDeleteCategory = useCallback(async (item) => {
-    // Validate deletion
     const validation = validateDelete(item);
     if (!validation.valid) {
       showToast(validation.message, 'error');
@@ -497,7 +508,6 @@ export default function BudgetItemsForm(props) {
         return;
       }
 
-      // Remove the item from state
       setBudgetItems(prev => prev.filter(i => i.id !== item.id));
 
       if (editingItemId === item.id) setEditingItemId(null);
@@ -526,11 +536,19 @@ export default function BudgetItemsForm(props) {
     const categoryId = newItemForm.category_id;
     const childExpenseId = newItemForm.item_id;
 
-    // Validate child budget
-    const validation = validateChildBudget(categoryId, amount);
-    if (!validation.valid) {
-      showToast(validation.message, 'error');
+    // Check if child already has a budget
+    if (getBudget(childExpenseId, true)) {
+      showToast('This item already has a budget. Please edit it instead.', 'error');
       return;
+    }
+
+    const validation = validateChildBudget(categoryId, amount);
+    
+    // Show warnings but allow save
+    if (validation.warnings && validation.warnings.length > 0) {
+      validation.warnings.forEach(warning => {
+        showToast(warning.message, 'error');
+      });
     }
 
     const newItem = {
@@ -558,13 +576,11 @@ export default function BudgetItemsForm(props) {
         return;
       }
 
-      // Add the new item to state
       const savedItem = response?.data || response;
       if (savedItem?.id) {
         setBudgetItems(prev => [...prev, savedItem]);
       }
 
-      // Reset form
       setNewItemForm({
         show: false,
         category_id: null,
@@ -580,7 +596,7 @@ export default function BudgetItemsForm(props) {
     } finally {
       setIsSaving(false);
     }
-  }, [newItemForm, budget_id, user_id, saveBudgetItem, validateChildBudget, showToast]);
+  }, [newItemForm, budget_id, user_id, saveBudgetItem, validateChildBudget, getBudget, showToast]);
 
   const handleEditItem = useCallback(async (item) => {
     if (!item.description?.trim() || !item.amount) {
@@ -596,9 +612,12 @@ export default function BudgetItemsForm(props) {
 
     const categoryId = item.category_id;
     const validation = validateChildBudget(categoryId, amount, item.id);
-    if (!validation.valid) {
-      showToast(validation.message, 'error');
-      return;
+    
+    // Show warnings but allow update
+    if (validation.warnings && validation.warnings.length > 0) {
+      validation.warnings.forEach(warning => {
+        showToast(warning.message, 'error');
+      });
     }
 
     const updatedItem = {
@@ -626,7 +645,6 @@ export default function BudgetItemsForm(props) {
         return;
       }
 
-      // Update the item in state
       const savedItem = response?.data || response;
       if (savedItem?.id) {
         setBudgetItems(prev => prev.map(i => 
@@ -660,7 +678,6 @@ export default function BudgetItemsForm(props) {
         return;
       }
 
-      // Remove the item from state
       setBudgetItems(prev => prev.filter(i => i.id !== item.id));
 
       if (editingItemId === item.id) setEditingItemId(null);
@@ -675,22 +692,31 @@ export default function BudgetItemsForm(props) {
   // ============ COMPUTED VALUES ============
 
   const grandTotal = useMemo(() => {
-    // Only count child budgets (item_id is not null) to avoid double counting
     const childTotal = budgetItems
-      .filter(item => item.item_id !== null)
+      .filter(item => isChildBudget(item))
       .reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
 
     const categoryTotal = budgetItems
-      .filter(item => item.item_id === null)
+      .filter(item => isCategoryBudget(item))
       .reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
 
     return { childTotal, categoryTotal, overall: childTotal + categoryTotal };
-  }, [budgetItems]);
+  }, [budgetItems, isChildBudget, isCategoryBudget]);
 
   const isOverBudget = useMemo(() => {
     const budgetTotal = parseFloat(total_amount || 0);
     return budgetTotal > 0 && grandTotal.overall > budgetTotal;
   }, [grandTotal.overall, total_amount]);
+
+  // Check if there are any category budgets
+  const hasAnyCategoryBudgets = useMemo(() => {
+    return budgetItems.some(item => isCategoryBudget(item));
+  }, [budgetItems, isCategoryBudget]);
+
+  // Check if there are any child budgets
+  const hasAnyChildBudgets = useMemo(() => {
+    return budgetItems.some(item => isChildBudget(item));
+  }, [budgetItems, isChildBudget]);
 
   // ============ EFFECTS ============
 
@@ -719,13 +745,264 @@ export default function BudgetItemsForm(props) {
   useEffect(() => {
     if (categoryTree && categoryTree.length > 0) {
       const rootIds = categoryTree
-        .filter(item => item.parent_id === null)
+        .filter(item => item.parent_id === null || !item.parent_id)
         .map(item => item.id);
       setExpandedCategories(new Set(rootIds));
     }
   }, [categoryTree]);
 
   // ============ RENDER FUNCTIONS ============
+
+  const renderChildItem = useCallback((category, child, level) => {
+    const existingBudget = getBudget(child.id, true);
+    const hasBudget = existingBudget !== undefined;
+    const isApproved = isItemApproved(existingBudget);
+    const isCompleted = isItemCompleted(existingBudget);
+    const budgetAmount = hasBudget ? parseFloat(existingBudget.amount || 0) : 0;
+    
+    const categoryAmount = getCategoryBudgetAmount(category.id);
+    const childTotal = getChildBudgetsTotal(category.id);
+    const remainingBudget = categoryAmount - childTotal;
+    const hasCategoryBudgetSet = hasCategoryBudget(category.id);
+    
+    // ALWAYS allow adding budget, just show warnings
+    const canAddBudget = true;
+    const willExceedCategory = hasCategoryBudgetSet && (remainingBudget <= 0);
+    const noCategoryBudget = !hasCategoryBudgetSet;
+
+    const isEditing = editingItemId === existingBudget?.id && !isApproved;
+
+    return (
+      <div key={child.id} className="mx-3 my-1">
+        {isEditing ? (
+          // Edit form for child budget
+          <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+            <div className="flex flex-wrap gap-2 items-end">
+              <div className="flex-1 min-w-[180px]">
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Description
+                </label>
+                <input
+                  type="text"
+                  value={existingBudget.description || ''}
+                  onChange={(e) => {
+                    setBudgetItems(prev => prev.map(item =>
+                      item.id === existingBudget.id ? { ...item, description: e.target.value } : item
+                    ));
+                  }}
+                  className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 
+                             rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                             focus:ring-2 focus:ring-yellow-500 dark:focus:ring-yellow-400 focus:border-transparent"
+                  autoFocus
+                  disabled={isSaving}
+                />
+              </div>
+              <div className="w-36">
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Amount ({currency || '₦'})
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={existingBudget.amount}
+                  onChange={(e) => {
+                    setBudgetItems(prev => prev.map(item =>
+                      item.id === existingBudget.id ? { ...item, amount: parseFloat(e.target.value) || 0 } : item
+                    ));
+                  }}
+                  className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 
+                             rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                             focus:ring-2 focus:ring-yellow-500 dark:focus:ring-yellow-400 focus:border-transparent"
+                  disabled={isSaving}
+                />
+              </div>
+              <button
+                onClick={() => handleEditItem(existingBudget)}
+                disabled={isSaving}
+                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 
+                           disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium 
+                           flex items-center gap-1 transition-colors"
+              >
+                {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                {isSaving ? 'Updating...' : 'Update'}
+              </button>
+              <button
+                onClick={() => setEditingItemId(null)}
+                disabled={isSaving}
+                className="px-4 py-1.5 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 
+                           dark:hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          // Display child item
+          <div
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors group
+              ${hasBudget 
+                ? isApproved 
+                  ? 'bg-green-50/50 dark:bg-green-900/10' 
+                  : 'bg-blue-50/50 dark:bg-blue-900/10'
+                : willExceedCategory || noCategoryBudget
+                  ? 'bg-yellow-50/50 dark:bg-yellow-900/10 hover:bg-yellow-100 dark:hover:bg-yellow-900/20'
+                  : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
+              }
+            `}
+            style={{ marginLeft: `${(level + 1) * 16}px` }}
+          >
+            <div className="flex-1 min-w-0">
+              <span className={`text-sm ${hasBudget ? 'font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+                {child.name}
+              </span>
+              
+              {hasBudget && (
+                <span className="ml-2 text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 
+                               text-blue-700 dark:text-blue-300 rounded-full">
+                  {currency || '₦'} {budgetAmount.toFixed(2)}
+                </span>
+              )}
+              
+              {!hasBudget && (
+                <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">
+                  No budget set
+                </span>
+              )}
+              
+              {/* Warning indicators */}
+              {willExceedCategory && hasBudget && (
+                <span className="ml-2 text-xs px-2 py-0.5 bg-red-100 dark:bg-red-900/30 
+                               text-red-700 dark:text-red-300 rounded-full inline-flex items-center gap-1">
+                  <AlertTriangle size={12} />
+                  Over category budget
+                </span>
+              )}
+              
+              {noCategoryBudget && hasBudget && (
+                <span className="ml-2 text-xs px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 
+                               text-yellow-700 dark:text-yellow-300 rounded-full inline-flex items-center gap-1">
+                  <AlertCircle size={12} />
+                  No category budget
+                </span>
+              )}
+              
+              {isApproved && (
+                <span className="ml-2 text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/30 
+                               text-green-700 dark:text-green-300 rounded-full inline-flex items-center gap-1">
+                  <CheckCircle size={12} />
+                  Approved
+                </span>
+              )}
+              
+              {isCompleted && (
+                <span className="ml-2 text-xs px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 
+                               text-purple-700 dark:text-purple-300 rounded-full">
+                  Completed
+                </span>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Actions for existing budgets */}
+              {hasBudget && !isApproved && (
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => setEditingItemId(existingBudget.id)}
+                    className="p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 
+                               dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
+                    aria-label="Edit budget"
+                    title="Edit"
+                  >
+                    <Edit size={15} />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteItem(existingBudget)}
+                    disabled={isDeleting}
+                    className="p-1 text-red-600 hover:text-red-800 dark:text-red-400 
+                               dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded
+                               disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Delete budget"
+                    title="Delete"
+                  >
+                    {isDeleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                  </button>
+                </div>
+              )}
+
+              {/* ALWAYS show add budget button for items without budget */}
+              {!hasBudget && canAddBudget && (
+                <button
+                  onClick={() => {
+                    setNewItemForm({
+                      show: true,
+                      category_id: category.id,
+                      item_id: child.id,
+                      amount: '',
+                      description: `Budget for ${child.name}`,
+                      parent_id: null
+                    });
+                  }}
+                  className={`p-1 rounded transition-colors
+                    ${noCategoryBudget || willExceedCategory
+                      ? 'text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
+                      : 'text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20'
+                    }
+                  `}
+                  title="Add budget for item"
+                  aria-label="Add budget"
+                >
+                  <Plus size={16} />
+                </button>
+              )}
+
+              {/* Warning messages */}
+              {!hasBudget && noCategoryBudget && (
+                <span className="text-xs text-yellow-500 dark:text-yellow-400">
+                  ⚠️ No category budget
+                </span>
+              )}
+              
+              {!hasBudget && willExceedCategory && !noCategoryBudget && (
+                <span className="text-xs text-red-400 dark:text-red-500">
+                  ⚠️ Will exceed budget
+                </span>
+              )}
+
+              {/* Show remaining budget */}
+              {hasCategoryBudgetSet && !hasBudget && (
+                <span className={`text-xs ${remainingBudget > 0 ? 'text-gray-400 dark:text-gray-500' : 'text-red-400 dark:text-red-500'}`}>
+                  {currency || '₦'} {Math.max(0, remainingBudget).toFixed(2)} left
+                </span>
+              )}
+
+              {isApproved && (
+                <span className="text-green-600 dark:text-green-400" title="Approved - Read only">
+                  <Lock size={15} />
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }, [
+    getBudget, 
+    isItemApproved, 
+    isItemCompleted, 
+    getCategoryBudgetAmount, 
+    getChildBudgetsTotal, 
+    hasCategoryBudget, 
+    editingItemId, 
+    isSaving, 
+    isDeleting, 
+    currency, 
+    handleEditItem, 
+    handleDeleteItem, 
+    setBudgetItems, 
+    setEditingItemId, 
+    setNewItemForm
+  ]);
 
   const renderCategory = useCallback((category, level = 0) => {
     const isExpanded = expandedCategories.has(category.id);
@@ -737,21 +1014,20 @@ export default function BudgetItemsForm(props) {
     const childTotal = getChildBudgetsTotal(category.id);
     const remaining = getRemainingBudget(category.id);
     const total = categoryAmount + childTotal;
-    const isOverBudgetCategory = remaining !== null && remaining < 0;
+    const isOverBudgetCategory = remaining < 0;
     const hasCategoryBudgetSet = categoryBudget !== undefined;
     const isApproved = isItemApproved(categoryBudget);
+    const isCompleted = isItemCompleted(categoryBudget);
+    
+    const hasChildWithBudget = childBudgets.length > 0;
 
-    // Determine which handler to use based on the action
-    const handleSave = () => {
-      if (newItemForm.item_id) {
-        handleSaveItem();
-      } else {
-        handleSaveCategory();
-      }
-    };
+    const isEditing = editingItemId === categoryBudget?.id && !isApproved;
+
+    // Determine if we should show the new item form for this category
+    const showFormForThisCategory = newItemForm.show && newItemForm.category_id === category.id;
 
     return (
-      <div key={category.id} className="mb-1">
+      <div key={category.id} className="mb-2">
         {/* Category Header */}
         <div
           className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors cursor-pointer
@@ -783,51 +1059,53 @@ export default function BudgetItemsForm(props) {
             <span className="font-medium text-gray-900 dark:text-white">
               {category.name}
             </span>
-            <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-              ({childBudgets.length} child budgets)
-            </span>
+            
+            {/* Status badges */}
             {hasCategoryBudgetSet && (
-              <span className="ml-2 text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 
-                             text-blue-700 dark:text-blue-300 rounded-full">
+              <span className={`ml-2 text-xs px-2 py-0.5 rounded-full
+                ${isOverBudgetCategory 
+                  ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' 
+                  : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                }
+              `}>
                 Budget: {currency || '₦'} {categoryAmount.toFixed(2)}
+                {isOverBudgetCategory && ` (Over by ${currency || '₦'} ${Math.abs(remaining).toFixed(2)})`}
               </span>
             )}
+            
             {!hasCategoryBudgetSet && (
               <span className="ml-2 text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 
                              text-gray-600 dark:text-gray-400 rounded-full">
                 No budget set
               </span>
             )}
-            {childTotal > 0 && (
+            
+            {hasChildWithBudget && (
               <span className="ml-2 text-xs px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 
                              text-purple-700 dark:text-purple-300 rounded-full">
-                Allocated: {currency || '₦'} {childTotal.toFixed(2)}
+                {childBudgets.length} items allocated
               </span>
             )}
-            {remaining !== null && remaining >= 0 && (
+            
+            {remaining > 0 && hasCategoryBudgetSet && (
               <span className="ml-2 text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/30 
                              text-green-700 dark:text-green-300 rounded-full">
                 Remaining: {currency || '₦'} {remaining.toFixed(2)}
               </span>
             )}
-            {remaining === null && hasCategoryBudgetSet && (
-              <span className="ml-2 text-xs px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 
-                             text-yellow-700 dark:text-yellow-300 rounded-full">
-                No category budget
-              </span>
-            )}
-            {isOverBudgetCategory && (
-              <span className="ml-2 text-xs px-2 py-0.5 bg-red-100 dark:bg-red-900/30 
-                             text-red-700 dark:text-red-300 rounded-full flex items-center gap-1">
-                <AlertTriangle size={12} />
-                Over budget by {currency || '₦'} {Math.abs(remaining).toFixed(2)}
-              </span>
-            )}
+            
             {isApproved && (
               <span className="ml-2 text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/30 
                              text-green-700 dark:text-green-300 rounded-full inline-flex items-center gap-1">
                 <CheckCircle size={12} />
                 Approved
+              </span>
+            )}
+            
+            {isCompleted && (
+              <span className="ml-2 text-xs px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 
+                             text-purple-700 dark:text-purple-300 rounded-full">
+                Completed
               </span>
             )}
           </div>
@@ -836,6 +1114,41 @@ export default function BudgetItemsForm(props) {
             <span className={`text-sm font-semibold ${isOverBudgetCategory ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'}`}>
               {currency || '₦'} {total.toFixed(2)}
             </span>
+
+            {/* Category Budget Action Buttons - FIXED */}
+            {hasCategoryBudgetSet && !isApproved && (
+              <div className="flex items-center gap-1">
+                {/* Edit Category Budget Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingItemId(categoryBudget.id);
+                  }}
+                  className="p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 
+                             dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
+                  title="Edit category budget"
+                  aria-label="Edit category budget"
+                >
+                  <Edit size={16} />
+                </button>
+                
+                {/* Delete Category Budget Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteCategory(categoryBudget);
+                  }}
+                  disabled={isDeleting}
+                  className="p-1 text-red-600 hover:text-red-800 dark:text-red-400 
+                             dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded
+                             disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Delete category budget"
+                  aria-label="Delete category budget"
+                >
+                  {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                </button>
+              </div>
+            )}
 
             {/* Set Category Budget Button */}
             {!hasCategoryBudgetSet && !isApproved && (
@@ -865,8 +1178,73 @@ export default function BudgetItemsForm(props) {
         {/* Category Content */}
         {isExpanded && (
           <div className="ml-4">
+            {/* Edit Category Form */}
+            {isEditing && categoryBudget && (
+              <div className="mx-3 my-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                <div className="flex flex-wrap gap-2 items-end">
+                  <div className="flex-1 min-w-[180px]">
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Description
+                    </label>
+                    <input
+                      type="text"
+                      value={categoryBudget.description || ''}
+                      onChange={(e) => {
+                        setBudgetItems(prev => prev.map(item =>
+                          item.id === categoryBudget.id ? { ...item, description: e.target.value } : item
+                        ));
+                      }}
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 
+                                 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                 focus:ring-2 focus:ring-yellow-500 dark:focus:ring-yellow-400 focus:border-transparent"
+                      autoFocus
+                      disabled={isSaving}
+                    />
+                  </div>
+                  <div className="w-36">
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Amount ({currency || '₦'})
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      value={categoryBudget.amount}
+                      onChange={(e) => {
+                        setBudgetItems(prev => prev.map(item =>
+                          item.id === categoryBudget.id ? { ...item, amount: parseFloat(e.target.value) || 0 } : item
+                        ));
+                      }}
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 
+                                 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                 focus:ring-2 focus:ring-yellow-500 dark:focus:ring-yellow-400 focus:border-transparent"
+                      disabled={isSaving}
+                    />
+                  </div>
+                  <button
+                    onClick={() => handleEditCategory(categoryBudget)}
+                    disabled={isSaving}
+                    className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 
+                               disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium 
+                               flex items-center gap-1 transition-colors"
+                  >
+                    {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                    {isSaving ? 'Updating...' : 'Update'}
+                  </button>
+                  <button
+                    onClick={() => setEditingItemId(null)}
+                    disabled={isSaving}
+                    className="px-4 py-1.5 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 
+                               dark:hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* New Item Form */}
-            {newItemForm.show && newItemForm.category_id === category.id && (
+            {showFormForThisCategory && (
               <div className="mx-3 my-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                 <div className="flex flex-wrap gap-2 items-end">
                   <div className="flex-1 min-w-[180px]">
@@ -902,13 +1280,36 @@ export default function BudgetItemsForm(props) {
                       disabled={isSaving}
                     />
                   </div>
-                  {newItemForm.item_id && remaining !== null && (
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      Available: {currency || '₦'} {Math.max(0, remaining).toFixed(2)}
+                  
+                  {/* Show warning if adding child budget */}
+                  {newItemForm.item_id && hasCategoryBudget(category.id) && (
+                    <div className={`text-xs ${getRemainingBudget(category.id) <= 0 ? 'text-red-500 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                      {getRemainingBudget(category.id) <= 0 ? (
+                        <span className="flex items-center gap-1">
+                          <AlertTriangle size={12} />
+                          Warning: Category budget is fully allocated!
+                        </span>
+                      ) : (
+                        `Available: ${currency || '₦'} ${Math.max(0, getRemainingBudget(category.id)).toFixed(2)}`
+                      )}
                     </div>
                   )}
+                  
+                  {newItemForm.item_id && !hasCategoryBudget(category.id) && (
+                    <div className="text-xs text-yellow-500 dark:text-yellow-400 flex items-center gap-1">
+                      <AlertCircle size={12} />
+                      Warning: No category budget set. This is allowed but recommended to set one.
+                    </div>
+                  )}
+                  
                   <button
-                    onClick={handleSave}
+                    onClick={() => {
+                      if (newItemForm.item_id) {
+                        handleSaveItem();
+                      } else {
+                        handleSaveCategory();
+                      }
+                    }}
                     disabled={isSaving}
                     className="px-4 py-1.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 
                                disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium 
@@ -938,234 +1339,12 @@ export default function BudgetItemsForm(props) {
               </div>
             )}
 
-            {/* Child Budgets */}
-            {childBudgets.map(budget => {
-              const isApproved = isItemApproved(budget);
-              const expenseItem = flatExpenseItems.find(e => e.id === budget.item_id);
-              const isEditing = editingItemId === budget.id && !isApproved;
-
-              return (
-                <div key={budget.id} className="mx-3 my-1">
-                  {isEditing ? (
-                    <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                      <div className="flex flex-wrap gap-2 items-end">
-                        <div className="flex-1 min-w-[180px]">
-                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Description
-                          </label>
-                          <input
-                            type="text"
-                            value={budget.description || ''}
-                            onChange={(e) => {
-                              setBudgetItems(prev => prev.map(item =>
-                                item.id === budget.id ? { ...item, description: e.target.value } : item
-                              ));
-                            }}
-                            className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 
-                                       rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                                       focus:ring-2 focus:ring-yellow-500 dark:focus:ring-yellow-400 focus:border-transparent"
-                            autoFocus
-                            disabled={isSaving}
-                          />
-                        </div>
-                        <div className="w-36">
-                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Amount ({currency || '₦'})
-                          </label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0.01"
-                            value={budget.amount}
-                            onChange={(e) => {
-                              setBudgetItems(prev => prev.map(item =>
-                                item.id === budget.id ? { ...item, amount: parseFloat(e.target.value) || 0 } : item
-                              ));
-                            }}
-                            className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 
-                                       rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                                       focus:ring-2 focus:ring-yellow-500 dark:focus:ring-yellow-400 focus:border-transparent"
-                            disabled={isSaving}
-                          />
-                        </div>
-                        <button
-                          onClick={() => {
-                            if (budget.item_id) {
-                              handleEditItem(budget);
-                            } else {
-                              handleEditCategory(budget);
-                            }
-                          }}
-                          disabled={isSaving}
-                          className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 
-                                     disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium 
-                                     flex items-center gap-1 transition-colors"
-                        >
-                          {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                          {isSaving ? 'Updating...' : 'Update'}
-                        </button>
-                        <button
-                          onClick={() => setEditingItemId(null)}
-                          disabled={isSaving}
-                          className="px-4 py-1.5 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 
-                                     dark:hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors group
-                        ${isApproved
-                          ? 'bg-green-50/50 dark:bg-green-900/10 hover:bg-green-50 dark:hover:bg-green-900/20'
-                          : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                        }
-                        ${budget.isOptimistic ? 'opacity-75 animate-pulse' : ''}
-                      `}
-                      style={{ marginLeft: '16px' }}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <span className={`text-sm ${isApproved ? 'text-gray-600 dark:text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>
-                          {budget.description || budget.item_name || 'Unnamed budget'}
-                        </span>
-                        {expenseItem && (
-                          <span className="ml-2 text-xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 
-                                         text-indigo-700 dark:text-indigo-300 rounded-full">
-                            {expenseItem.name}
-                          </span>
-                        )}
-                        {isApproved && (
-                          <span className="ml-2 text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/30 
-                                         text-green-700 dark:text-green-300 rounded-full inline-flex items-center gap-1">
-                            <CheckCircle size={12} />
-                            Approved
-                          </span>
-                        )}
-                        {budget.is_completed === 1 && (
-                          <span className="ml-2 text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/30 
-                                         text-green-700 dark:text-green-300 rounded-full">
-                            Completed
-                          </span>
-                        )}
-                        {budget.isOptimistic && (
-                          <span className="ml-2 text-xs px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 
-                                         text-yellow-700 dark:text-yellow-300 rounded-full">
-                            Saving...
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className={`text-sm font-medium ${isApproved ? 'text-gray-500 dark:text-gray-400' : 'text-blue-600 dark:text-blue-400'}`}>
-                          {currency || '₦'} {parseFloat(budget.amount || 0).toFixed(2)}
-                        </span>
-
-                        {!isApproved && !isSaving && (
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => setEditingItemId(budget.id)}
-                              className="p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 
-                                         dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
-                              aria-label="Edit budget item"
-                              title="Edit"
-                            >
-                              <Edit size={15} />
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (budget.item_id) {
-                                  handleDeleteItem(budget);
-                                } else {
-                                  handleDeleteCategory(budget);
-                                }
-                              }}
-                              disabled={isDeleting}
-                              className="p-1 text-red-600 hover:text-red-800 dark:text-red-400 
-                                         dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded
-                                         disabled:opacity-50 disabled:cursor-not-allowed"
-                              aria-label="Delete budget item"
-                              title="Delete"
-                            >
-                              {isDeleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
-                            </button>
-                          </div>
-                        )}
-
-                        {isApproved && (
-                          <span className="text-green-600 dark:text-green-400" title="Approved - Read only">
-                            <Lock size={15} />
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-
-            {/* Child items without budgets */}
+            {/* Render all children with their budget status */}
             {hasChildren && (
-              <div className="ml-4 mt-2">
-                {category.children.map(child => {
-                  const hasBudgetItem = getBudget(child.id, true) !== undefined;
-                  if (hasBudgetItem) return null;
-
-                  const remainingBudget = getRemainingBudget(category.id);
-                  const canAddBudget = hasCategoryBudget(category.id) && 
-                                      (remainingBudget === null || remainingBudget > 0);
-
-                  return (
-                    <div key={child.id} className="flex items-center gap-2 px-3 py-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                      <div className="flex-1">
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          └─ {child.name}
-                        </span>
-                        <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">
-                          No budget set
-                        </span>
-                      </div>
-                      {canAddBudget && (
-                        <button
-                          onClick={() => {
-                            setNewItemForm({
-                              show: true,
-                              category_id: category.id,
-                              item_id: child.id,
-                              amount: '',
-                              description: `Budget for ${child.name}`,
-                              parent_id: null
-                            });
-                          }}
-                          disabled={isSaving}
-                          className="p-1 text-green-600 hover:text-green-800 dark:text-green-400 
-                                     dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 
-                                     rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Add budget for child"
-                          aria-label="Add budget for child"
-                        >
-                          <Plus size={16} />
-                        </button>
-                      )}
-                      {!canAddBudget && hasCategoryBudget(category.id) && (
-                        <span className="text-xs text-red-400 dark:text-red-500">
-                          No remaining budget
-                        </span>
-                      )}
-                      {!hasCategoryBudget(category.id) && (
-                        <span className="text-xs text-yellow-400 dark:text-yellow-500">
-                          Set category budget first
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Child Categories - Recursive */}
-            {hasChildren && isExpanded && (
-              <div className="ml-2">
-                {category.children.map(child => renderCategory(child, level + 1))}
+              <div className="mt-2">
+                {category.children.map(child => 
+                  renderChildItem(category, child, level)
+                )}
               </div>
             )}
           </div>
@@ -1181,19 +1360,18 @@ export default function BudgetItemsForm(props) {
     getRemainingBudget,
     hasCategoryBudget,
     isItemApproved,
+    isItemCompleted,
     toggleCategory,
     newItemForm,
     isSaving,
     isDeleting,
     editingItemId,
     currency,
-    flatExpenseItems,
+    renderChildItem,
     handleSaveCategory,
     handleSaveItem,
     handleEditCategory,
-    handleEditItem,
     handleDeleteCategory,
-    handleDeleteItem,
     setBudgetItems,
     setNewItemForm,
     setEditingItemId
@@ -1343,11 +1521,11 @@ export default function BudgetItemsForm(props) {
       <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg flex items-center gap-6 flex-wrap">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-blue-100 dark:bg-blue-900/30 rounded border border-blue-200 dark:border-blue-800"></div>
-          <span className="text-xs text-gray-600 dark:text-gray-400">Category Budget (item_id = null)</span>
+          <span className="text-xs text-gray-600 dark:text-gray-400">Category Budget</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-purple-100 dark:bg-purple-900/30 rounded border border-purple-200 dark:border-purple-800"></div>
-          <span className="text-xs text-gray-600 dark:text-gray-400">Child Item Budget (item_id = child_id)</span>
+          <span className="text-xs text-gray-600 dark:text-gray-400">Child Item Budget</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-green-100 dark:bg-green-900/30 rounded border border-green-200 dark:border-green-800"></div>
@@ -1359,8 +1537,8 @@ export default function BudgetItemsForm(props) {
           <span className="text-xs text-gray-600 dark:text-gray-400">Over Budget</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-yellow-100 dark:bg-yellow-900/30 rounded border border-yellow-200 dark:border-yellow-800 animate-pulse"></div>
-          <span className="text-xs text-gray-600 dark:text-gray-400">Saving in progress</span>
+          <div className="w-4 h-4 bg-yellow-100 dark:bg-yellow-900/30 rounded border border-yellow-200 dark:border-yellow-800"></div>
+          <span className="text-xs text-gray-600 dark:text-gray-400">Warning/Exceeds Budget</span>
         </div>
       </div>
 
@@ -1371,6 +1549,17 @@ export default function BudgetItemsForm(props) {
           <AlertCircle size={20} />
           <span className="text-sm font-medium">
             Warning: Overall allocated amount ({currency || '₦'} {grandTotal.overall.toFixed(2)}) exceeds budget total ({currency || '₦'} {parseFloat(total_amount || 0).toFixed(2)})!
+          </span>
+        </div>
+      )}
+
+      {/* Tip - Only show if there are child budgets AND no category budgets */}
+      {hasAnyChildBudgets && !hasAnyCategoryBudgets && (
+        <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800 
+                       flex items-center gap-2 text-yellow-700 dark:text-yellow-300">
+          <AlertCircle size={20} />
+          <span className="text-sm font-medium">
+            Tip: You have child budgets but no category budgets. Setting category budgets helps with organization.
           </span>
         </div>
       )}

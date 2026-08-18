@@ -28,6 +28,8 @@ import PurchaseOrderRequisitions from "./pages/Product/PurchaseOrderRequisitions
 import CashTransfer from "./pages/Product/CashTransfer.jsx";
 import CashTransferItems from "./pages/Product/CashTransItems.tsx";
 import CashAdvance from "./pages/Product/CashAdvance.jsx";
+import BudgetList from "./pages/Budgets/Budgets";
+import BudgetItems from "./pages/Budgets/BudgetItems.jsx";
 
 import SettingLanding from "./pages/Settings/SettingsLanding.tsx";
 import SettingPage from "./pages/Settings/Index.tsx";
@@ -38,13 +40,9 @@ import AdvanceRequests from "./pages/CashAdvances/AdvanceRequests";
 
 // Finance & Expenses
 import AccountsPayable from "./pages/Finance/AccountsPayable";
-import Opex from "./pages/Finance/Opex";
 import Payments from "./pages/Finance/Payments";
 import Budgets from "./pages/Finance/Budgets";
 
-// Budgets
-import BudgetList from "./pages/Budgets/Budgets";
-import BudgetItems from "./pages/Budgets/BudgetItems.jsx";
 
 // Inventory & Assets
 import GoodsReceived from "./pages/Inventory/GoodsReceived";
@@ -54,8 +52,12 @@ import Allocations from "./pages/Inventory/Allocations";
 
 // Reports & Analytics
 import ExpenseAsset from "./pages/Reports/ExpenseAsset";
-import CashFlow from "./pages/Reports/CashFlow";
+import CashFlow from "./pages/Reports/CashFlow.jsx";
 import AuditTrails from "./pages/Reports/AuditTrails";
+import ExpenseReport from "./pages/Reports/ExpenseReport.jsx";
+import Opex from "./pages/Reports/Opex";
+import Capex from "./pages/Reports/Capex";
+import BudgetGraph from "./pages/Reports/Budget.jsx";
 
 // Teams & Permissions
 import UserDirectory from "./pages/Teams/UserDirectory";
@@ -67,8 +69,7 @@ import AuthorityDelegation from "./pages/Teams/AuthorityDelegation";
 import CompanyProfile from "./pages/Settings/CompanyProfile";
 import WorkFlowPage from "./pages/Settings/ApprovalWorkflows";
 import WorkFlowStepsPage from "./pages/Settings/ApprovalWorkflowSteps.tsx";
-import Vendors from "./pages/Settings/Vendors.tsx";
-import PurchaseOrderItems from "./pages/Procurement/PurchaseOrderRequisitions";
+
 
 export default function App() {
   return (
@@ -117,6 +118,11 @@ export default function App() {
             <Route path="/reports/expense-asset" element={<ExpenseAsset />} />
             <Route path="/reports/cash-flow" element={<CashFlow />} />
             <Route path="/reports/audit" element={<AuditTrails />} />
+            <Route path="/reports/expense-report" element={<ExpenseReport />} />
+            <Route path="/reports/capex" element={<Capex />} />
+            <Route path="/reports/opex" element={<Opex />} />
+            <Route path="/reports/budget-performance" element={<BudgetGraph />} />
+
 
             {/* Teams & Permissions */}
             <Route path="/teams/directory" element={<UserDirectory />} />

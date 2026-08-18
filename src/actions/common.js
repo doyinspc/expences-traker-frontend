@@ -46,7 +46,7 @@ const getUserType = () => {
 // Get tenant DB from sessionStorage
 const getTenantDb = () => {
     try {
-        return sessionStorage.getItem('tenantDb') || import.meta.env.VITE_APP_TENANT_DB || 'expences1';
+        return sessionStorage.getItem('tenantDb') || import.meta.env.VITE_APP_TENANT_DB || 'stresert_expences1';
     } catch (error) {
         console.error('Error getting tenantDb from sessionStorage:', error);
         return import.meta.env.VITE_APP_TENANT_DB || 'expences1';

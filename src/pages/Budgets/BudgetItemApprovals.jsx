@@ -44,7 +44,7 @@ export default function BudgetItemApproval(props) {
   const { data, loadQuery, loadUpdate, isLoading } = useReduxApiData({
     table: "budgetitems",
     pth: "budgetitems",
-    queryType: 'gets',
+    queryType: 'getBudgetItems',
     mainParam: { budget_id },
     narration: 'get all budgetitems already stored for this particular budget id'
   });
