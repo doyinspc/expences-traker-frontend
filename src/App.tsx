@@ -30,6 +30,7 @@ import CashTransferItems from "./pages/Product/CashTransItems.tsx";
 import CashAdvance from "./pages/Product/CashAdvance.jsx";
 import BudgetList from "./pages/Budgets/Budgets";
 import BudgetItems from "./pages/Budgets/BudgetItems.jsx";
+import LearnMore from "./pages/Product/LearnMore.tsx";
 
 import SettingLanding from "./pages/Settings/SettingsLanding.tsx";
 import SettingPage from "./pages/Settings/Index.tsx";
@@ -94,6 +95,7 @@ export default function App() {
             <Route path="/procurement/cashtransfer/:id" element={<CashTransferItems />} />
             <Route path="/procurement/budgets" element={<BudgetList />} />
             <Route path="/procurement/budgets/:budgetId" element={<BudgetItems />} />
+            <Route path="/procurement/learnmore" element={<LearnMore />} />
 
             <Route path="/procurement/approvals" element={<ApprovalCenter />} />
             <Route path="/procurement/approvals/:workflow_id" element={<ApprovalCenterDetails />} />

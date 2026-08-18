@@ -123,7 +123,7 @@ const AddItemsModal: React.FC<AddItemsModalProps> = ({
         table: "requisitions",
         uniqueKey: 'requisition',
         queryType: 'gets',
-        mainParam: { is_active: 1, location_id: location_id || 0 },
+        mainParam: { is_active: 1, location_id: location_id || 0, requisition_type:1 },
         narration: 'get active requisitions',
         autoLoad: false,
     });
@@ -133,7 +133,7 @@ const AddItemsModal: React.FC<AddItemsModalProps> = ({
         table: "requisitionitems",
         uniqueKey: 'requisitionitemLoader',
         queryType: 'gets',
-        mainParam: { requisition_id: selectedRequisition || null },
+        mainParam: { requisition_id: selectedRequisition || null, approved:0},
         narration: 'get requisition items',
         autoLoad: false,
     });

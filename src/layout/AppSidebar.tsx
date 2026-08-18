@@ -56,6 +56,7 @@ const navItems: NavItem[] = [
     { name: "Advance Requests", path: "/procurement/cashadvance" },
     { name: "Cash Transfers", path: "/procurement/cashtransfer" },
     { name: "Budget", path: "/procurement/budgets" },
+    { name: "Learn More", path: "/procurement/learnmore" },
     
   ],
 },
@@ -63,8 +64,8 @@ const navItems: NavItem[] = [
     icon: <CheckSquare size={24} strokeWidth={1.5} />,
     name: "Approvals",
     subItems: [
-      { name: "My Approvals", path: "/procurement/approvals", new: true },
-      { name: "All Approvals", path: "/procurement/controls", pro: true },
+      { name: "My Approvals", path: "/procurement/approvals" },
+      { name: "All Approvals", path: "/procurement/controls" },
     ],
   },
   {

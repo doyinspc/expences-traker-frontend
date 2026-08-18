@@ -116,7 +116,7 @@ const DEFAULT_COLUMN_VISIBILITY: ColumnVisibility = {
     approver_name: false,
     approve_date: false,
     approval_workflow_id: false,
-    approval_workflow_name: false,
+    approval_workflow_name: true,
     current_approval_level: false,
     expected_delivery_date: false,
     notes: false,
