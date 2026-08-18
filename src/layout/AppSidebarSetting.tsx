@@ -37,7 +37,7 @@ const AppSidebar: React.FC = () => {
         icon: <Users size={24} strokeWidth={1.5} />,
         name: "User Management",
         subItems: [
-          { name: "Roles", path: "/setting/page/3" },
+          { name: "Roles", path: "/setting/page/1" },
           { name: "Departments", path: "/setting/page/2" },
           { name: "Locations", path: "/setting/page/4" },
           { name: "User", path: "/setting/user" },
