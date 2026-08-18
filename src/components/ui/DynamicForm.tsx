@@ -9,7 +9,7 @@ import TextArea from '../../components/form/input/TextArea';
 import ToggleSwitch from '../../components/form/form-elements/ToggleSwitch';
 import DatePicker from '../../components/form/date-picker';
 import PhoneInput from '../../components/form/group-input/PhoneInput';
-import FileUpload from '../../components/form/Select';
+import FileUpload from '../../components/form/Select'; // Assuming this is correct in your setup
 import { getFormFields } from '../../config/tableMapping';
 
 // ==================== TYPES ====================
@@ -172,8 +172,8 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
       Object.entries(fields).forEach(([fieldName, field]) => {
         // Check if we have initialData for this field
         const hasInitialData = initialData[fieldName] !== undefined && 
-                              initialData[fieldName] !== null && 
-                              initialData[fieldName] !== '';
+                               initialData[fieldName] !== null && 
+                               initialData[fieldName] !== '';
         
         let defaultValue: any = null;
         
@@ -184,8 +184,8 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
           // Toggle defaults to false
           defaultValue = field.default !== undefined ? field.default : false;
         } else if (field.type === 'select') {
-          // Select defaults to null (not empty string)
-          defaultValue = field.default !== undefined && field.default !== null ? field.default : null;
+          // Select defaults to empty string to keep component controlled
+          defaultValue = field.default !== undefined && field.default !== null ? field.default : '';
         } else if (field.type === 'date' || field.type === 'datetime') {
           // Date fields - use default or null
           defaultValue = field.default !== undefined && field.default !== null ? field.default : null;
@@ -199,6 +199,35 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
       setFormData(initial);
     }
   }, [initialData, fields]);
+
+  // Auto-select dropdowns that only have 1 option
+  useEffect(() => {
+    if (!fields || !optionData) return;
+
+    setFormData((prev) => {
+      let hasChanges = false;
+      const updates: Record<string, any> = {};
+
+      Object.entries(fields).forEach(([fieldName, field]) => {
+        if (field.type === 'select' && field.options) {
+          const options = getSelectOptions(field.options, optionData);
+          const currentValue = prev[fieldName];
+
+          // If exactly 1 option exists and the field hasn't been set yet
+          if (
+            options.length === 1 && 
+            (currentValue === null || currentValue === undefined || currentValue === '')
+          ) {
+            updates[fieldName] = options[0].value;
+            hasChanges = true;
+          }
+        }
+      });
+
+      // Only trigger a re-render if we actually updated single-item selects
+      return hasChanges ? { ...prev, ...updates } : prev;
+    });
+  }, [fields, optionData]);
 
   // Handle input changes
   const handleChange = (
@@ -352,7 +381,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
         } else if (field.type === 'toggle') {
           resetData[fieldName] = field.default !== undefined ? field.default : false;
         } else if (field.type === 'select') {
-          resetData[fieldName] = field.default !== undefined && field.default !== null ? field.default : null;
+          resetData[fieldName] = field.default !== undefined && field.default !== null ? field.default : '';
         } else if (field.type === 'date' || field.type === 'datetime') {
           resetData[fieldName] = field.default !== undefined && field.default !== null ? field.default : null;
         } else {
@@ -471,7 +500,8 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
           name={fieldName}
           placeholder={placeholder || `Select ${label}`}
           options={selectOptions}
-          value={selectedValue}
+          // Defaulting to '' to make sure the native select remains controlled 
+          value={selectedValue ?? ''} 
           disabled={isDisabled}
           className={`dark:bg-dark-900 ${error ? 'border-red-500' : ''}`}
           onChange={(eOrValue) => handleSelectChange(fieldName, eOrValue)}
@@ -576,13 +606,28 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
       case 'datetime':
         // Format date value for DatePicker
         let dateValue = value;
-        if (value && typeof value === 'string') {
-          // If it's a full datetime string, extract just the date part
-          if (value.includes('T')) {
-            dateValue = value.split('T')[0];
+        if (value) {
+          // If the value is already a Date object
+          if (value instanceof Date) {
+            if (!isNaN(value.getTime())) {
+              dateValue = value.toISOString().split('T')[0];
+            } else {
+              dateValue = null;
+            }
+          } 
+          // If it's a string, format it correctly
+          else if (typeof value === 'string') {
+            // Check for ISO Strings ('2024-03-25T15:30:00.000Z')
+            if (value.includes('T')) {
+              dateValue = value.split('T')[0];
+            } 
+            // Check for SQL Datetime Strings ('2024-03-25 15:30:00')
+            else if (value.includes(' ')) {
+              dateValue = value.split(' ')[0];
+            }
           }
-          // If it's an ISO string without time, keep as is
         }
+
         // If value is null or undefined, pass null
         if (dateValue === null || dateValue === undefined || dateValue === '') {
           dateValue = null;
