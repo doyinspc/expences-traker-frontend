@@ -23,7 +23,19 @@ import {
   UserPlus,
   ArrowRight,
   X,
-  ChevronLeft
+  ChevronLeft,
+  Info,
+  AlertCircle,
+  Key,
+  Lock,
+  Unlock,
+  HelpCircle,
+  Sparkles,
+  Clock,
+  TrendingUp,
+  Activity,
+  Calendar,
+  ChevronUp
 } from 'lucide-react';
 import PageMeta from '../../components/common/PageMeta';
 import { useDispatch, useSelector } from 'react-redux';
@@ -49,11 +61,169 @@ interface Location {
 interface Role {
   id: string;
   name: string;
-  location_id: string; // This links to location.id
+  location_id: string;
   description?: string;
   isActive?: boolean;
   isDefault?: boolean;
+  permissions?: string[];
 }
+
+// ============ COLLAPSIBLE INFO BANNER ============
+const InfoBanner: React.FC = () => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="mb-6">
+      <div className={`
+        overflow-hidden rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 
+        border border-blue-200 dark:border-blue-800 transition-all duration-500 ease-in-out
+        ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-12 opacity-90'}
+      `}>
+        {/* Header - Always visible */}
+        <div 
+          className="flex items-center justify-between p-4 cursor-pointer hover:bg-blue-100/30 dark:hover:bg-blue-800/20 transition-colors"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-blue-100 dark:bg-blue-900/30 p-1.5 flex-shrink-0">
+              <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-blue-500" />
+                Learn More
+              </h4>
+              {!isExpanded && (
+                <span className="text-xs text-blue-600 dark:text-blue-400 font-medium hidden sm:inline">
+                  — Click to learn about location & role selection
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {!isExpanded && (
+              <div className="animate-bounce-arrow hidden sm:flex">
+                <ChevronDown className="h-5 w-5 text-blue-500 dark:text-blue-400" />
+              </div>
+            )}
+            <button 
+              className="p-1 rounded-lg hover:bg-blue-200/50 dark:hover:bg-blue-700/30 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsExpanded(!isExpanded);
+              }}
+            >
+              {isExpanded ? (
+                <ChevronUp className="h-5 w-5 text-blue-500 dark:text-blue-400" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-blue-500 dark:text-blue-400" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Content - Collapsible */}
+        <div className={`
+          px-4 pb-4 transition-all duration-500 ease-in-out
+          ${isExpanded ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none absolute'}
+        `}>
+          <div className="mt-1 space-y-3 text-sm text-blue-800 dark:text-blue-300">
+            <p className="flex items-start gap-2">
+              <span className="mt-0.5">📍</span>
+              <span>
+                <span className="font-medium">Location & Role Selection:</span> 
+                Your actions and permissions depend on your selected location and role. 
+                Choose the right combination to access the features you need.
+              </span>
+            </p>
+            <div className="flex flex-wrap gap-4 text-xs">
+              <span className="flex items-center gap-1.5">
+                <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                <span>Active location shown in <span className="font-medium text-blue-600 dark:text-blue-400">blue</span></span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <div className="h-2 w-2 rounded-full bg-purple-500"></div>
+                <span>Active role shown in <span className="font-medium text-purple-600 dark:text-purple-400">purple</span></span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <div className="h-2 w-2 rounded-full bg-amber-500"></div>
+                <span>Switch anytime to access different features</span>
+              </span>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-3 pt-2 border-t border-blue-200/50 dark:border-blue-700/30">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 dark:bg-blue-800/30 px-2.5 py-0.5 text-xs text-blue-700 dark:text-blue-300">
+                <Lock className="h-3 w-3" />
+                Permissions are role-based
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-100 dark:bg-indigo-800/30 px-2.5 py-0.5 text-xs text-indigo-700 dark:text-indigo-300">
+                <Building className="h-3 w-3" />
+                Actions are location-specific
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============ PERMISSION INFO CARD ============
+const PermissionInfoCard: React.FC<{ role: Role | null; location: Location | null }> = ({ role, location }) => {
+  if (!role || !location) {
+    return (
+      <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
+        <div className="flex items-center gap-3">
+          <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+          <p className="text-sm text-amber-800 dark:text-amber-300">
+            <span className="font-medium">Action Required:</span> Please select a location and role to view your permissions
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const samplePermissions = [
+    'View Documents',
+    'Create Requisitions',
+    'Approve Purchase Orders',
+    'Manage Users',
+    'View Reports',
+    'Edit Settings'
+  ];
+
+  return (
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 p-4">
+      <div className="flex items-start gap-3">
+        <div className="rounded-lg bg-purple-100 dark:bg-purple-900/30 p-2">
+          <Key className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+        </div>
+        <div className="flex-1">
+          <h5 className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
+            Your Current Permissions
+            <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
+              as {role.name} in {location.name}
+            </span>
+          </h5>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {samplePermissions.slice(0, 4).map((perm, idx) => (
+              <span key={idx} className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-0.5 text-xs text-emerald-700 dark:text-emerald-300">
+                <Check className="h-3 w-3" />
+                {perm}
+              </span>
+            ))}
+            <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-700 px-2.5 py-0.5 text-xs text-gray-600 dark:text-gray-300">
+              +2 more
+            </span>
+          </div>
+          <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+            <Lock className="inline h-3 w-3 mr-1" />
+            Some actions may require additional permissions
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ============ USER PROFILE CARD ============
 const UserProfileCard = () => {
@@ -135,10 +305,6 @@ const UserProfileCard = () => {
                 </span>
                 <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-xs backdrop-blur-sm">
                   <Users className="h-3 w-3" />
-                  Admin
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-xs backdrop-blur-sm">
-                  <Globe className="h-3 w-3" />
                   {locations?.length || 0} Locations
                 </span>
               </div>
@@ -171,7 +337,6 @@ const UserProfileCard = () => {
             <p className="text-sm text-white/70">Total Roles</p>
             <p className="text-2xl font-bold">
               {locations?.reduce((total: number, loc: Location) => {
-                // Filter roles by location_id matching this location's id
                 const locationRoles = roles?.filter((role: Role) => role.location_id === loc.id) || [];
                 return total + locationRoles.length;
               }, 0) || 0}
@@ -193,33 +358,36 @@ interface LocationCardProps {
   isSelected: boolean;
   onSelect: (location: Location) => void;
   roleCount: number;
+  isRoleSelectionMode: boolean;
 }
 
 const LocationCard: React.FC<LocationCardProps> = ({ 
   location, 
   isSelected, 
   onSelect,
-  roleCount
+  roleCount,
+  isRoleSelectionMode
 }) => {
- 
   const Icon = Building;
   const gradientColor = 'from-purple-500 to-pink-500';
 
   return (
     <div
-      onClick={() => onSelect(location)}
+      onClick={() => !isRoleSelectionMode && onSelect(location)}
       className={`
         group relative cursor-pointer overflow-hidden rounded-2xl border-2 p-6 transition-all duration-300
-        ${isSelected 
+        ${isSelected && isRoleSelectionMode 
           ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 shadow-lg shadow-blue-500/20' 
-          : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900/50'
+          : isRoleSelectionMode
+            ? 'border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-800/30 opacity-60 cursor-default'
+            : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900/50'
         }
       `}
     >
       {/* Gradient background accent */}
       <div className={`
         absolute inset-0 bg-gradient-to-br ${gradientColor} opacity-0 transition-opacity duration-300
-        ${isSelected ? 'opacity-5' : 'group-hover:opacity-5'}
+        ${isSelected && isRoleSelectionMode ? 'opacity-5' : 'group-hover:opacity-5'}
       `} />
 
       {/* Status indicator */}
@@ -243,7 +411,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
         {/* Icon */}
         <div className={`
           mb-4 inline-flex rounded-xl p-3 transition-all duration-300
-          ${isSelected 
+          ${isSelected && isRoleSelectionMode 
             ? 'bg-gradient-to-br from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30' 
             : 'bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600 dark:bg-gray-800 dark:text-gray-400'
           }
@@ -273,7 +441,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
         </div>
 
         {/* Selected checkmark */}
-        {isSelected && (
+        {isSelected && isRoleSelectionMode && (
           <div className="absolute bottom-4 right-4 rounded-full bg-blue-600 p-1 text-white shadow-lg">
             <Check className="h-4 w-4" />
           </div>
@@ -313,6 +481,15 @@ const RoleCard: React.FC<RoleCardProps> = ({
     return 'from-gray-500 to-gray-600';
   };
 
+  const getPermissionLevel = (roleName: string) => {
+    const name = roleName?.toLowerCase() || '';
+    if (name.includes('admin')) return 'Full Access';
+    if (name.includes('manager')) return 'Management Access';
+    if (name.includes('supervisor')) return 'Supervisory Access';
+    if (name.includes('user')) return 'Basic Access';
+    return 'Limited Access';
+  };
+
   const gradientColor = getRoleColor(role.name);
 
   return (
@@ -321,8 +498,8 @@ const RoleCard: React.FC<RoleCardProps> = ({
       className={`
         group relative cursor-pointer overflow-hidden rounded-2xl border-2 p-6 transition-all duration-300
         ${isSelected 
-          ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 shadow-lg shadow-blue-500/20' 
-          : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900/50'
+          ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 shadow-lg shadow-purple-500/20' 
+          : 'border-gray-200 bg-white hover:border-purple-300 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900/50'
         }
       `}
     >
@@ -354,8 +531,8 @@ const RoleCard: React.FC<RoleCardProps> = ({
         <div className={`
           mb-4 inline-flex rounded-xl p-3 transition-all duration-300
           ${isSelected 
-            ? 'bg-gradient-to-br from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30' 
-            : 'bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600 dark:bg-gray-800 dark:text-gray-400'
+            ? 'bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30' 
+            : 'bg-gray-100 text-gray-600 group-hover:bg-purple-100 group-hover:text-purple-600 dark:bg-gray-800 dark:text-gray-400'
           }
         `}>
           {getRoleIcon(role.name)}
@@ -370,9 +547,17 @@ const RoleCard: React.FC<RoleCardProps> = ({
           </p>
         )}
 
+        {/* Permission level */}
+        <div className="mt-3 flex items-center gap-2 border-t border-gray-200 pt-3 dark:border-gray-800">
+          <Lock className="h-3.5 w-3.5 text-gray-400" />
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {getPermissionLevel(role.name)}
+          </span>
+        </div>
+
         {/* Selected checkmark */}
         {isSelected && (
-          <div className="absolute bottom-4 right-4 rounded-full bg-blue-600 p-1 text-white shadow-lg">
+          <div className="absolute bottom-4 right-4 rounded-full bg-purple-600 p-1 text-white shadow-lg">
             <Check className="h-4 w-4" />
           </div>
         )}
@@ -387,15 +572,18 @@ const CurrentLocationBadge: React.FC<{ location: Location | null }> = ({ locatio
     return (
       <div className="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-1.5 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
         <Building className="h-4 w-4" />
-        <span className="text-sm font-medium">No Location</span>
+        <span className="text-sm font-medium">No Location Selected</span>
+        <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
       </div>
     );
   }
 
   return (
-    <div className="inline-flex items-center gap-2 rounded-lg bg-blue-100 px-3 py-1.5 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+    <div className="inline-flex items-center gap-2 rounded-lg bg-blue-100 px-3 py-1.5 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 shadow-sm shadow-blue-500/20">
       <Building className="h-4 w-4" />
       <span className="text-sm font-medium">{location.name}</span>
+      <div className="h-3 w-px bg-blue-300 dark:bg-blue-600" />
+      <span className="text-xs opacity-70">{location.city}</span>
     </div>
   );
 };
@@ -406,15 +594,70 @@ const CurrentRoleBadge: React.FC<{ role: Role | null }> = ({ role }) => {
     return (
       <div className="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-1.5 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
         <Shield className="h-4 w-4" />
-        <span className="text-sm font-medium">No Role</span>
+        <span className="text-sm font-medium">No Role Selected</span>
+        <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
       </div>
     );
   }
 
   return (
-    <div className="inline-flex items-center gap-2 rounded-lg bg-purple-100 px-3 py-1.5 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+    <div className="inline-flex items-center gap-2 rounded-lg bg-purple-100 px-3 py-1.5 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 shadow-sm shadow-purple-500/20">
       <Shield className="h-4 w-4" />
       <span className="text-sm font-medium">{role.name}</span>
+      <div className="h-3 w-px bg-purple-300 dark:bg-purple-600" />
+      <span className="text-xs opacity-70">{role.description?.split(' ').slice(0, 2).join(' ') || 'Role'}</span>
+    </div>
+  );
+};
+
+// ============ ACTION REQUIRED CARD ============
+const ActionRequiredCard: React.FC<{ location: Location | null; role: Role | null }> = ({ location, role }) => {
+  if (location && role) {
+    return (
+      <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-4">
+        <div className="flex items-center gap-3">
+          <div className="rounded-full bg-emerald-100 dark:bg-emerald-900/30 p-1.5">
+            <Unlock className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <p className="text-sm text-emerald-800 dark:text-emerald-300">
+            <span className="font-medium">You're all set!</span> You have access to 
+            <span className="font-medium text-emerald-900 dark:text-emerald-200"> {location.name}</span> as 
+            <span className="font-medium text-emerald-900 dark:text-emerald-200"> {role.name}</span>. 
+            You can now perform actions based on your permissions.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (location && !role) {
+    return (
+      <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
+        <div className="flex items-center gap-3">
+          <div className="rounded-full bg-amber-100 dark:bg-amber-900/30 p-1.5">
+            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+          </div>
+          <p className="text-sm text-amber-800 dark:text-amber-300">
+            <span className="font-medium">Action Required:</span> Select a role for 
+            <span className="font-medium text-amber-900 dark:text-amber-200"> {location.name}</span> 
+            to access features and perform actions.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
+      <div className="flex items-center gap-3">
+        <div className="rounded-full bg-amber-100 dark:bg-amber-900/30 p-1.5">
+          <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+        </div>
+        <p className="text-sm text-amber-800 dark:text-amber-300">
+          <span className="font-medium">Welcome! 👋</span> To get started, select a location below, 
+          then choose your role. This ensures you have the right permissions for your work.
+        </p>
+      </div>
     </div>
   );
 };
@@ -433,23 +676,21 @@ export default function Landing() {
     return roles.filter((r: Role) => r.location_id === locationId);
   };
 
-  // Handle location selection - minimizes locations and shows roles
+  // Handle location selection
   const handleSelectLocation = (loc: Location) => {
     setSelectedLocation(loc);
     const locationRoles = getRolesForLocation(loc.id);
     setShowRoleSelection(true);
-    // Auto-select first role if only one available
     if (locationRoles.length === 1) {
       handleSelectRole(locationRoles[0]);
     }
   };
 
-  // Handle role selection - updates Redux and closes role selection
+  // Handle role selection
   const handleSelectRole = (selectedRole: Role) => {
     setSelectedRole(selectedRole);
     dispatch(authActions.tenantSwitchLocation(selectedLocation));
     dispatch(authActions.tenantSwitchRole(selectedRole));
-    // Close role selection after a moment
     setTimeout(() => {
       setShowRoleSelection(false);
     }, 500);
@@ -460,7 +701,7 @@ export default function Landing() {
     setShowRoleSelection(false);
   };
 
-  // Calculate total roles across all locations (filtered by location_id)
+  // Calculate total roles across all locations
   const totalRoles = locations?.reduce((total: number, loc: Location) => {
     const locationRoles = getRolesForLocation(loc.id);
     return total + locationRoles.length;
@@ -479,13 +720,14 @@ export default function Landing() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 p-4 dark:from-gray-900 dark:to-gray-800">
         <div className="mx-auto max-w-7xl">
           {/* Header with location & role switcher */}
-          <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+          <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Welcome Back!
+                Welcome Back! 👋
               </h1>
-              <p className="mt-1 text-gray-600 dark:text-gray-400">
-                Manage your procurement operations across all locations
+              <p className="mt-1 text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                Manage your operations across all locations
               </p>
             </div>
             
@@ -495,44 +737,59 @@ export default function Landing() {
             </div>
           </div>
 
+          {/* Collapsible Info Banner with Bouncing Arrow */}
+          <InfoBanner />
+
           {/* User Profile Card */}
-          <div className="mb-8">
+          <div className="mb-6">
             <UserProfileCard />
+          </div>
+
+          {/* Action Required / Status Card */}
+          <div className="mb-6">
+            <ActionRequiredCard location={selectedLocation || location} role={selectedRole || role} />
           </div>
 
           {/* Location & Role Selection Area */}
           <div className="mb-8">
-            {/* Header with back button if showing roles */}
+            {/* Header */}
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {showRoleSelection ? (
-                  <span className="flex items-center gap-2">
-                    <button
-                      onClick={handleBackToLocations}
-                      className="p-1 hover:bg-gray-100 rounded-lg transition-colors dark:hover:bg-gray-800"
-                    >
-                      <ChevronLeft className="h-5 w-5 text-gray-500" />
-                    </button>
-                    <span>Select Role for <span className="text-blue-600">{selectedLocation?.name}</span></span>
-                  </span>
-                ) : (
-                  'Your Locations'
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  {showRoleSelection ? (
+                    <>
+                      <button
+                        onClick={handleBackToLocations}
+                        className="p-1 hover:bg-gray-100 rounded-lg transition-colors dark:hover:bg-gray-800"
+                      >
+                        <ChevronLeft className="h-5 w-5 text-gray-500" />
+                      </button>
+                      <span>Select Your Role for <span className="text-purple-600 dark:text-purple-400">{selectedLocation?.name}</span></span>
+                    </>
+                  ) : (
+                    <>
+                      <Building className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      Select Your Location
+                    </>
+                  )}
+                </h2>
+                {!showRoleSelection && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Choose a location to view available roles
+                  </p>
                 )}
-              </h2>
+              </div>
               {!showRoleSelection && (
-                <button 
-                  onClick={() => setShowRoleSelection(false)}
-                  className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
-                >
-                  {locations?.length || 0} Locations
-                </button>
+                <span className="text-xs text-gray-400 dark:text-gray-500">
+                  {locations?.length || 0} locations available
+                </span>
               )}
             </div>
 
-            {/* Location Cards - Minimized when role selection is shown */}
+            {/* Location Cards */}
             <div className={`grid gap-4 transition-all duration-300 ${
               showRoleSelection 
-                ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 opacity-50 scale-95' 
+                ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 opacity-50 scale-[0.98]' 
                 : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
             }`}>
               {locations?.slice(0, showRoleSelection ? 3 : 4).map((loc: Location) => {
@@ -546,12 +803,12 @@ export default function Landing() {
                     key={loc.id}
                     onClick={() => !showRoleSelection && handleSelectLocation(loc)}
                     className={`
-                      group relative overflow-hidden rounded-xl border p-4 text-left transition-all
+                      group relative overflow-hidden rounded-xl border p-4 text-left transition-all duration-300
                       ${isSelected && showRoleSelection 
                         ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 shadow-lg shadow-blue-500/20' 
                         : showRoleSelection
-                          ? 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/30 opacity-60'
-                          : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900/50 cursor-pointer'
+                          ? 'border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-800/30 opacity-60 cursor-default'
+                          : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-lg hover:-translate-y-0.5 dark:border-gray-800 dark:bg-gray-900/50 cursor-pointer'
                       }
                     `}
                   >
@@ -574,8 +831,11 @@ export default function Landing() {
                         <p className="font-medium text-gray-900 dark:text-white">
                           {loc.name}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {loc.city} • {roleCount} {roleCount === 1 ? 'role' : 'roles'}
+                        <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {loc.city}
+                          <span className="mx-1">•</span>
+                          {roleCount} {roleCount === 1 ? 'role' : 'roles'}
                         </p>
                       </div>
                       {isSelected && showRoleSelection && (
@@ -590,9 +850,24 @@ export default function Landing() {
               })}
             </div>
 
-            {/* Role Selection - Appears when location is selected */}
+            {/* Role Selection */}
             {showRoleSelection && selectedLocation && (
               <div className="mt-6 animate-slideDown">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <Shield className="inline h-4 w-4 mr-1.5 text-purple-500" />
+                    {locationRoles.length} {locationRoles.length === 1 ? 'role' : 'roles'} available for {selectedLocation.name}
+                  </p>
+                  {locationRoles.length === 0 && (
+                    <button
+                      onClick={handleBackToLocations}
+                      className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                    >
+                      ← Back to locations
+                    </button>
+                  )}
+                </div>
+
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   {locationRoles.length > 0 ? (
                     locationRoles.map((role: Role) => (
@@ -609,50 +884,67 @@ export default function Landing() {
                       <p className="text-gray-500 dark:text-gray-400">No roles available for this location</p>
                       <button
                         onClick={handleBackToLocations}
-                        className="mt-3 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                        className="mt-3 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 inline-flex items-center gap-1"
                       >
-                        ← Back to locations
+                        <ChevronLeft className="h-4 w-4" /> Back to locations
                       </button>
                     </div>
                   )}
                 </div>
 
-                {/* Quick action buttons */}
-                <div className="mt-4 flex justify-end gap-3">
-                  <button
-                    onClick={handleBackToLocations}
-                    className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-                  >
-                    ← Change Location
-                  </button>
-                </div>
+                {/* Permission Info */}
+                {selectedRole && (
+                  <div className="mt-4">
+                    <PermissionInfoCard role={selectedRole} location={selectedLocation} />
+                  </div>
+                )}
               </div>
             )}
           </div>
 
           {/* Quick Stats Grid */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 p-4 text-white shadow-lg shadow-blue-500/30">
-              <p className="text-sm opacity-90">Total Locations</p>
-              <p className="mt-1 text-2xl font-bold">
-                {locations?.length || 0}
-              </p>
-              <p className="mt-1 text-xs opacity-70">Across all regions</p>
+            <div className="rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 p-4 text-white shadow-lg shadow-blue-500/30 hover:shadow-xl transition-shadow">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm opacity-90">Total Locations</p>
+                  <p className="mt-1 text-2xl font-bold">
+                    {locations?.length || 0}
+                  </p>
+                  <p className="mt-1 text-xs opacity-70">Across all regions</p>
+                </div>
+                <Building className="h-8 w-8 opacity-30" />
+              </div>
             </div>
-            <div className="rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 p-4 text-white shadow-lg shadow-purple-500/30">
-              <p className="text-sm opacity-90">Total Roles</p>
-              <p className="mt-1 text-2xl font-bold">{totalRoles}</p>
-              <p className="mt-1 text-xs opacity-70">Across all locations</p>
+            <div className="rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 p-4 text-white shadow-lg shadow-purple-500/30 hover:shadow-xl transition-shadow">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm opacity-90">Total Roles</p>
+                  <p className="mt-1 text-2xl font-bold">{totalRoles}</p>
+                  <p className="mt-1 text-xs opacity-70">Across all locations</p>
+                </div>
+                <Shield className="h-8 w-8 opacity-30" />
+              </div>
             </div>
-            <div className="rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 p-4 text-white shadow-lg shadow-emerald-500/30">
-              <p className="text-sm opacity-90">Active Projects</p>
-              <p className="mt-1 text-2xl font-bold">45</p>
-              <p className="mt-1 text-xs opacity-70">80% completion rate</p>
+            <div className="rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 p-4 text-white shadow-lg shadow-emerald-500/30 hover:shadow-xl transition-shadow">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm opacity-90">Active Projects</p>
+                  <p className="mt-1 text-2xl font-bold">45</p>
+                  <p className="mt-1 text-xs opacity-70">80% completion rate</p>
+                </div>
+                <Activity className="h-8 w-8 opacity-30" />
+              </div>
             </div>
-            <div className="rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 p-4 text-white shadow-lg shadow-amber-500/30">
-              <p className="text-sm opacity-90">Departments</p>
-              <p className="mt-1 text-2xl font-bold">33</p>
-              <p className="mt-1 text-xs opacity-70">Across all locations</p>
+            <div className="rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 p-4 text-white shadow-lg shadow-amber-500/30 hover:shadow-xl transition-shadow">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm opacity-90">Departments</p>
+                  <p className="mt-1 text-2xl font-bold">33</p>
+                  <p className="mt-1 text-xs opacity-70">Across all locations</p>
+                </div>
+                <Users className="h-8 w-8 opacity-30" />
+              </div>
             </div>
           </div>
 
@@ -660,13 +952,16 @@ export default function Landing() {
           <div className="mt-8 rounded-2xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-8 text-white shadow-xl">
             <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
               <div>
-                <h3 className="text-xl font-bold">Ready to start working?</h3>
+                <h3 className="text-xl font-bold flex items-center gap-2">
+                  <Sparkles className="h-5 w-5" />
+                  Ready to get started?
+                </h3>
                 <p className="mt-1 text-white/80">
                   {selectedLocation && selectedRole 
-                    ? `Working as ${selectedRole.name} in ${selectedLocation.name}` 
+                    ? `✅ Working as ${selectedRole.name} in ${selectedLocation.name} — you have full access to your features`
                     : selectedLocation 
-                      ? `Select a role for ${selectedLocation.name} to continue`
-                      : 'Select a location to begin managing your procurement tasks'}
+                      ? `👆 Select a role for ${selectedLocation.name} to continue`
+                      : '📍 Select a location above to begin managing your operations'}
                 </p>
               </div>
               <button
@@ -677,20 +972,40 @@ export default function Landing() {
                     setShowRoleSelection(false);
                   }
                 }}
-                className="rounded-full bg-white px-6 py-2.5 font-medium text-blue-600 transition hover:shadow-lg hover:scale-105"
+                className="group rounded-full bg-white px-6 py-2.5 font-medium text-blue-600 transition hover:shadow-lg hover:scale-105 flex items-center gap-2"
               >
                 {selectedLocation && selectedRole 
                   ? 'Switch Location/Role' 
                   : selectedLocation 
                     ? 'Select Role' 
                     : 'Select Location'}
+                <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
               </button>
+            </div>
+          </div>
+
+          {/* Footer info */}
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+            <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-2">
+              <Lock className="h-3 w-3" />
+              Your permissions are based on your selected location and role
+            </p>
+            <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                Session active
+              </span>
+              <span className="h-3 w-px bg-gray-300 dark:bg-gray-600" />
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Add slide-down animation */}
+      {/* Styles */}
       <style>{`
         @keyframes slideDown {
           from {
@@ -704,6 +1019,18 @@ export default function Landing() {
         }
         .animate-slideDown {
           animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes bounceArrow {
+          0%, 100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-6px);
+          }
+        }
+        .animate-bounce-arrow {
+          animation: bounceArrow 1.5s ease-in-out infinite;
         }
       `}</style>
     </>
