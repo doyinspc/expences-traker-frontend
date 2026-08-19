@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import axios from 'axios';
-import { X, Loader2, Plus, AlertCircle } from 'lucide-react';
+import { X, Loader2, Plus, AlertCircle, Info, Calendar, ChevronDown } from 'lucide-react';
 import { API_PATH_SETTING, axiosConfig } from '../../actions/common';
 import { useSelector } from 'react-redux';
 import useReduxApiData from '../../hooks/useTanstackQuery';
@@ -26,13 +26,16 @@ const RequisitionItemForm = ({
     const [loadingItems, setLoadingItems] = useState(false);
     const [fetchError, setFetchError] = useState(null);
     const [touched, setTouched] = useState({});
+    const [showInfo, setShowInfo] = useState(true);
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const datePickerRef = useRef(null);
 
     // ==================== FORM DATA ====================
     const [formData, setFormData] = useState(() => ({
         requisition_id: requisitionId || 0,
         category_id: initialData?.category_id ?? null,
         item_id: initialData?.item_id ?? null,
-        expense_type: initialData?.expense_type ?? 0, // 0 for OPEX, 1 for CAPEX
+        is_type: initialData?.is_type ?? 0, // 0 for OPEX, 1 for CAPEX
         quantity: initialData?.quantity ?? null,
         unit_price: initialData?.unit_price ?? null,
         total_price: initialData?.total_price ?? null,
@@ -62,9 +65,17 @@ const RequisitionItemForm = ({
         let items = categories?.find(rw=>rw.id == formData?.category_id);
         return items?.children || [];
       }, [formData?.category_id, categories])
-      
 
-
+    // ==================== CLOSE DATE PICKER ON OUTSIDE CLICK ====================
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (datePickerRef.current && !datePickerRef.current.contains(event.target)) {
+                setShowDatePicker(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // ==================== FILTER ITEMS BY CATEGORY ====================
     useEffect(() => {
@@ -119,13 +130,13 @@ const RequisitionItemForm = ({
     const handleInputChange = (e) => {
         const { name, value, type } = e.target;
         
-        const allowedFields = ['quantity', 'unit_price', 'total_price', 'expense_type', 'delivery_required_by', 'special_instructions'];
+        const allowedFields = ['quantity', 'unit_price', 'total_price', 'is_type', 'delivery_required_by', 'special_instructions'];
         if (!allowedFields.includes(name) && name !== 'sku_id') {
             console.warn('Unknown field:', name);
             return;
         }
         
-        if (type === 'number' || name === 'expense_type') {
+        if (type === 'number' || name === 'is_type') {
             const numValue = value === '' ? null : Number(value);
             if (value !== '' && isNaN(numValue)) return;
             
@@ -141,6 +152,17 @@ const RequisitionItemForm = ({
         }
         
         setTouched(prev => ({ ...prev, [name]: true }));
+    };
+
+    // ==================== HANDLE DATE SELECT ====================
+    const handleDateSelect = (e) => {
+        const value = e.target.value;
+        setFormData(prev => ({
+            ...prev,
+            delivery_required_by: value,
+        }));
+        setTouched(prev => ({ ...prev, delivery_required_by: true }));
+        setShowDatePicker(false);
     };
 
     // ==================== CALCULATE TOTAL PRICE ====================
@@ -235,7 +257,7 @@ const RequisitionItemForm = ({
             requisition_id: requisitionId,
             category_id: formData.category_id,
             item_id: formData.item_id,
-            expense_type: formData.expense_type,
+            is_type: formData.is_type,
             quantity: formData.quantity,
             unit_price: formData.unit_price,
             total_price: formData.total_price ?? (formData.quantity ?? 0) * (formData.unit_price ?? 0),
@@ -257,6 +279,65 @@ const RequisitionItemForm = ({
     // ==================== RENDER ====================
     return (
         <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            
+            {/* ==================== INFO BAR ==================== */}
+            {showInfo && (
+                <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-3">
+                            <Info size={20} className="text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                            <div className="space-y-1.5">
+                                <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300">
+                                    How to Add Requisition Items
+                                </h4>
+                                <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
+                                    <li>
+                                        <span className="font-medium">Expense Type:</span> Select whether this is an OPEX (operational) or CAPEX (capital) expense
+                                    </li>
+                                    <li>
+                                        <span className="font-medium">Category &amp; Item:</span> First choose a category, then select the specific item from the filtered list
+                                    </li>
+                                    <li>
+                                        <span className="font-medium">Pricing:</span> Enter quantity and either unit price or total price (the other will auto-calculate)
+                                    </li>
+                                    <li>
+                                        <span className="font-medium">Delivery Date:</span> Use the calendar dropdown to select when the item is required
+                                    </li>
+                                    <li>
+                                        <span className="font-medium">Special Instructions:</span> Add any additional notes or requirements for this item
+                                    </li>
+                                </ul>
+                                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                    <span className="text-red-500">*</span> Fields marked with an asterisk are required
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setShowInfo(false)}
+                            className="flex-shrink-0 p-1 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-lg transition-colors"
+                            aria-label="Dismiss info"
+                        >
+                            <X size={16} className="text-blue-500 dark:text-blue-400" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Learn More / Show Info Button (when info is hidden) */}
+            {!showInfo && (
+                <div className="mb-4">
+                    <button
+                        type="button"
+                        onClick={() => setShowInfo(true)}
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1.5 transition-colors"
+                    >
+                        <Info size={14} />
+                        <span>Show help &amp; instructions</span>
+                    </button>
+                </div>
+            )}
+
             {/* Header */}
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -317,8 +398,8 @@ const RequisitionItemForm = ({
                         Expense Type <span className="text-red-500">*</span>
                     </label>
                     <select
-                        name="expense_type"
-                        value={formData.expense_type ?? 0}
+                        name="is_type"
+                        value={formData.is_type ?? 0}
                         onChange={handleInputChange}
                         onBlur={handleBlur}
                         disabled={isFormDisabled}
@@ -488,27 +569,60 @@ const RequisitionItemForm = ({
                     )}
                 </div>
 
-                {/* Delivery Required By */}
-                <div>
+                {/* Delivery Required By - Custom Calendar Dropdown */}
+                <div className="relative" ref={datePickerRef}>
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Delivery Required By
                     </label>
-                    <input
-                        type="date"
-                        name="delivery_required_by"
-                        value={formData.delivery_required_by ?? ''}
-                        onChange={handleInputChange}
-                        onBlur={handleBlur}
-                        disabled={isFormDisabled}
-                        data-error={!!errors.delivery_required_by}
-                        className={`w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-700 
-                            text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 
-                            focus:border-brand-500 transition-colors
-                            ${errors.delivery_required_by && touched.delivery_required_by 
-                                ? 'border-red-500' 
-                                : 'border-gray-300 dark:border-gray-600'}
-                            disabled:opacity-50 disabled:cursor-not-allowed`}
-                    />
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={() => setShowDatePicker(!showDatePicker)}
+                            disabled={isFormDisabled}
+                            className={`w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-700 
+                                text-gray-900 dark:text-white text-left
+                                focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors
+                                ${errors.delivery_required_by && touched.delivery_required_by 
+                                    ? 'border-red-500' 
+                                    : 'border-gray-300 dark:border-gray-600'}
+                                disabled:opacity-50 disabled:cursor-not-allowed
+                                flex items-center justify-between`}
+                        >
+                            <span className={formData.delivery_required_by ? '' : 'text-gray-400 dark:text-gray-500'}>
+                                {formData.delivery_required_by 
+                                    ? new Date(formData.delivery_required_by).toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric'
+                                      })
+                                    : 'Select date...'}
+                            </span>
+                            <Calendar size={18} className="text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                        </button>
+                        
+                        {showDatePicker && (
+                            <div className="absolute z-50 mt-1 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg w-full min-w-[280px]">
+                                <input
+                                    type="date"
+                                    value={formData.delivery_required_by ?? ''}
+                                    onChange={handleDateSelect}
+                                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 
+                                        rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                        focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
+                                />
+                                <div className="flex justify-end mt-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowDatePicker(false)}
+                                        className="px-3 py-1 text-xs text-gray-600 dark:text-gray-300 
+                                            hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     {errors.delivery_required_by && touched.delivery_required_by && (
                         <p className="mt-1 text-xs text-red-500">{errors.delivery_required_by}</p>
                     )}

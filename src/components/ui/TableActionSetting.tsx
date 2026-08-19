@@ -280,6 +280,26 @@ export const FullSettingAction = (props: TableActionSettingProps) => (
         showNext={false}
     />
 );
+export const NoDeleteNextSettingAction = (props: TableActionSettingProps) => (
+    <TableActionSetting 
+        {...props} 
+        showEdit={true}
+        showDelete={false}
+        showActivate={true}
+        showDeactivate={true}
+        showNext={false}
+    />
+);
+export const FullSettingActionNoDelete = (props: TableActionSettingProps) => (
+    <TableActionSetting 
+        {...props} 
+        showEdit={true}
+        showDelete={false}
+        showActivate={true}
+        showDeactivate={true}
+        showNext={true}
+    />
+);
 
 // Minimal setting actions (Edit only)
 export const MinimalSettingAction = (props: TableActionSettingProps) => (

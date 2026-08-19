@@ -70,6 +70,8 @@ import AuthorityDelegation from "./pages/Teams/AuthorityDelegation";
 import CompanyProfile from "./pages/Settings/CompanyProfile";
 import WorkFlowPage from "./pages/Settings/ApprovalWorkflows";
 import WorkFlowStepsPage from "./pages/Settings/ApprovalWorkflowSteps.tsx";
+import ExpensePage from "./pages/Settings/Expenses";
+import ExpenseItemsPage from "./pages/Settings/ExpenseItems.tsx";
 
 
 export default function App() {
@@ -141,6 +143,8 @@ export default function App() {
             <Route path="/setting/user" element={<UserDirectory />} />
             <Route path="/setting/workflow" element={<WorkFlowPage />} />
             <Route path="/setting/workflow/:page_id" element={<WorkFlowStepsPage />} />
+            <Route path="/setting/expense" element={<ExpensePage />} />
+            <Route path="/setting/expense/:page_id" element={<ExpenseItemsPage />} />
           </Route>
           <Route path="/admin" element={<AppLayoutAdmin />}>
           </Route>

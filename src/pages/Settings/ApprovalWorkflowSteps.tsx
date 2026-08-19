@@ -8,7 +8,7 @@ import PageBreadcrumb from "../../components/common/PageBreadCrumb.js";
 import Tables from '../../components/table/index.jsx';
 import Loader from '../../components/ui/Loader.js';
 import DynamicForm from "../../components/ui/DynamicForm.js";
-import { TableAction } from '../../components/ui/TableAction.js';
+import { EditDeleteSettingAction } from '../../components/ui/TableActionSetting.js';
 import { InfoPanel } from '../../components/ui/InfoPanel.js';
 import { FilterSection } from '../../components/ui/FilterSection.js';
 import { TabNavigation } from '../../components/ui/TabNavigation.js';
@@ -36,7 +36,6 @@ import {
     countActiveFilters 
 } from '../../utils/functions/dataHelpers.js';
 import { getTitleRow } from "../../utils/functions/basci.jsx";
-import { uniqueId } from "recharts/types/util/DataUtils.js";
 
 // ==================== CONSTANTS ====================
 const TABLE_NAME = "workflowsteps";
@@ -45,7 +44,7 @@ const PAGE_SIZE = 500;
 type TabType = 'table' | 'analysis';
 
 // ==================== COMPONENT ====================
-const IndexChild: React.FC = () => {
+const ApprovalWorkflowSteps: React.FC = () => {
     const nav = useNavigate();
     // const userx = useSelector((state: any) => state.userReducer);
     
@@ -238,7 +237,7 @@ const IndexChild: React.FC = () => {
     // ==================== COLUMNS ====================
     const columns = useMemo(() => {
         return columnBuilder(
-            { table_action: TableAction, table_data: tableData },
+            { table_action: EditDeleteSettingAction, table_data: tableData },
             { onNext, onView, onActivate, onEdit, onDelete }
         );
     }, [tableData, onNext, onView, onActivate, onEdit, onDelete]);
@@ -416,4 +415,4 @@ const IndexChild: React.FC = () => {
     );
 };
 
-export default IndexChild;
+export default ApprovalWorkflowSteps;

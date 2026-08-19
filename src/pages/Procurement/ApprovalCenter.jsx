@@ -13,10 +13,12 @@ import {
     History, UserCheck, ChevronDown,
     Info, BookOpen, Lightbulb, Shield,
     Play, HelpCircle,
-    BarChart
+    BarChart,
+    MonitorCheckIcon
 } from 'lucide-react';
 import useReduxApiData from "../../hooks/useTanstackQuery";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
+import { numberFunction } from "../../utils/functions/basci";
 
 // ==================== DOCUMENT TYPE CONFIG ====================
 const DOCUMENT_TYPE_CONFIG = {
@@ -405,9 +407,8 @@ const ApprovalCenter = () => {
                           item.document_data?.purchaseorder_title || 
                           item.document_data?.purpose || 
                           'Untitled',
-                doc_amount: item.document_data?.total_amount || 
-                           item.document_data?.grand_total || 
-                           item.document_data?.amount || 0,
+                doc_amount: item.document_data?.amount || 0,
+                doc_credit_amount: item.document_data?.credit_amount || 0,
                 doc_currency: currencyCode,
                 doc_department: item.document_data?.department_name,
                 doc_vendor: item.document_data?.vendor_name,
@@ -471,6 +472,7 @@ const ApprovalCenter = () => {
             title: item.doc_title || 'Untitled',
             number: item.doc_number || item.document_number || `#${item.document_id}`,
             amount: item.doc_amount || 0,
+            credit_amount: item.doc_credit_amount || 0,
             currency: item.doc_currency || 'NGN',
             Icon: item.doc_type_config?.icon || FileText,
             color: item.doc_type_config?.color || 'gray',
@@ -639,7 +641,8 @@ const ApprovalCenter = () => {
             color, 
             department, 
             requester, 
-            document_name 
+            document_name,
+            credit_amount 
         } = getDocumentDetails(item);
         
         const priorityName = item.priority_name || 'Normal';
@@ -706,9 +709,12 @@ const ApprovalCenter = () => {
                             <span className="truncate text-xs">{requester || 'N/A'}</span>
                         </div>
                         {amount > 0 && (
-                            <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                                <DollarSign className="w-3.5 h-3.5" />
-                                <span className="text-xs">{currency} {amount.toLocaleString()}</span>
+                            <div className="flex items-center gap-1 text-red-600 dark:text-red-400">
+                                <MonitorCheckIcon className="w-3.5 h-3.5" />
+                                <span className="text-xs">{currency} {numberFunction(amount)}</span>
+                                {credit_amount > 0 ? 
+                                <>/<span className="text-xs text-green-600 dark:text-green-400">{currency} {numberFunction(amount)}</span></>:
+                                null}
                             </div>
                         )}
                         <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">

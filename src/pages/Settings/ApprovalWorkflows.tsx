@@ -8,7 +8,7 @@ import PageBreadcrumb from "../../components/common/PageBreadCrumb.js";
 import Tables from '../../components/table/index.jsx';
 import Loader from '../../components/ui/Loader.js';
 import DynamicForm from "../../components/ui/DynamicForm.js";
-import { TableAction } from '../../components/ui/TableAction.js';
+import { FullSettingActionNoDelete } from '../../components/ui/TableActionSetting.js';
 import { InfoPanel } from '../../components/ui/InfoPanel.js';
 import { FilterSection } from '../../components/ui/FilterSection.js';
 import { TabNavigation } from '../../components/ui/TabNavigation.js';
@@ -38,17 +38,271 @@ import {
 } from '../../utils/functions/dataHelpers.js';
 import { REQUISITION_TYPE_OPTIONS } from "../../utils/constants/common.jsx";
 
+// ==================== ICON IMPORTS ====================
+import { 
+    BookOpen, 
+    ChevronDown, 
+    Shield, 
+    Layers, 
+    ListChecks,
+    Lightbulb, 
+    HelpCircle, 
+    Plus, 
+    Edit, 
+    Eye, 
+    Trash2,
+    FileText
+} from 'lucide-react';
+
 // ==================== CONSTANTS ====================
 const TABLE_NAME = "workflows";
 const TABLE_PATH = "workflow";
 const PAGE_SIZE = 500;
 type TabType = 'table' | 'analysis';
 
+// ==================== INFO PANEL COMPONENT ====================
+const WorkflowInfoPanel = ({ isExpanded, onToggle }) => {
+    if (!isExpanded) {
+        return (
+            <button
+                onClick={onToggle}
+                className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl border border-blue-200 dark:border-blue-800 hover:shadow-md transition-all group"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                        <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="text-left">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                            Understanding Workflows
+                        </h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                            Learn how approval workflows work, what defines them, and how steps are structured
+                        </p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-blue-600 dark:text-blue-400 font-medium group-hover:text-blue-700">
+                        Learn More
+                    </span>
+                    <ChevronDown className="w-4 h-4 text-blue-600 dark:text-blue-400 group-hover:translate-y-0.5 transition-transform" />
+                </div>
+            </button>
+        );
+    }
+
+    return (
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            <button
+                onClick={onToggle}
+                className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-b border-gray-200 dark:border-gray-700 hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 dark:hover:from-blue-900/30 dark:hover:to-purple-900/30 transition-colors"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                        <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="text-left">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                            Workflow Guide
+                        </h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                            Everything you need to know about creating and managing approval workflows
+                        </p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                        Hide Guide
+                    </span>
+                    <ChevronDown className="w-4 h-4 text-blue-600 dark:text-blue-400 rotate-180 transition-transform" />
+                </div>
+            </button>
+
+            <div className="p-6 space-y-6">
+                {/* What is a Workflow */}
+                <div>
+                    <div className="flex items-center gap-2 mb-2">
+                        <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                            What is an Approval Workflow?
+                        </h4>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 pl-7">
+                        An Approval Workflow defines the approval process for different document types. 
+                        It determines who needs to approve what, in what order, and under what conditions. 
+                        Workflows ensure that all documents go through the proper review process before 
+                        they can be executed.
+                    </p>
+                </div>
+
+                {/* Workflow Components */}
+                <div>
+                    <div className="flex items-center gap-2 mb-2">
+                        <Layers className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                            Workflow Components
+                        </h4>
+                    </div>
+                    <div className="pl-7 space-y-3">
+                        <div className="flex items-start gap-3">
+                            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-bold mt-0.5">1</span>
+                            <div>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Document Type</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    Specifies which document type this workflow applies to (Requisitions, Purchase Orders, Cash Advances, Budgets, Cash Transfers).
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-bold mt-0.5">2</span>
+                            <div>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Maximum Amount</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    The maximum amount this workflow can handle. Documents above this limit use a different workflow.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-bold mt-0.5">3</span>
+                            <div>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Workflow Steps</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    Sequential approval steps. Each step specifies a role, serial number, and required action.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* How Steps Work */}
+                <div>
+                    <div className="flex items-center gap-2 mb-2">
+                        <ListChecks className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                            How Steps Work
+                        </h4>
+                    </div>
+                    <div className="pl-7 space-y-2">
+                        <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                            <span className="text-blue-600 dark:text-blue-400 font-bold text-sm">→</span>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                <span className="font-medium">Serial Order:</span> Steps execute in order (Step 1 → Step 2 → Step 3...).
+                            </p>
+                        </div>
+                        <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                            <span className="text-green-600 dark:text-green-400 font-bold text-sm">→</span>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                <span className="font-medium">Role Assignment:</span> Each step is assigned to a specific role.
+                            </p>
+                        </div>
+                        <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                            <span className="text-yellow-600 dark:text-yellow-400 font-bold text-sm">→</span>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                <span className="font-medium">Actions:</span> Approve (✓), Reject (✗), or Review with comments.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* What You Can Do */}
+                <div>
+                    <div className="flex items-center gap-2 mb-2">
+                        <Lightbulb className="w-5 h-5 text-yellow-500 dark:text-yellow-400" />
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                            What You Can Do
+                        </h4>
+                    </div>
+                    <div className="pl-7 grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                            <Plus className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Create Workflows</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">Define new workflows for different document types.</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                            <Edit className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Manage Steps</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">Add, edit, or reorder steps in a workflow.</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-2 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                            <Eye className="w-4 h-4 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Review Workflows</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">View existing workflows and approval paths.</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                            <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Deactivate</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">Deactivate workflows no longer needed.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Tips */}
+                <div>
+                    <div className="flex items-center gap-2 mb-2">
+                        <HelpCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                            Pro Tips
+                        </h4>
+                    </div>
+                    <div className="pl-7 space-y-1">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
+                            <span className="text-blue-600 dark:text-blue-400">•</span>
+                            <span><span className="font-medium">Think about amount thresholds:</span> Create separate workflows for low, medium, and high value documents.</span>
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
+                            <span className="text-blue-600 dark:text-blue-400">•</span>
+                            <span><span className="font-medium">Plan your approval hierarchy:</span> Start with department heads, then finance, then executive management.</span>
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
+                            <span className="text-blue-600 dark:text-blue-400">•</span>
+                            <span><span className="font-medium">Keep steps clear:</span> Each step should have a clear purpose and responsible role.</span>
+                        </p>
+                    </div>
+                </div>
+
+                {/* Quick Reference */}
+                <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        Document Types & Typical Workflows
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center gap-1 p-2 bg-white dark:bg-gray-700/50 rounded">
+                            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                            <span className="text-gray-600 dark:text-gray-400">Requisitions → Dept Head → Finance → Director</span>
+                        </div>
+                        <div className="flex items-center gap-1 p-2 bg-white dark:bg-gray-700/50 rounded">
+                            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                            <span className="text-gray-600 dark:text-gray-400">Purchase Orders → Approver → Finance → Procurement</span>
+                        </div>
+                        <div className="flex items-center gap-1 p-2 bg-white dark:bg-gray-700/50 rounded">
+                            <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                            <span className="text-gray-600 dark:text-gray-400">Cash Advances → Supervisor → Finance → Director</span>
+                        </div>
+                        <div className="flex items-center gap-1 p-2 bg-white dark:bg-gray-700/50 rounded">
+                            <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                            <span className="text-gray-600 dark:text-gray-400">Budgets → Dept Head → Finance → CEO</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ==================== COMPONENT ====================
-const Expenses: React.FC = () => {
+const ApprovalWorkflows: React.FC = () => {
     const nav = useNavigate();
-    // const userx = useSelector((state: any) => state.userReducer);
-    
+    // ==================== STATE ====================
+    const [isInfoExpanded, setIsInfoExpanded] = useState(false);
 
     // ==================== CONFIGURATIONS ====================
     const tableMapping = useMemo(() => getTableMapping(TABLE_NAME), []);
@@ -62,8 +316,6 @@ const Expenses: React.FC = () => {
     const availableDimensions = useMemo(() => getAvailableDimensions(TABLE_NAME), []);
     const displayName = useMemo(() => getTableDisplayName(TABLE_NAME), []);
     const {grp} = tableMapping || {}
-    //const {locationid, user} = useSelector((state: any) => state.authReducer);
-
     const initialData = {grp}
 
     // ==================== STATE ====================
@@ -227,6 +479,22 @@ const Expenses: React.FC = () => {
         loadQuery(initialData);
         loadworkflowtypeData()
     }, []);
+
+    useEffect(() => {
+        if (analysisConfig) {
+            setAnalysisGroupBy(analysisConfig.defaultGroupBy || availableDimensions[0] || '');
+            setAnalysisMetric(analysisConfig.defaultMetric || availableMetrics[0] || '');
+        }
+    }, [analysisConfig, availableDimensions, availableMetrics]);
+
+    // ==================== COLUMNS ====================
+    const columns = useMemo(() => {
+        return columnBuilder(
+            { table_action: FullSettingActionNoDelete, table_data: tableData },
+            { onNext, onView, onActivate, onEdit, onDelete }
+        );
+    }, [tableData, onNext, onView, onActivate, onEdit, onDelete]);
+
     const formattedSelectRows = useMemo(() => {
             const safeData = (data: unknown): any[] => Array.isArray(data) ? data : [];
     
@@ -244,26 +512,19 @@ const Expenses: React.FC = () => {
         }, [workflowtypeData, REQUISITION_TYPE_OPTIONS]);
     
 
-    useEffect(() => {
-        if (analysisConfig) {
-            setAnalysisGroupBy(analysisConfig.defaultGroupBy || availableDimensions[0] || '');
-            setAnalysisMetric(analysisConfig.defaultMetric || availableMetrics[0] || '');
-        }
-    }, [analysisConfig, availableDimensions, availableMetrics]);
-
-    // ==================== COLUMNS ====================
-    const columns = useMemo(() => {
-        return columnBuilder(
-            { table_action: TableAction, table_data: tableData },
-            { onNext, onView, onActivate, onEdit, onDelete }
-        );
-    }, [tableData, onNext, onView, onActivate, onEdit, onDelete]);
-
     // ==================== RENDER ====================
     return (
         <>
             <PageBreadcrumb pageTitle={displayName} />
             
+            {/* Info Panel - Added at the top */}
+            <div className="mb-4">
+                <WorkflowInfoPanel 
+                    isExpanded={isInfoExpanded} 
+                    onToggle={() => setIsInfoExpanded(!isInfoExpanded)} 
+                />
+            </div>
+
             {/* Header */}
             <div className="flex items-center justify-end gap-2 mb-4">
                 {activeFilterCount > 0 && (
@@ -416,4 +677,4 @@ const Expenses: React.FC = () => {
     );
 };
 
-export default Expenses;
+export default ApprovalWorkflows;

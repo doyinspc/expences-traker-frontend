@@ -74,8 +74,8 @@ const workflowsteps = {
             label: 'Description',
             placeholder: '...',
             type: 'textarea',
+            showInTable: true,
             description: 'What this step requires',
-            showInTable: false,
         },
         item_id1: {
             label: 'Role',

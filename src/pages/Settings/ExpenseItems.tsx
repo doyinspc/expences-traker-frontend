@@ -8,7 +8,7 @@ import PageBreadcrumb from "../../components/common/PageBreadCrumb.js";
 import Tables from '../../components/table/index.jsx';
 import Loader from '../../components/ui/Loader.js';
 import DynamicForm from "../../components/ui/DynamicForm.js";
-import { TableAction } from '../../components/ui/TableAction.js';
+import { NoDeleteNextSettingAction} from '../../components/ui/TableActionSetting.js';
 import { InfoPanel } from '../../components/ui/InfoPanel.js';
 import { FilterSection } from '../../components/ui/FilterSection.js';
 import { TabNavigation } from '../../components/ui/TabNavigation.js';
@@ -229,7 +229,7 @@ const ExpensItems: React.FC = () => {
     // ==================== COLUMNS ====================
     const columns = useMemo(() => {
         return columnBuilder(
-            { table_action: TableAction, table_data: tableData },
+            { table_action: NoDeleteNextSettingAction, table_data: tableData },
             { onNext, onView, onActivate, onEdit, onDelete }
         );
     }, [tableData, onNext, onView, onActivate, onEdit, onDelete]);

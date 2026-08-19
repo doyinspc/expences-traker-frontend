@@ -50,7 +50,7 @@ const AppSidebar: React.FC = () => {
         icon: <Banknote size={24} strokeWidth={1.5} />,
         name: "Financial Settings",
         subItems: [
-          { name: "Expense Types", path: "/setting/page/5" },
+          { name: "Expense Types", path: "/setting/expense" },
           { name: "Currency", path: "/setting/page/6" },
           { name: "Accounts/Banks", path: "/setting/page/7" },
         ],
