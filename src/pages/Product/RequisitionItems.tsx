@@ -25,7 +25,8 @@ import {
 } from '../../utils/functions/dataHelpers';
 import RequisitionView from "./Components/ItemsTable.js";
 import { STATUS_OPTIONS } from "../../utils/constants/common.jsx";
-import { getTitleRow } from "../../utils/functions/basci.jsx";
+import { getTitleRow, numberFunction } from "../../utils/functions/basci.jsx";
+import Swal from "sweetalert2";
 
 // ==================== TABLE CONFIGURATION ====================
 const table_data = [
@@ -46,8 +47,8 @@ const table_data = [
     
     // Pricing
     {label: 'Quantity', name:'quantity', type:'number', showTable: true, editable:true, element:null},
-    {label: 'Unit Price', name:'unit_price', type:'number', showTable: true, editable:true, element:null},
-    {label: 'Total Price', name:'total_price', type:'number', showTable: true, editable:false, element:null},
+    {label: 'Unit Price', name:'unit_price', type:'number', showTable: true, editable:true, element:null, format:(e)=>numberFunction(e)},
+    {label: 'Total Price', name:'total_price', type:'number', showTable: true, editable:false, element:null, format:(e)=>numberFunction(e)},
     {label: 'SKU', name:'sku_id', type:'number', showTable: true, editable:false, element:null},
     
     // Delivery
@@ -140,7 +141,7 @@ const Requisitions: React.FC = () => {
     const { user, location_id } = useSelector((state: any) => state.authReducer);
      const {id:user_id} = user
     const parent_row = getTitleRow(1)
-    const {currency_name = 'NGN'} = parent_row || {}
+    const {currency_name = 'NGN', title} = parent_row || {}
 
     // ==================== STATE ====================
     const [page, setPage] = useState<number>(0);
@@ -162,10 +163,6 @@ const Requisitions: React.FC = () => {
         narration: 'get all purchase requisitions'
     });
 
-    
-   
-
-    
 
     // ==================== OPTION LABEL HELPERS ====================
     const getOptionLabel = useCallback((value: string, options: any[]) => {
@@ -187,8 +184,13 @@ const Requisitions: React.FC = () => {
     }, []);
 
     const onDelete = useCallback((row: any): void => {
-        if (window.confirm(`Are you sure you want to delete requisition ${row.pr_id || row.id}?`)) {
-            loadUpdate({ id: row.id, cat: 'delete' });
+        if (
+            window.confirm(`Are you sure you want to delete requisition ${row.pr_id || row.id}?`)
+        && row.approved == 0 && row.resolved == 0) 
+            {
+            loadUpdate({ id: row.id, act:3, cat: 'insert' });
+        }else{
+            Swal
         }
     }, [loadUpdate]);
 
@@ -666,7 +668,7 @@ const Requisitions: React.FC = () => {
     // ==================== RENDER ====================
     return (
         <>
-            <PageBreadcrumb pageTitle={displayName} />
+            <PageBreadcrumb pageTitle={`${displayName} : ${title}` } />
             
             {/* Header */}
             <div className="flex items-center justify-end gap-2 mb-4">

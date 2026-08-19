@@ -26,7 +26,7 @@ import {
 } from '../../../utils/functions/dataHelpers';
 import { REQUISITION_TYPE_OPTIONS} from "../../../utils/constants/common.jsx";
 import DisplayPageDetails from "./DisplayPageChild.js";
-import { moneyFunction, dateFunction, dateTimeFunction } from "../../../utils/functions/basci.jsx";
+import { moneyFunction, storeTitleRow } from "../../../utils/functions/basci.jsx";
 
 // ==================== PROPS INTERFACE ====================
 export interface RequisitionsPageProps {
@@ -327,11 +327,11 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
     }, [row]);
 
     const onNext = useCallback((row: any): void => {
+        storeTitleRow(row, 1)
         nav(`/procurement/${TABLE_PATH}/${row.id}`);
     }, [nav]);
 
     const onView = useCallback((row: any): void => {
-        console.log(row)
         setRow(row);
         setIsEdit(false);
         setPage(2);

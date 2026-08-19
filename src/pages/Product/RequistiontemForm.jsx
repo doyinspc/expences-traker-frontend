@@ -18,7 +18,8 @@ const RequisitionItemForm = ({
 }) => {
     
     const { tenantDb } = useSelector(state => state.auth);
-    const { budget_id } = parent_row || {};
+    const { budget_id, currency_name:currency } = parent_row || {};
+    console.log(parent_row)
 
     // ==================== STATE ====================
     const [category_id, setcategory_id] = useState([]);
@@ -544,7 +545,7 @@ const RequisitionItemForm = ({
                     </label>
                     <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
-                            $
+                            {currency}
                         </span>
                         <input
                             type="number"
