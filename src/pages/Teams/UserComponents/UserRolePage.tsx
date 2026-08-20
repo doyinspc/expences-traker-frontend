@@ -253,8 +253,8 @@ const Userroles: React.FC<UserrolesProps> = ({
         }
 
         return roleData.map((role: any) => ({
-            label: isAdmin ? role.name : role.itemname1,
-            value: isAdmin ? role.id : role.itemid1
+            label: role.name,
+            value: role.id
         }));
     }, [roleData, isAdmin]);
 

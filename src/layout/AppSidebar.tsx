@@ -1,35 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
+import { useDispatch } from "react-redux";
+import { authActions } from "./../actions/auth";
 
-// Imported icons from Lucide React
+// Imported icons from Lucide React - only used ones
 import {
   LayoutGrid,
-  ShoppingCart,
   FileText,
-  Package,
-  PieChart,
+  CheckSquare,
+  BarChart3,
   Settings,
   ChevronDown,
   MoreHorizontal,
   LogOut,
-  CheckSquare,
-  Wallet,
-  BarChart3,
-  Building2,
-  Truck,
-  Eye,
-  ClipboardCheck,
-  Activity,
-  Landmark,
-  TrendingUp,
-  TrendingDown,
-  Banknote,
-  Gauge,
-  Target,
-  GitBranch
 } from "lucide-react";
 
 import { useSidebar } from "../context/SidebarContext";
+
+const { logout } = authActions;
 
 type NavItem = {
   name: string;
@@ -48,20 +36,19 @@ const navItems: NavItem[] = [
     path: "/",
   },
   {
-  icon: <FileText size={24} strokeWidth={1.5} />,
-  name: "Requests & Documents",
-  subItems: [
-    { name: "Requisitions", path: "/procurement/requisition" },
-    { name: "Purchase Orders", path: "/procurement/purchaseorder" },
-    { name: "Advance Requests", path: "/procurement/cashadvance" },
-    { name: "Cash Transfers", path: "/procurement/cashtransfer" },
-    { name: "Income Collection", path: "/procurement/income" },
-    { name: "Stock", path: "/procurement/stock" },
-    { name: "Budget", path: "/procurement/budgets" },
-    { name: "Learn More", path: "/procurement/learnmore" },
-    
-  ],
-},
+    icon: <FileText size={24} strokeWidth={1.5} />,
+    name: "Requests & Documents",
+    subItems: [
+      { name: "Requisitions", path: "/procurement/requisition" },
+      { name: "Purchase Orders", path: "/procurement/purchaseorder" },
+      { name: "Advance Requests", path: "/procurement/cashadvance" },
+      { name: "Cash Transfers", path: "/procurement/cashtransfer" },
+      { name: "Income Collection", path: "/procurement/income" },
+      { name: "Stock", path: "/procurement/stock" },
+      { name: "Budget", path: "/procurement/budgets" },
+      { name: "Learn More", path: "/procurement/learnmore" },
+    ],
+  },
   {
     icon: <CheckSquare size={24} strokeWidth={1.5} />,
     name: "Approvals",
@@ -70,16 +57,6 @@ const navItems: NavItem[] = [
       { name: "All Approvals", path: "/procurement/controls" },
     ],
   },
-  // {
-  //   icon: <Package size={24} strokeWidth={1.5} />,
-  //   name: "Inventory",
-  //   subItems: [
-  //     { name: "Goods Received (GRN)", path: "/inventory/grn" },
-  //     { name: "Fixed Assets", path: "/inventory/fixed-assets" },
-  //     { name: "Stock Levels", path: "/inventory/stock" },
-  //     { name: "Allocations", path: "/inventory/allocations" },
-  //   ],
-  // },
   {
     icon: <BarChart3 size={24} strokeWidth={1.5} />,
     name: "Finance & Analytics",
@@ -87,10 +64,6 @@ const navItems: NavItem[] = [
       { name: "Expense vs Income", path: "/reports/expense-report" },
       { name: "Cash Flow", path: "/reports/cash-flow" },
       { name: "Budget Performance", path: "/reports/budget-performance" },
-      // { name: "CAPEX", path: "/reports/capex" },
-      // { name: "OPEX", path: "/reports/opex" },
-      // { name: "Budget vs Actual", path: "/reports/budget" },
-      // { name: "Accounts & Banks", path: "/reports/accounts" },
     ],
   },
 ];
@@ -117,6 +90,8 @@ const othersItems: NavItem[] = [
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const [openSubmenu, setOpenSubmenu] = useState<{
     type: "main" | "others";
@@ -180,6 +155,30 @@ const AppSidebar: React.FC = () => {
     });
   };
 
+  // ============================================
+  // HANDLE LOGOUT
+  // ============================================
+  const handleLogout = useCallback(() => {
+    // Dispatch logout action to clear Redux state
+    dispatch(logout());
+    
+    // Navigate to login page
+    navigate("/login");
+  }, [dispatch, navigate]);
+
+  // ============================================
+  // HANDLE ITEM CLICK (for logout and other links)
+  // ============================================
+  const handleItemClick = useCallback((nav: NavItem) => {
+    if (nav.path === "/logout") {
+      handleLogout();
+      return;
+    }
+    if (nav.path) {
+      navigate(nav.path);
+    }
+  }, [handleLogout, navigate]);
+
   const renderMenuItems = (items: NavItem[], menuType: "main" | "others") => (
     <ul className="flex flex-col gap-4">
       {items.map((nav, index) => (
@@ -223,27 +222,25 @@ const AppSidebar: React.FC = () => {
               )}
             </button>
           ) : (
-            nav.path && (
-              <Link
-                to={nav.path}
-                className={`menu-item group ${
-                  isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
+            <div
+              onClick={() => handleItemClick(nav)}
+              className={`menu-item group cursor-pointer ${
+                isActive(nav.path || "") ? "menu-item-active" : "menu-item-inactive"
+              }`}
+            >
+              <span
+                className={`menu-item-icon-size ${
+                  isActive(nav.path || "")
+                    ? "menu-item-icon-active"
+                    : "menu-item-icon-inactive"
                 }`}
               >
-                <span
-                  className={`menu-item-icon-size ${
-                    isActive(nav.path)
-                      ? "menu-item-icon-active"
-                      : "menu-item-icon-inactive"
-                  }`}
-                >
-                  {nav.icon}
-                </span>
-                {(isExpanded || isHovered || isMobileOpen) && (
-                  <span className="menu-item-text">{nav.name}</span>
-                )}
-              </Link>
-            )
+                {nav.icon}
+              </span>
+              {(isExpanded || isHovered || isMobileOpen) && (
+                <span className="menu-item-text">{nav.name}</span>
+              )}
+            </div>
           )}
           {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
             <div

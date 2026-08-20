@@ -14,6 +14,7 @@ import RequisitionViewWithDetails from './RequisitionComponents/RequistionViewWi
 import PurchaseOrderViewWithDetails from './PurchaseOrder/PurchaseOrderWithDetails';
 import StepsSidebar from '../../components/approvals/StepsSidebar';
 import ApprovalActions from '../../components/approvals/ApprovalActions';
+import DisplayPageChild from '../Product/Components/DisplayPageChild';
 
 function getStepContext(steps) {
   if (!Array.isArray(steps) || steps.length === 0) {
@@ -119,6 +120,7 @@ export default function ApprovalCenterDetails() {
     
     const canApprove = activeStep && 
                        activeStep.role_id === role_id &&
+                       parseInt(activeStep.assigned_to_user_id)  === 1 &&
                        workflowInstance.is_active === 1 &&
                        workflowInstance.is_completed === 0;
     
@@ -247,16 +249,19 @@ export default function ApprovalCenterDetails() {
 
                             {/* Document content */}
                             <div className="p-4">
-                                {requisition_type == 1 || requisition_type == 3 || requisition_type == 6 ? (
-                                    <RequisitionViewWithDetails 
-                                        requisition={document}
-                                        onClose={() => navigate('/approval')}
-                                        title={document_name}
-                                        showDeactivate={true}
-                                        statusData={statusData || []}
-                                        priorityData={priorityData || []}
+                                {requisition_type == 1 || requisition_type == 2 || requisition_type == 3 || requisition_type == 6 || requisition_type == 7  || requisition_type == 8 ? (
+                                <DisplayPageChild
+                                    document={document}
+                                    documentTypeId={requisition_type}
+                                    onClose={() => {}}
+                                    onDeactivate={()=>{}}
+                                    deactivateLoading={false}
+                                    title={document_name}
+                                    showDeactivate={true}
+                                    statusData={statusData || []}
+                                    priorityData={priorityData || []}
                                     />
-                                ) : requisition_type == 2 ? (
+                                ) : requisition_type == 4 ? (
                                     <PurchaseOrderViewWithDetails
                                         purchaseOrder={document}
                                         onClose={() => navigate('/approval')}
