@@ -70,21 +70,21 @@ const navItems: NavItem[] = [
       { name: "All Approvals", path: "/procurement/controls" },
     ],
   },
-  {
-    icon: <Package size={24} strokeWidth={1.5} />,
-    name: "Inventory",
-    subItems: [
-      { name: "Goods Received (GRN)", path: "/inventory/grn" },
-      { name: "Fixed Assets", path: "/inventory/fixed-assets" },
-      { name: "Stock Levels", path: "/inventory/stock" },
-      { name: "Allocations", path: "/inventory/allocations" },
-    ],
-  },
+  // {
+  //   icon: <Package size={24} strokeWidth={1.5} />,
+  //   name: "Inventory",
+  //   subItems: [
+  //     { name: "Goods Received (GRN)", path: "/inventory/grn" },
+  //     { name: "Fixed Assets", path: "/inventory/fixed-assets" },
+  //     { name: "Stock Levels", path: "/inventory/stock" },
+  //     { name: "Allocations", path: "/inventory/allocations" },
+  //   ],
+  // },
   {
     icon: <BarChart3 size={24} strokeWidth={1.5} />,
     name: "Finance & Analytics",
     subItems: [
-      { name: "Expense vs Asset", path: "/reports/expense-report" },
+      { name: "Expense vs Income", path: "/reports/expense-report" },
       { name: "Cash Flow", path: "/reports/cash-flow" },
       { name: "Budget Performance", path: "/reports/budget-performance" },
       // { name: "CAPEX", path: "/reports/capex" },

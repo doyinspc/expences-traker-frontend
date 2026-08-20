@@ -36,6 +36,7 @@ import {
     countActiveFilters 
 } from '../../utils/functions/dataHelpers.js';
 import { getTitleRow } from "../../utils/functions/basci.jsx";
+import { X } from "lucide-react";
 
 // ==================== CONSTANTS ====================
 const TABLE_NAME = "expenseitems";
@@ -79,6 +80,7 @@ const ExpensItems: React.FC = () => {
     const [showInfo, setShowInfo] = useState<boolean>(false);
     const [analysisGroupBy, setAnalysisGroupBy] = useState<string>('');
     const [analysisMetric, setAnalysisMetric] = useState<string>('');
+    const [showLearnMore, setShowLearnMore] = useState<boolean>(true);
     
     const isFirstRender = useRef(true);
 
@@ -214,6 +216,10 @@ const ExpensItems: React.FC = () => {
         nav(-1);
     }, [nav]);
 
+    const toggleLearnMore = useCallback((): void => {
+        setShowLearnMore(prev => !prev);
+    }, []);
+
     // ==================== DATA PROCESSING ====================
     const processedRows = useMemo(() => processRows(data as Array<any>, TABLE_NAME), [data]);
     const filteredRows = useMemo(() => 
@@ -308,7 +314,77 @@ const ExpensItems: React.FC = () => {
     return (
         <>
             <PageBreadcrumb pageTitle={displayName + `: ${parent_name || '-'}`} />
-            
+
+            {/* ==================== LEARN MORE INFO BAR ==================== */}
+            {showLearnMore && (
+                <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                                <InfoIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div className="space-y-1.5">
+                                <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                                    Managing Expense Items
+                                </h4>
+                                <p className="text-xs text-gray-600 dark:text-gray-300">
+                                    Expense items are the individual products or services that can be requested through requisitions, Cash Advance or can be a source of income or both. 
+                                    Each item can be configured with specific attributes that determine how it's categorized in the system.
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
+                                    <div className="flex items-start gap-1.5">
+                                        <span className="text-xs font-medium text-red-600 dark:text-red-400">Expense</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">- Marks this as an expense item (OPEX/CAPEX)</span>
+                                    </div>
+                                    <div className="flex items-start gap-1.5">
+                                        <span className="text-xs font-medium text-green-600 dark:text-green-400">Income</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">- Marks this as an income/revenue item</span>
+                                    </div>
+                                    <div className="flex items-start gap-1.5">
+                                        <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Good / Service</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">- Classifies as physical product or service</span>
+                                    </div>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                    <span className="flex items-center gap-1">
+                                        <span className="w-2 h-2 rounded-full bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800"></span>
+                                        Click <strong>Expense</strong> badge to toggle expense status
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                        <span className="w-2 h-2 rounded-full bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800"></span>
+                                        Click <strong>Income</strong> badge to toggle income status
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                        <span className="w-2 h-2 rounded-full bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800"></span>
+                                        Click <strong>Good/Service</strong> badge to cycle through classifications
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={toggleLearnMore}
+                            className="flex-shrink-0 p-1 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-lg transition-colors"
+                            aria-label="Dismiss info"
+                        >
+                            <X size={16} className="text-blue-500 dark:text-blue-400" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Show Learn More Button (when info is hidden) */}
+            {!showLearnMore && (
+                <button
+                    type="button"
+                    onClick={toggleLearnMore}
+                    className="mb-4 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1.5 transition-colors"
+                >
+                    <InfoIcon className="w-4 h-4" />
+                    <span>Learn More</span>
+                </button>
+            )}
+
             {/* Header */}
             <div className="flex items-center justify-end gap-2 mb-4">
                 {activeFilterCount > 0 && (
