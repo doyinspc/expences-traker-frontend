@@ -1,6 +1,6 @@
 ﻿// src/pages/Procurement/Requisitions.tsx
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { columnBuilder } from '../../actions/common.js';
@@ -8,7 +8,7 @@ import PageBreadcrumb from "../../components/common/PageBreadCrumb.js";
 import Tables from '../../components/table/index.jsx';
 import Loader from '../../components/ui/Loader.js';
 import DynamicForm from "../../components/ui/DynamicForm.js";
-import { ExpenseIncomeSettingAction } from '../../components/ui/TableActionSetting.js';
+import { FullSettingActionNoDelete } from '../../components/ui/TableActionSetting.js';
 import { InfoPanel } from '../../components/ui/InfoPanel.js';
 import { FilterSection } from '../../components/ui/FilterSection.js';
 import { TabNavigation } from '../../components/ui/TabNavigation.js';
@@ -26,6 +26,7 @@ import {
     getAvailableDimensions,
     getTableDisplayName
 } from '../../utils/functions/tableBuilder.js';
+import { storeTitleRow } from '../../utils/functions/basci.jsx';
 import { getTableMapping } from '../../config/tableMapping.js';
 import Swal from 'sweetalert2';
 
@@ -35,17 +36,18 @@ import {
     generateAnalysisData, 
     countActiveFilters 
 } from '../../utils/functions/dataHelpers.js';
-import { getTitleRow } from "../../utils/functions/basci.jsx";
 
 // ==================== CONSTANTS ====================
-const TABLE_NAME = "expenseitems";
-const TABLE_PATH = "expenseitem";
+const TABLE_NAME = "incomes";
+const TABLE_PATH = "income";
 const PAGE_SIZE = 500;
 type TabType = 'table' | 'analysis';
 
 // ==================== COMPONENT ====================
-const ExpensItems: React.FC = () => {
+const Expenses: React.FC = () => {
     const nav = useNavigate();
+    // const userx = useSelector((state: any) => state.userReducer);
+    
 
     // ==================== CONFIGURATIONS ====================
     const tableMapping = useMemo(() => getTableMapping(TABLE_NAME), []);
@@ -59,14 +61,9 @@ const ExpensItems: React.FC = () => {
     const availableDimensions = useMemo(() => getAvailableDimensions(TABLE_NAME), []);
     const displayName = useMemo(() => getTableDisplayName(TABLE_NAME), []);
     const {grp} = tableMapping || {}
+    //const {locationid, user} = useSelector((state: any) => state.authReducer);
 
-    const titleHeaders = getTitleRow(1)
-    const {id:parent_id, name:parent_name} = titleHeaders || {};
-    const initialData = useMemo(() => ({parent_id}), [parent_id]);
-    
-    if(!titleHeaders || Object.keys(titleHeaders).length === 0){
-        nav(-1)
-    }
+    const initialData = {grp}
 
     // ==================== STATE ====================
     const [page, setPage] = useState<number>(0);
@@ -79,17 +76,16 @@ const ExpensItems: React.FC = () => {
     const [showInfo, setShowInfo] = useState<boolean>(false);
     const [analysisGroupBy, setAnalysisGroupBy] = useState<string>('');
     const [analysisMetric, setAnalysisMetric] = useState<string>('');
-    
-    const isFirstRender = useRef(true);
 
     // ==================== API HOOKS ====================
     const { data, loadQuery, loadUpdate, deleteData, isLoading } = useReduxApiData({
         table: TABLE_NAME,
         pth: TABLE_PATH,
         queryType: 'gets',
-        mainParam: initialData,
-        narration: 'get all expense items',
+        mainParam: {grp},
+        narration: 'get all purchase requisitions'
     });
+    
 
     // ==================== HANDLERS ====================
     const onAdd = useCallback((): void => {
@@ -123,41 +119,17 @@ const ExpensItems: React.FC = () => {
                 );
             }
         });
-    }, [deleteData]);
+    }, []);
 
     const onActivate = useCallback((row: any): void => {
         const { id, is_active } = row;
         loadUpdate({ id, cat: 'insert', is_active: is_active === 0 ? 1 : 0 });
-    }, [loadUpdate]);
-
-    const onIncome = useCallback((row: any): void => {
-        const { id, text_3 } = row;
-        loadUpdate({ id, cat: 'insert', text_3: parseInt(text_3) === 0 ? 1 : 0 });
-    }, [loadUpdate]);
-
-    const onExpense = useCallback((row: any): void => {
-        const { id, text_2 } = row;
-        loadUpdate({ id, cat: 'insert', text_2: parseInt(text_2) === 0 ? 1 : 0 });
-    }, [loadUpdate]);
-
-    const onGoodOrService = useCallback((row: any): void => {
-        const { id, text_4 } = row;
-        let newValue = 0;
-        if (parseInt(text_4) === 0 || parseInt(text_4) === null || parseInt(text_4) === undefined) {
-            newValue = 1;
-        } else if (parseInt(text_4) === 1) {
-            newValue = 2;
-        } else if (parseInt(text_4) === 2) {
-            newValue = 3;
-        } else if (parseInt(text_4) === 3) {
-            newValue = 1;
-        }
-        loadUpdate({ id, cat: 'insert', text_4: newValue });
-    }, [loadUpdate]);
+    }, []);
 
     const onNext = useCallback((row: any): void => {
-        nav(`/procurement/requisition/${row.id}`);
-    }, [nav]);
+        storeTitleRow(row, 1);
+        nav(`/setting/expense/${row.id}`);
+    }, []);
 
     const onView = useCallback((row: any): void => {
         setRow(row);
@@ -167,15 +139,15 @@ const ExpensItems: React.FC = () => {
 
     const handleSave = useCallback((formData: any): void => {
         loadUpdate(formData);
-    }, [loadUpdate]);
+    }, []);
 
     const handleUpdate = useCallback((formData: any): void => {
         loadUpdate(formData);
-    }, [loadUpdate]);
+    }, []);
 
     const handleReload = useCallback((): void => {
         loadQuery(initialData);
-    }, [loadQuery, initialData]);
+    }, []);
 
     const handleFilterChange = useCallback((filterName: string, value: any): void => {
         setFilters(prev => ({ ...prev, [filterName]: value }));
@@ -201,19 +173,17 @@ const ExpensItems: React.FC = () => {
     const toggleInfo = useCallback((): void => {
         setShowInfo(prev => !prev);
     }, []);
-
     const reload = useCallback((): void => {
         loadQuery(initialData);
-    }, [loadQuery, initialData]);
-
+    }, []);
     const addData = useCallback((): void => {
-        onAdd();
-    }, [onAdd]);
-
+        onAdd()
+    }, []);
     const goBack = useCallback((): void => {
         nav(-1);
-    }, [nav]);
+    }, []);
 
+    
     // ==================== DATA PROCESSING ====================
     const processedRows = useMemo(() => processRows(data as Array<any>, TABLE_NAME), [data]);
     const filteredRows = useMemo(() => 
@@ -241,11 +211,8 @@ const ExpensItems: React.FC = () => {
 
     // ==================== EFFECTS ====================
     useEffect(() => {
-        if (isFirstRender.current) {
-            isFirstRender.current = false;
-            loadQuery(initialData);
-        }
-    }, [loadQuery, initialData]);
+        loadQuery(initialData);
+    }, []);
 
     useEffect(() => {
         if (analysisConfig) {
@@ -254,60 +221,18 @@ const ExpensItems: React.FC = () => {
         }
     }, [analysisConfig, availableDimensions, availableMetrics]);
 
-    // ==================== CUSTOM ACTION WRAPPER ====================
-    // This wrapper ensures all props are passed correctly to the action component
-    const ActionWrapper = useCallback((props: any) => {
-        const { row } = props;
-        return (
-            <ExpenseIncomeSettingAction
-                row={row}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onActivate={onActivate}
-                onIncome={onIncome}
-                onExpense={onExpense}
-                onGoodOrService={onGoodOrService}
-                onNext={onNext}
-                onView={onView}
-                showEdit={true}
-                showDelete={true}
-                showActivate={true}
-                showDeactivate={true}
-                showNext={false}
-                showExpense={true}
-                showIncome={true}
-                showGoodOrService={true}
-                size="md"
-                iconOnly={true}
-            />
-        );
-    }, [onEdit, onDelete, onActivate, onIncome, onExpense, onGoodOrService, onNext, onView]);
-
     // ==================== COLUMNS ====================
     const columns = useMemo(() => {
         return columnBuilder(
-            { 
-                table_action: ActionWrapper, 
-                table_data: tableData 
-            },
-            { 
-                // These are passed as fallbacks but the wrapper uses the direct handlers
-                onNext, 
-                onView, 
-                onActivate, 
-                onEdit, 
-                onDelete,
-                onIncome,
-                onExpense,
-                onGoodOrService
-            }
+            { table_action: FullSettingActionNoDelete, table_data: tableData },
+            { onNext, onView, onActivate, onEdit, onDelete }
         );
-    }, [tableData, ActionWrapper, onNext, onView, onActivate, onEdit, onDelete, onIncome, onExpense, onGoodOrService]);
+    }, [tableData, onNext, onView, onActivate, onEdit, onDelete]);
 
     // ==================== RENDER ====================
     return (
         <>
-            <PageBreadcrumb pageTitle={displayName + `: ${parent_name || '-'}`} />
+            <PageBreadcrumb pageTitle={displayName} />
             
             {/* Header */}
             <div className="flex items-center justify-end gap-2 mb-4">
@@ -427,7 +352,7 @@ const ExpensItems: React.FC = () => {
 
                                     {activeTab === 'analysis' && (
                                         <div className="mt-4">
-                                            <Analysis data={processedRows} analysisData={analysisData} />
+                                            <Analysis data={processedRows} analysisData ={analysisData} />
                                         </div>
                                     )}
                                 </>
@@ -438,7 +363,7 @@ const ExpensItems: React.FC = () => {
                                         title={isEdit ? `Edit ${displayName}` : `Create ${displayName}`}
                                         submitLabel={isEdit ? `Update ${displayName}` : `Create ${displayName}`}
                                         onSave={isEdit ? handleUpdate : handleSave}
-                                        initialData={isEdit ? row : initialData}
+                                        initialData={ isEdit ? row  : initialData }
                                         onCancel={() => setPage(0)}
                                         optionData={{}}
                                     />
@@ -461,4 +386,4 @@ const ExpensItems: React.FC = () => {
     );
 };
 
-export default ExpensItems;
+export default Expenses;

@@ -1,41 +1,42 @@
-// src/config/purchaseIncomes.js
-
-const incomes = {
-    frontendRoutes: ['/procurement/incomes'],
-    description: 'Record income recived or sales made withing this window.',
-    form: 'IncomeForm',
-    tableName: 'incomes',
-    displayName: 'Incomes',
+const cashadvances = {
+    frontendRoutes: ['/procurement/cashadvances'],
+    description: 'Manage employee cash advance requests for procurement and business-related expenses. This module handles the request, approval, and tracking of cash advances issued to employees for official purposes, including travel, purchases, and other business expenses.',
+    form: 'CashadvanceForm',
+    tableName: 'cashadvances',
+    displayName: 'Cash Advance Requests',
     icon: 'ShoppingCart',
     defaultSort: { field: 'created_at', direction: 'DESC' },
     defaultFilters: { status: 'pending_approval' },
+    
     analysisConfig: {
         enabled: true,
         defaultGroupBy: 'department_id',
         defaultMetric: 'total_amount',
         chartTypes: ['bar', 'pie', 'table', 'line', 'scatter'],
         availableMetrics: ['count', 'total_amount', 'avg_amount', 'pending_count', 'approved_count'],
-        availableDimensions: ['department_id', 'income_type', 'status', 'priority', 'created_at'],
+        availableDimensions: ['department_id', 'cashadvance_type', 'status', 'priority', 'created_at'],
     },
+    
     fields: {
         id: {
-            label: 'PR Number',
+            label: 'Cash Advance Reference',
             type: 'text',
             hidden: true,
             disabled: true,
-            description: 'Auto-generated purchase income number',
+            description: 'Auto-generated unique reference number for this cash advance request',
             showInTable: true,
             tableWidth: '120px',
             filterable: true,
             filterType: 'text',
             analyzable: false,
         },
+        
         title: {
-            label: 'Title',
-            placeholder: 'Office Supplies Purchase',
+            label: 'Request Title',
+            placeholder: 'e.g., Travel Advance for Lagos Trip, Office Supplies Purchase',
             type: 'text',
             required: true,
-            description: 'Brief title of the income',
+            description: 'A clear title describing the purpose of this cash advance request',
             showInTable: true,
             showInForm: true,
             tableWidth: '200px',
@@ -45,23 +46,24 @@ const incomes = {
             analysisType: 'group',
             analysisGroup: 'title',
         },
+        
         description: {
-            label: 'Description',
-            placeholder: 'Detailed description of income',
+            label: 'Request Description',
+            placeholder: 'Provide detailed information about why this cash advance is needed, including purpose, expected use, and any relevant details...',
             type: 'textarea',
-            description: 'Detailed description of the income',
+            description: 'Detailed description of the cash advance request, including purpose and justification',
             showInTable: false,
             showInForm: true,
             filterable: false,
             analyzable: false,
         },
+        
         budget_id: {
-            label: 'Budget',
+            label: 'Budget Source',
             placeholder: 'Select budget',
-            hidden:true,
             type: 'select',
             options: 'budgets',
-            description: 'Budget making the request',
+            description: 'Budget line item that this cash advance will be charged against',
             showInTable: false,
             showInForm: true,
             tableWidth: '150px',
@@ -73,27 +75,29 @@ const incomes = {
             analysisGroup: 'budget',
             nameField: 'budget_name',
         },
+        
         budget_name: {
             label: 'Budget Name',
             type: 'text',
-            hidden: false, // ✅ Changed from true to false
+            hidden: false,
             disabled: true,
             description: 'Budget name',
             showInTable: true,
-            showInForm: false, // ✅ Explicitly set to false
+            showInForm: false,
             filterable: true,
             filterType: 'text',
             analyzable: true,
             analysisType: 'group',
             analysisGroup: 'budget',
         },
+        
         requester_id: {
             label: 'Requester',
             placeholder: 'Select requester',
             type: 'select',
             hidden: true,
             options: 'users',
-            description: 'Employee requesting the purchase',
+            description: 'Employee requesting this cash advance',
             showInTable: false,
             showInForm: true,
             tableWidth: '150px',
@@ -105,14 +109,15 @@ const incomes = {
             analysisGroup: 'requester',
             nameField: 'requester_name',
         },
+        
         requester_name: {
             label: 'Requester Name',
             type: 'text',
-            hidden: false, // ✅ Changed from true to false
+            hidden: false,
             disabled: true,
-            description: 'Requester full name',
+            description: 'Full name of the employee requesting this cash advance',
             showInTable: true,
-            showInForm: false, // ✅ Explicitly set to false
+            showInForm: false,
             tableWidth: '150px',
             filterable: true,
             filterType: 'text',
@@ -120,13 +125,14 @@ const incomes = {
             analysisType: 'group',
             analysisGroup: 'requester',
         },
+        
         department_id: {
             label: 'Department',
             placeholder: 'Select department',
             type: 'select',
             required: true,
             options: 'departments',
-            description: 'Department making the request',
+            description: 'Department making this cash advance request',
             showInTable: false,
             showInForm: true,
             tableWidth: '150px',
@@ -138,26 +144,29 @@ const incomes = {
             analysisGroup: 'department',
             nameField: 'department_name',
         },
+        
         department_name: {
             label: 'Department Name',
             type: 'text',
-            hidden: false, // ✅ Changed from true to false
+            hidden: false,
             disabled: true,
             description: 'Department name',
             showInTable: true,
-            showInForm: false, // ✅ Explicitly set to false
+            showInForm: false,
             filterable: true,
             filterType: 'text',
             analyzable: true,
             analysisType: 'group',
             analysisGroup: 'department',
         },
+        
         vendor_id: {
-            label: 'Vendor',
+            label: 'Vendor (if applicable)',
             placeholder: 'Select vendor',
             type: 'select',
+            hidden: true,
             options: 'vendors',
-            description: 'Preferred vendor for this request',
+            description: 'Preferred vendor for this purchase (if cash advance is for vendor payment)',
             showInTable: false,
             showInForm: true,
             tableWidth: '150px',
@@ -169,27 +178,29 @@ const incomes = {
             analysisGroup: 'vendor',
             nameField: 'vendor_name',
         },
+        
         vendor_name: {
             label: 'Vendor Name',
             type: 'text',
-            hidden: false, // ✅ Changed from true to false
+            hidden: false,
             disabled: true,
             description: 'Vendor name',
-            showInTable: true,
-            showInForm: false, // ✅ Explicitly set to false
+            showInTable: false,
+            showInForm: false,
             filterable: true,
             filterType: 'text',
             analyzable: true,
             analysisType: 'group',
             analysisGroup: 'vendor',
         },
+        
         location_id: {
             label: 'Location',
             placeholder: 'Select location',
             type: 'select',
             hidden: true,
             options: 'locations',
-            description: 'Location where items will be delivered',
+            description: 'Location where the cash advance will be used or where expenses will be incurred',
             showInTable: false,
             showInForm: true,
             tableWidth: '150px',
@@ -201,55 +212,33 @@ const incomes = {
             analysisGroup: 'location',
             nameField: 'location_name',
         },
+        
         location_name: {
             label: 'Location Name',
             type: 'text',
-            hidden: false, // ✅ Changed from true to false
+            hidden: false,
             disabled: true,
             description: 'Location name',
             showInTable: true,
-            showInForm: false, // ✅ Explicitly set to false
+            showInForm: false,
             filterable: true,
             filterType: 'text',
             analyzable: true,
             analysisType: 'group',
             analysisGroup: 'location',
         },
-        requsition_type: {
-            label: 'Income Type',
-            placeholder: 'Select type',
-            type: 'select',
-            required: true,
-            hidden: true,
-            options: 'income_types',
-            description: 'Type of income ',
-            showInTable: true,
-            showInForm: true,
-            tableWidth: '140px',
-            filterable: true,
-            filterType: 'select',
-            filterOptions: 'income_types',
-            analyzable: true,
-            analysisType: 'group',
-            analysisGroup: 'type',
-        },
-        credit_amount: {
-            label: 'Total Amount',
+        
+        total_amount: {
+            label: 'Total Amount Requested',
             placeholder: '0.00',
             hidden: true,
             type: 'number',
-            description: 'Total estimated amount',
+            description: 'Total amount of cash advance being requested',
             showInTable: true,
             showInForm: true,
             tableWidth: '150px',
             tableAlign: 'right',
-            tableFormat: function(value) {
-                if (!value) return '$0.00';
-                return new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: 'USD',
-                }).format(value);
-            },
+           
             filterable: true,
             filterType: 'number',
             analyzable: true,
@@ -260,13 +249,14 @@ const incomes = {
                 message: 'Amount cannot be negative',
             },
         },
+        
         currency_id: {
             label: 'Currency',
             placeholder: 'USD',
             type: 'select',
             options: 'currencies',
             default: 'USD',
-            description: 'Currency for the transaction',
+            description: 'Currency for this cash advance transaction',
             showInTable: false,
             showInForm: true,
             filterable: true,
@@ -276,6 +266,7 @@ const incomes = {
             analysisType: 'group',
             analysisGroup: 'currency',
         },
+        
         currency_name: {
             label: 'Currency',
             placeholder: 'NGR',
@@ -283,7 +274,7 @@ const incomes = {
             type: 'select',
             options: 'currencies',
             default: 'NGR',
-            description: 'Currency for the transaction',
+            description: 'Currency for this cash advance transaction',
             showInTable: false,
             showInForm: false,
             filterable: true,
@@ -293,12 +284,13 @@ const incomes = {
             analysisType: 'group',
             analysisGroup: 'currency',
         },
+       
         priority: {
             label: 'Priority',
-            placeholder: 'Select priority',
+            placeholder: 'Select priority level',
             type: 'select',
             options: 'priorities',
-            description: 'Priority level of the request',
+            description: 'Priority level of this cash advance request (Low, Normal, High, Urgent)',
             showInTable: true,
             showInForm: true,
             tableWidth: '120px',
@@ -309,12 +301,13 @@ const incomes = {
             analysisType: 'group',
             analysisGroup: 'priority',
         },
+        
         priority_name: {
             label: 'Priority',
             placeholder: 'Select priority',
             type: 'select',
             options: 'priorities',
-            description: 'Priority level of the request',
+            description: 'Priority level of this cash advance request',
             showInTable: true,
             showInForm: false,
             tableWidth: '120px',
@@ -325,46 +318,49 @@ const incomes = {
             analysisType: 'group',
             analysisGroup: 'priority',
         },
+        
         status: {
             label: 'Status',
-            placeholder: 'draft',
+            placeholder: 'Select status',
             type: 'select',
-            options: 'requisition_status',
-            description: 'Current status of the requisition',
+            options: 'cashadvance_status',
+            description: 'Current status of this cash advance request',
             showInTable: true,
             showInForm: true,
             tableWidth: '150px',
             filterable: true,
             filterType: 'select',
-            filterOptions: 'requisition_status',
+            filterOptions: 'cashadvance_status',
             analyzable: true,
             analysisType: 'group',
             analysisGroup: 'status',
         },
+        
         status_name: {
             label: 'Status',
-            placeholder: 'draft',
+            placeholder: 'Select status',
             type: 'select',
-            options: 'income_status',
+            options: 'cashadvance_status',
             disabled: true,
-            description: 'Current status of the income',
+            description: 'Current status of this cash advance request',
             showInTable: true,
             showInForm: false,
             tableWidth: '150px',
             filterable: true,
             filterType: 'select',
-            filterOptions: 'income_status',
+            filterOptions: 'cashadvance_status',
             analyzable: true,
             analysisType: 'group',
             analysisGroup: 'status',
         },
+        
         approver_id: {
             label: 'Approver',
             placeholder: 'Select approver',
             hidden: true,
             type: 'select',
             options: 'users',
-            description: 'Person who approved this income',
+            description: 'Person who approved or will approve this cash advance',
             showInTable: false,
             showInForm: true,
             tableWidth: '150px',
@@ -376,14 +372,15 @@ const incomes = {
             analysisGroup: 'approver',
             nameField: 'approver_name',
         },
+        
         approver_name: {
             label: 'Approver Name',
             type: 'text',
-            hidden: false, // ✅ Changed from true to false
+            hidden: false,
             disabled: true,
-            description: 'Approver full name',
+            description: 'Full name of the person who approved this cash advance',
             showInTable: true,
-            showInForm: false, // ✅ Explicitly set to false
+            showInForm: false,
             tableWidth: '150px',
             filterable: true,
             filterType: 'text',
@@ -391,12 +388,13 @@ const incomes = {
             analysisType: 'group',
             analysisGroup: 'approver',
         },
+        
         approve_date: {
             label: 'Approval Date',
             type: 'datetime',
             hidden: true,
             disabled: true,
-            description: 'Date when the income was approved',
+            description: 'Date and time when this cash advance was approved',
             showInTable: true,
             showInForm: true,
             tableWidth: '150px',
@@ -406,13 +404,14 @@ const incomes = {
             analysisType: 'trend',
             analysisGroup: 'timeline',
         },
+        
         approval_workflow_id: {
             label: 'Approval Workflow',
-            placeholder: 'Select workflow',
-            hidden:true,
+            placeholder: 'Select approval workflow',
+            hidden: true,
             type: 'select',
             options: 'approval_workflows',
-            description: 'Approval workflow to follow',
+            description: 'The approval workflow assigned to this cash advance request',
             showInTable: false,
             showInForm: true,
             filterable: true,
@@ -421,24 +420,25 @@ const incomes = {
             analyzable: false,
             nameField: 'approval_workflow_name',
         },
+        
         approval_workflow_name: {
             label: 'Workflow Name',
             type: 'text',
-            hidden:true,
-            hidden: false, // ✅ Changed from true to false
+            hidden: false,
             disabled: true,
             description: 'Approval workflow name',
             showInTable: true,
-            showInForm: false, // ✅ Explicitly set to false
+            showInForm: false,
             filterable: false,
             analyzable: false,
         },
+        
         current_approval_level: {
             label: 'Current Approval Level',
             type: 'number',
             disabled: true,
             hidden: true,
-            description: 'Current step in approval workflow',
+            description: 'Current step in the approval workflow',
             showInTable: false,
             showInForm: true,
             filterable: true,
@@ -447,10 +447,11 @@ const incomes = {
             analysisType: 'avg',
             analysisGroup: 'approval',
         },
+        
         expected_delivery_date: {
-            label: 'Expected Delivery Date',
+            label: 'Expected Completion Date',
             type: 'date',
-            description: 'Expected delivery date',
+            description: 'Expected date when the cash advance will be utilized and settled',
             showInTable: true,
             showInForm: true,
             tableWidth: '150px',
@@ -465,9 +466,11 @@ const incomes = {
             analysisType: 'trend',
             analysisGroup: 'timeline',
         },
-         created_at: {
+        
+        created_at: {
             label: 'Created Date',
             type: 'date',
+            description: 'Date when this cash advance request was created',
             showInTable: true,
             showInForm: true,
             tableWidth: '150px',
@@ -477,13 +480,14 @@ const incomes = {
             analysisType: 'trend',
             analysisGroup: 'activity',
         },
+        
         created_by_id: {
             label: 'Created By',
             type: 'select',
             options: 'users',
             hidden: true,
             disabled: true,
-            description: 'User who created this record',
+            description: 'User who created this cash advance record',
             showInTable: false,
             showInForm: true,
             filterable: true,
@@ -494,25 +498,27 @@ const incomes = {
             analysisGroup: 'creator',
             nameField: 'created_by_name',
         },
+        
         created_by_name: {
             label: 'Created By',
             type: 'text',
-            hidden: false, // ✅ Changed from true to false
+            hidden: false,
             disabled: true,
-            description: 'Creator full name',
+            description: 'Full name of the person who created this record',
             showInTable: true,
-            showInForm: false, // ✅ Explicitly set to false
+            showInForm: false,
             filterable: true,
             filterType: 'text',
             analyzable: true,
             analysisType: 'group',
             analysisGroup: 'creator',
         },
+        
         notes: {
             label: 'Notes',
-            placeholder: 'Additional notes',
+            placeholder: 'Add any additional information, special instructions, or supporting details...',
             type: 'textarea',
-            description: 'Additional notes or comments',
+            description: 'Additional notes, special instructions, or supporting information for this cash advance request',
             showInTable: false,
             showInForm: true,
             filterable: false,
@@ -529,13 +535,14 @@ const incomes = {
             filterable: false,
             analyzable: false,
         },
+        
         updated_by_id: {
             label: 'Updated By',
             type: 'select',
             options: 'users',
             disabled: true,
             hidden: true,
-            description: 'User who last updated this record',
+            description: 'User who last updated this cash advance record',
             showInTable: false,
             showInForm: true,
             filterable: true,
@@ -546,14 +553,15 @@ const incomes = {
             analysisGroup: 'updater',
             nameField: 'updated_by_name',
         },
+        
         updated_by_name: {
             label: 'Updated By',
             type: 'text',
-            hidden: false, // ✅ Changed from true to false
+            hidden: false,
             disabled: true,
-            description: 'Updater full name',
+            description: 'Full name of the person who last updated this record',
             showInTable: true,
-            showInForm: false, // ✅ Explicitly set to false
+            showInForm: false,
             filterable: true,
             filterType: 'text',
             analyzable: true,
@@ -563,4 +571,4 @@ const incomes = {
     },
 };
 
-export default incomes;
+export default cashadvances;

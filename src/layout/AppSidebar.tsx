@@ -55,6 +55,8 @@ const navItems: NavItem[] = [
     { name: "Purchase Orders", path: "/procurement/purchaseorder" },
     { name: "Advance Requests", path: "/procurement/cashadvance" },
     { name: "Cash Transfers", path: "/procurement/cashtransfer" },
+    { name: "Income Collection", path: "/procurement/income" },
+    { name: "Stock", path: "/procurement/stock" },
     { name: "Budget", path: "/procurement/budgets" },
     { name: "Learn More", path: "/procurement/learnmore" },
     

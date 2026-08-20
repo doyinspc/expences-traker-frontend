@@ -35,12 +35,14 @@ import documentcategories from "./users/documentcategories";
 
 // Purchase requisitions imports
 import requisitions from "./purchase_requisitions/requisitions.js";
+import stocks from "./purchase_requisitions/stocks.js";
+import incomes from "./purchase_requisitions/incomes.js";
+import incomeitems from "./purchase_requisitions/incomeitems.js";
 import cashtransfers from "./purchase_requisitions/cashtransfers.js";
 import requisitionitems from "./purchase_requisitions/requisitionitems.js";
 import budgets from "./purchase_requisitions/budgets";
 import budgetitems from "./purchase_requisitions/budgetitems";
 import purchaseOrders from "./purchase_requisitions/purchaseorders.js";
-//import cashAdvances from "./purchase_requisitions/cashAdvances";
 import fixedAssets from "./purchase_requisitions/fixedAssets";
 import invoices from "./purchase_requisitions/invoices";
 import payments from "./purchase_requisitions/payments";
@@ -50,6 +52,7 @@ import grns from "./purchase_requisitions/grns";
 import skus from "./purchase_requisitions/skus";
 import chartOfAccounts from "./purchase_requisitions/chartOfAccounts";
 import adminAccounts from "./purchase_requisitions/adminAccounts";
+import cashadvances from "./purchase_requisitions/cashadvance.js";
 
 // ==================== TABLE MAPPING ====================
 
@@ -91,12 +94,15 @@ export const tableMapping = {
 
     // Purchase Requisitions
     cashtransfers,
+    cashadvances,
     requisitions,
     requisitionitems,
+    incomes,
+    incomeitems,
+    stocks,
     budgets,
     budgetitems,
     purchaseorders: purchaseOrders,
-    //cash_advances: cashAdvances,
     fixed_assets: fixedAssets,
     invoices,
     payments,

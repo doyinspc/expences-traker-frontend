@@ -36,10 +36,10 @@ const RequisitionItemForm = ({
         requisition_id: requisitionId || 0,
         category_id: initialData?.category_id ?? null,
         item_id: initialData?.item_id ?? null,
-        is_type: initialData?.is_type ?? 0, // 0 for OPEX, 1 for CAPEX
+        is_type: 2, // 0 for OPEX, 1 for CAPEX 2 INCOME
         quantity: initialData?.quantity ?? null,
         unit_price: initialData?.unit_price ?? null,
-        total_price: initialData?.total_price ?? null,
+        credit_price: initialData?.credit_price ?? null,
         delivery_required_by: initialData?.delivery_required_by ? new Date(initialData.delivery_required_by) : null,
         special_instructions: initialData?.special_instructions ?? '',
         sku_id: initialData?.sku_id ?? '',
@@ -56,8 +56,8 @@ const RequisitionItemForm = ({
       } = useReduxApiData({
         table: "expenses",
         pth: "expense",
-        queryType: 'getRowsWithChildrenStructuredExpense',
-        mainParam: { grp: 5, is_active: 1 },
+        queryType: 'getRowsWithChildrenStructuredIncome',
+        mainParam: { grp: 5, is_active: 1},
         narration: 'get all expenses categories and expenses items in a structured manner'
       });
 
@@ -120,7 +120,7 @@ const RequisitionItemForm = ({
     const handleInputChange = (e) => {
         const { name, value, type } = e.target;
         
-        const allowedFields = ['quantity', 'unit_price', 'total_price', 'is_type', 'special_instructions'];
+        const allowedFields = ['quantity', 'unit_price', 'credit_price', 'is_type', 'special_instructions'];
         if (!allowedFields.includes(name) && name !== 'sku_id') {
             console.warn('Unknown field:', name);
             return;
@@ -163,7 +163,7 @@ const RequisitionItemForm = ({
             const roundedTotal = Math.round(total * 100) / 100;
             setFormData(prev => ({
                 ...prev,
-                total_price: roundedTotal,
+                credit_price: roundedTotal,
             }));
         }
     }, [formData.quantity, formData.unit_price]);
@@ -188,16 +188,16 @@ const RequisitionItemForm = ({
             newErrors.item_id = 'Selected item is invalid';
         }
 
-        if (!formData.total_price && !formData.unit_price) {
-            newErrors.total_price = 'A Total Price or Unit Price is required';
+        if (!formData.credit_price && !formData.unit_price) {
+            newErrors.credit_price = 'A Total Price or Unit Price is required';
         }
 
         if (formData.unit_price !== null && formData.unit_price < 0) {
             newErrors.unit_price = 'Unit price cannot be negative';
         }
 
-        if (formData.total_price !== null && formData.total_price < 0) {
-            newErrors.total_price = 'Total price cannot be negative';
+        if (formData.credit_price !== null && formData.credit_price < 0) {
+            newErrors.credit_price = 'Total price cannot be negative';
         }
 
         if (formData.quantity !== null && formData.quantity !== undefined && formData.quantity < 0) {
@@ -247,7 +247,7 @@ const RequisitionItemForm = ({
             is_type: formData.is_type,
             quantity: formData.quantity,
             unit_price: formData.unit_price,
-            total_price: formData.total_price ?? (formData.quantity ?? 0) * (formData.unit_price ?? 0),
+            credit_price: formData.credit_price ?? (formData.quantity ?? 0) * (formData.unit_price ?? 0),
             delivery_required_by: formData.delivery_required_by,
             special_instructions: formData.special_instructions?.trim() ?? '',
             created_by_id: formData.created_by_id,
@@ -275,11 +275,11 @@ const RequisitionItemForm = ({
                             <Info size={20} className="text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                             <div className="space-y-1.5">
                                 <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300">
-                                    How to Add Requisition Items
+                                    How to Add Income
                                 </h4>
                                 <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
                                     <li>
-                                        <span className="font-medium">Expense Type:</span> Select whether this is an OPEX (operational) or CAPEX (capital) expense
+                                        <span className="font-medium">Income Type:</span> Select whether this is an OPEX (operational) or CAPEX (capital) expense
                                     </li>
                                     <li>
                                         <span className="font-medium">Category &amp; Item:</span> First choose a category, then select the specific item from the filtered list
@@ -288,7 +288,7 @@ const RequisitionItemForm = ({
                                         <span className="font-medium">Pricing:</span> Enter quantity and either unit price or total price (the other will auto-calculate)
                                     </li>
                                     <li>
-                                        <span className="font-medium">Delivery Date:</span> Use the calendar dropdown to select when the item is required
+                                        <span className="font-medium">Date:</span> Use the calendar dropdown to select when the item is paid
                                     </li>
                                     <li>
                                         <span className="font-medium">Special Instructions:</span> Add any additional notes or requirements for this item
@@ -380,7 +380,7 @@ const RequisitionItemForm = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 
                 {/* Expense Type */}
-                <div>
+                {/* <div>
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Expense Type <span className="text-red-500">*</span>
                     </label>
@@ -395,7 +395,7 @@ const RequisitionItemForm = ({
                         <option value={0}>OPEX</option>
                         <option value={1}>CAPEX</option>
                     </select>
-                </div>
+                </div> */}
 
                 {/* Category Select */}
                 <div>
@@ -535,24 +535,24 @@ const RequisitionItemForm = ({
                         </span>
                         <input
                             type="number"
-                            name="total_price"
-                            value={formData.total_price ?? ''}
+                            name="credit_price"
+                            value={formData.credit_price ?? ''}
                             onChange={handleInputChange}
                             onBlur={handleBlur}
                             placeholder="0.00"
                             min="0"
                             step="0.01"
                             disabled={isFormDisabled}
-                            data-error={!!errors.total_price}
+                            data-error={!!errors.credit_price}
                             className={`w-full pl-7 pr-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-700 
                                 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 
                                 focus:border-brand-500 transition-colors
-                                ${errors.total_price && touched.total_price ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'}
+                                ${errors.credit_price && touched.credit_price ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'}
                                 disabled:opacity-50 disabled:cursor-not-allowed`}
                         />
                     </div>
-                    {errors.total_price && touched.total_price && (
-                        <p className="mt-1 text-xs text-red-500">{errors.total_price}</p>
+                    {errors.credit_price && touched.credit_price && (
+                        <p className="mt-1 text-xs text-red-500">{errors.credit_price}</p>
                     )}
                 </div>
 

@@ -15,18 +15,20 @@ import Dashboard from "./pages/Dashboard/Dashboard.tsx";
 import Welcome from "./pages/Dashboard/Location";
 
 // Procurement
-// import Requisitions from "./pages/Procurement/Requisitions";
 import ApprovalCenter from "./pages/Procurement/ApprovalCenter.jsx";
 import ApprovalCenterDetails from "./pages/Procurement/ApprovalCenterDetails.jsx";
 import ControlCenter from "./pages/Procurement/ControlCenter.jsx";
-//import CashTransfer from "./pages/Procurement/CashTransfer.tsx";
 
 import Requisitions from "./pages/Product/Requisition";
 import RequisitionItems from "./pages/Product/RequisitionItems.tsx";
 import PurchaseOrders from "./pages/Product/PurchaseOrder";
 import PurchaseOrderRequisitions from "./pages/Product/PurchaseOrderRequisitions";
 import CashTransfer from "./pages/Product/CashTransfer.jsx";
-import CashTransferItems from "./pages/Product/CashTransItems.tsx";
+import CashTransferItems from "./pages/Product/CashTransferItems.tsx";
+import Incomes from "./pages/Product/Income.jsx";
+import IncomeItems from "./pages/Product/IncomeItems.tsx";
+import Stocks from "./pages/Product/Stock.jsx";
+import StockItems from "./pages/Product/StockItems.tsx";
 import CashAdvance from "./pages/Product/CashAdvance.jsx";
 import BudgetList from "./pages/Budgets/Budgets";
 import BudgetItems from "./pages/Budgets/BudgetItems.jsx";
@@ -72,6 +74,8 @@ import WorkFlowPage from "./pages/Settings/ApprovalWorkflows";
 import WorkFlowStepsPage from "./pages/Settings/ApprovalWorkflowSteps.tsx";
 import ExpensePage from "./pages/Settings/Expenses";
 import ExpenseItemsPage from "./pages/Settings/ExpenseItems.tsx";
+import IncomePage from "./pages/Settings/Incomes.tsx";
+import IncomeItemsPage from "./pages/Settings/IncomeItems.tsx";
 
 
 export default function App() {
@@ -91,6 +95,10 @@ export default function App() {
             <Route path="/procurement/cashadvance/:id" element={<RequisitionItems />} />
             <Route path="/procurement/requisition" element={<Requisitions />} />
             <Route path="/procurement/requisition/:id" element={<RequisitionItems />} />
+            <Route path="/procurement/income" element={<Incomes />} />
+            <Route path="/procurement/income/:id" element={<IncomeItems />} />
+            <Route path="/procurement/stock" element={<Stocks />} />
+            <Route path="/procurement/stock/:id" element={<StockItems />} />
             <Route path="/procurement/purchaseorder" element={<PurchaseOrders />} />
             <Route path="/procurement/purchaseorder/:id" element={<PurchaseOrderRequisitions />} />
             <Route path="/procurement/cashtransfer" element={<CashTransfer />} />
@@ -145,6 +153,8 @@ export default function App() {
             <Route path="/setting/workflow/:page_id" element={<WorkFlowStepsPage />} />
             <Route path="/setting/expense" element={<ExpensePage />} />
             <Route path="/setting/expense/:page_id" element={<ExpenseItemsPage />} />
+            <Route path="/setting/income" element={<IncomePage />} />
+            <Route path="/setting/income/:page_id" element={<IncomeItemsPage />} />
           </Route>
           <Route path="/admin" element={<AppLayoutAdmin />}>
           </Route>

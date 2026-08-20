@@ -265,7 +265,7 @@ export const valdateString = (str) =>{
 }
 
 export const columnBuilder = (page_data, actions) =>{
-  console.log(page_data)
+
   const {table_data, table_action} = page_data || {}
   const columnHelper = createColumnHelper()
   const snWidth = 20;

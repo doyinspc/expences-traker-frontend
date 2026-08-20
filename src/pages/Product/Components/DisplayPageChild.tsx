@@ -1,4 +1,4 @@
-// src/components/common/DisplayOageChild.tsx
+// src/components/common/DisplayPageChild.tsx
 
 import React, { useEffect, useState } from 'react';
 import { X, ArrowLeft, Power, Loader2, Send, AlertTriangle } from 'lucide-react';
@@ -106,7 +106,7 @@ export interface CommonData {
   [key: string]: any;
 }
 
-export interface DisplayOageChildProps {
+export interface DisplayPageChildProps {
   document: DocumentData;
   statusData?: CommonData[];
   priorityData?: CommonData[];
@@ -147,7 +147,7 @@ export interface DisplayOageChildProps {
 }
 
 // ==================== COMPONENT ====================
-const DisplayOageChild: React.FC<DisplayOageChildProps> = ({
+const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
   document,
   onClose,
   onDeactivate,
@@ -197,7 +197,17 @@ const DisplayOageChild: React.FC<DisplayOageChildProps> = ({
   // DATA FETCHING
   // ============================================
    const documentId = document?.id || 0;
-  const mainParam = documentTypeId == 2 ? { purchaseorder_id: document.id || 0} : { requisition_id: document.id || 0}
+   let mainParam:any = {};
+   if(documentTypeId == 2){
+     mainParam.purchaseorder_id = document.id || 0;
+   }
+   else if(documentTypeId == 8){
+     mainParam.sku_id = document.id || 0;
+   }
+   else{
+    mainParam.requisition_id = document.id || 0;
+   }
+
   const { data: documentItemsData, loadQuery, isLoading, loadUpdate } = useReduxApiData({
     table: 'requisitionitems',
     uniqueKey: itemsTableName,
@@ -848,4 +858,4 @@ const DisplayOageChild: React.FC<DisplayOageChildProps> = ({
   );
 };
 
-export default DisplayOageChild;
+export default DisplayPageChild;

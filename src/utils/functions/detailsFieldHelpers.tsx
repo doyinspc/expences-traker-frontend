@@ -112,7 +112,7 @@ export const buildLeftFields = (helpers: DetailFieldsHelpers): DetailField[] => 
       chipColor: getPriorityColorFromData(document.priority) 
     },
     { key: 'document_type', label: 'Type', value: safeValue(getDocumentTypeValue()) },
-    { key: 'is_capex', label: 'Is CAPEX?', value: safeValue(formatBoolean(document.is_capex)) },
+    { key: 'notes', label: 'Note', value: safeValue(safeValue(document.notes)) },
   ];
 };
 
@@ -139,7 +139,6 @@ export const buildRightFields = (helpers: DetailFieldsHelpers): DetailField[] =>
     { key: 'approval_workflow_name', label: 'Workflow', value: safeValue(getWorkflowName()) },
     { key: 'current_approval_level', label: 'Current Level', value: safeValue(document.current_approval_level) },
     { key: 'expected_delivery_date', label: 'Expected Delivery', value: formatDate(document.expected_delivery_date) },
-    { key: 'notes', label: 'Notes', value: safeValue(document.notes) },
     { key: 'created_by_name', label: 'Created By', value: safeValue(document.created_by_name) },
     { key: 'created_at', label: 'Created Date', value: formatDate(document.created_at) },
     { key: 'updated_by_name', label: 'Updated By', value: safeValue(document.updated_by_name) },

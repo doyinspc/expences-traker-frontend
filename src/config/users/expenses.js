@@ -1,12 +1,13 @@
 // src/config/expenses/expenses.ts
+
 const expenses = {
     frontendRoutes: ['/teams/expenses', '/finance/budgets'],
-    description: 'Organizational expenses with budgets',
+    description: 'Manage expense and income categories used across the organization for financial planning, budgeting, and procurement. Each category can be customized with specific items that define whether they represent expenses, income, or both, and whether they are goods or services.',
     form: 'ExpenseForm',
     tableName: 'commons',
-    groupid:5,
-    grp:5,
-    displayName: 'Expenses',
+    groupid: 5,
+    grp: 5,
+    displayName: 'Expense & Income Categories',
     icon: 'Building2',
     defaultSort: { field: 'name', direction: 'ASC' },
     defaultFilters: { is_active: true },
@@ -28,7 +29,7 @@ const expenses = {
             analyzable: false,
         },
         grp: {
-            label: 'grp',
+            label: 'Group',
             type: 'number',
             hidden: true,
             showInTable: false,
@@ -36,11 +37,11 @@ const expenses = {
             analyzable: false,
         },
         code: {
-            label: 'Expense Code',
-            placeholder: 'FIN-001',
+            label: 'Category Code',
+            placeholder: 'e.g., EXP-001, INC-001, OPS-002',
             type: 'text',
             required: true,
-            description: 'Unique expense identifier code',
+            description: 'Unique identifier code for this expense or income category',
             showInTable: true,
             tableWidth: '120px',
             filterable: true,
@@ -48,11 +49,11 @@ const expenses = {
             analyzable: false,
         },
         name: {
-            label: 'Expense Name',
-            placeholder: 'Finance Expense',
+            label: 'Category Name',
+            placeholder: 'e.g., Office Supplies, IT Equipment, Service Revenue',
             type: 'text',
             required: true,
-            description: 'Full expense name',
+            description: 'Full name of the expense or income category',
             showInTable: true,
             tableWidth: '180px',
             filterable: true,
@@ -61,14 +62,14 @@ const expenses = {
             analysisType: 'group',
             analysisGroup: 'expense',
         },
-         comment1: {
-            label: 'Expense Description',
-            placeholder: '...',
+        comment1: {
+            label: 'Category Description',
+            placeholder: 'Describe the purpose and scope of this category...',
             type: 'textarea',
             required: true,
-            description: 'Explain the expense, its purpose etc',
+            description: 'Detailed description explaining what this category covers and its purpose',
             showInTable: true,
-            tableWidth: '180px',
+            tableWidth: '250px',
             filterable: true,
             filterType: 'text',
             analyzable: true,
@@ -80,7 +81,7 @@ const expenses = {
             hidden: true,
             type: 'toggle',
             default: true,
-            description: 'Whether the expense is active',
+            description: 'Whether this category is currently active and available for use',
             showInTable: true,
             tableWidth: '80px',
             tableFormat: (value) => value ? '✅' : '❌',
@@ -111,4 +112,5 @@ const expenses = {
         },
     },
 };
+
 export default expenses;

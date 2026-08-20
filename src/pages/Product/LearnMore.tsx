@@ -8,25 +8,12 @@ import {
   RefreshCw, 
   Briefcase,
   CheckCircle,
-  Clock,
-  AlertCircle,
-  ArrowRight,
   Play,
   BookOpen,
   Lightbulb,
   Shield,
-  Users,
-  Eye,
-  Settings,
   Printer,
-  Download,
   Mail,
-  Calendar,
-  Layers,
-  Link,
-  CheckSquare,
-  AlertTriangle,
-  Info,
   ChevronDown,
   ChevronRight,
   ExternalLink,
@@ -37,18 +24,10 @@ import {
   Edit,
   Trash2,
   Send,
-  FileCheck,
-  Package,
-  Building,
-  User,
-  Globe,
-  MapPin,
-  CreditCard,
-  Wallet,
-  TrendingUp,
-  BarChart,
   Compass,
-  HelpCircle
+  HelpCircle,
+  Package,
+  TrendingUp
 } from 'lucide-react';
 import PageMeta from '../../components/common/PageMeta';
 
@@ -259,7 +238,7 @@ export default function LearningPage() {
         'Add multiple items with quantities and estimated prices',
         'Submit for approval when complete',
         'Can be for exams, events, office supplies, or any need',
-        'Approved requisitions can be converted to Purchase Orders'
+        'Approved requisitions are routed to Stock or Purchase Order based on availability'
       ],
       steps: [
         {
@@ -292,42 +271,99 @@ export default function LearningPage() {
             'Submission is final and cannot be edited',
             'You will receive notifications on approval status'
           ]
+        },
+        {
+          id: 4,
+          title: 'Requisition Fulfillment - Stock or Purchase Order',
+          description: 'After approval, the system checks item availability. Items available in stock are processed through Stock Requisition, while items not in stock go to Purchase Order.',
+          tips: [
+            'Items in stock: Processed via Stock Requisition for immediate issuance',
+            'Items out of stock: Processed via Purchase Order for procurement',
+            'The system automatically routes items to the correct fulfillment method'
+          ]
+        }
+      ]
+    },
+    {
+      id: 'stock',
+      title: 'Stock Requisition (Store/Warehouse Issuance)',
+      description: 'Process items that are available in the store or warehouse. This module handles the picking, packing, and issuance of items from existing stock to fulfill approved requisitions.',
+      icon: <Package className="h-6 w-6" />,
+      color: 'from-teal-500 to-teal-600',
+      keyPoints: [
+        'Created from approved requisitions',
+        'Items available in stock are issued from the store',
+        'Staff can pick items from the warehouse',
+        'Inventory is updated automatically',
+        'Items not available in stock will be sent to Purchase Order processing'
+      ],
+      steps: [
+        {
+          id: 1,
+          title: 'Select Approved Requisition',
+          description: 'Choose the approved requisition that needs to be fulfilled from stock. This shows all items and quantities requested.',
+          tips: [
+            'Check that the requisition has been fully approved',
+            'Verify that all items are available in stock',
+            'Items marked as "not in stock" will be routed to Purchase Order'
+          ]
+        },
+        {
+          id: 2,
+          title: 'Create Stock Requisition',
+          description: 'The system creates a stock requisition order for items available in the warehouse. This authorizes store staff to pick and issue the items.',
+          tips: [
+            'The stock requisition number is auto-generated',
+            'Specify the store/warehouse location',
+            'Add any special instructions for picking or delivery'
+          ]
+        },
+        {
+          id: 3,
+          title: 'Pick and Issue Items',
+          description: 'Store staff pick the items from the warehouse and issue them to the requesting department. Inventory is updated in real-time.',
+          tips: [
+            'Verify items and quantities before issuing',
+            'Check for any damaged or expired items',
+            'Update stock levels after issuance',
+            'Items that are out of stock will trigger Purchase Order creation'
+          ]
         }
       ]
     },
     {
       id: 'purchase_order',
       title: 'Purchase Orders',
-      description: 'Official order document created from approved requisitions. This authorizes the purchase and can be given to a vendor or staff member to procure items.',
+      description: 'Official order document created from approved requisitions for items not available in stock. This authorizes the purchase and can be given to a vendor or staff member to procure items from the market.',
       icon: <ShoppingCart className="h-6 w-6" />,
       color: 'from-purple-500 to-purple-600',
       keyPoints: [
-        'Created from approved requisitions',
+        'Created from approved requisitions for items NOT in stock',
         'Multiple requisition items can be combined',
-        'Can be issued to external vendors or staff',
-        'Staff can use this to purchase items from the market',
-        'Authorizes the procurement of goods/services'
+        'Can be issued to external vendors or staff (market purchases)',
+        'Staff can use this to purchase items from local markets',
+        'Items that are in stock are processed via Stock Requisition'
       ],
       steps: [
         {
           id: 1,
           title: 'Select Approved Requisitions',
-          description: 'Choose approved requisitions to convert into a purchase order. You can combine multiple requisitions into one PO for efficiency.',
+          description: 'Choose approved requisitions where items are not available in stock. These need to be procured from external sources.',
           tips: [
-            'Group requisitions from the same department',
-            'Consider consolidating for the same purpose',
-            'Check total amounts before proceeding'
+            'Group requisitions from the same department or purpose',
+            'Items from multiple requisitions can be combined into one PO',
+            'Check that total amounts are within budget'
           ]
         },
         {
           id: 2,
           title: 'Create Purchase Order',
-          description: 'The system combines items from selected requisitions into a single purchase order. Specify who will procure the items - can be a vendor or a staff member.',
+          description: 'The system combines items from selected requisitions into a single purchase order. Specify who will procure the items - can be a vendor or a staff member going to the market.',
           tips: [
-            'Select the appropriate procurement method',
+            'Select the appropriate procurement method (vendor or staff)',
             'If a staff member is procuring, add them as the "vendor"',
-            'Set expected delivery dates',
-            'Add any special instructions'
+            'Set expected delivery or procurement dates',
+            'Add any special instructions for the procurement'
           ]
         },
         {
@@ -338,7 +374,56 @@ export default function LearningPage() {
             'Ensure all items are correct before submitting',
             'Check if the total amount is within budget',
             'Track the PO number for reference',
-            'Approved POs can be issued to vendors or staff'
+            'Approved POs can be issued to vendors or staff for market purchases'
+          ]
+        }
+      ]
+    },
+    {
+      id: 'income',
+      title: 'Income & Sales Revenue',
+      description: 'Record and manage all income and sales revenue generated from procurement activities, including sales of goods, services, and other revenue streams.',
+      icon: <TrendingUp className="h-6 w-6" />,
+      color: 'from-emerald-500 to-emerald-600',
+      keyPoints: [
+        'Record income from sales of goods or services',
+        'Track revenue from procurement activities',
+        'Monitor financial performance across departments',
+        'Supports periodic income recording (weekly, monthly, quarterly)',
+        'Used for income reconciliation and reporting'
+      ],
+      steps: [
+        {
+          id: 1,
+          title: 'Create Income Record',
+          description: 'Fill in the income details including title, type, amount, and period. This describes the income source and amount received.',
+          tips: [
+            'Use clear titles like "Q1 2024 Sales Revenue"',
+            'Select the correct income type (Product Sales, Service, etc.)',
+            'Specify the income period (start and end dates)',
+            'Provide details about the customer or transaction'
+          ]
+        },
+        {
+          id: 2,
+          title: 'Add Supporting Details',
+          description: 'Add customer information, invoice numbers, payment method, and any supporting documentation for the income.',
+          tips: [
+            'Enter the customer or client name',
+            'Include invoice or receipt numbers for reference',
+            'Select the payment method used',
+            'Attach supporting documents like receipts or bank confirmations'
+          ]
+        },
+        {
+          id: 3,
+          title: 'Submit for Approval',
+          description: 'Submit the income record for approval. Approvers will review the income details and verify the accuracy of the recorded revenue.',
+          tips: [
+            'Ensure the amount is accurate and supported by documentation',
+            'Verify the department and location are correct',
+            'Keep the income reference for reconciliation purposes',
+            'Approved records can be used for financial reporting'
           ]
         }
       ]
@@ -346,7 +431,7 @@ export default function LearningPage() {
     {
       id: 'cash_advance',
       title: 'Cash Advance',
-      description: 'Request for cash advances for business expenses, events, or market purchases where card/transfer is not possible.',
+      description: 'Request for cash advances for business expenses, events, or market purchases where card or transfer is not possible.',
       icon: <DollarSign className="h-6 w-6" />,
       color: 'from-green-500 to-green-600',
       keyPoints: [
@@ -489,11 +574,23 @@ export default function LearningPage() {
   const faqs: FAQ[] = [
     {
       question: 'What is the difference between a Requisition and a Purchase Order?',
-      answer: 'A Requisition is an internal request for goods or services made by a department. A Purchase Order is the official authorization to procure the items. It can be given to an external vendor OR a staff member who will go to the market to purchase the items. Purchase Orders are created from approved requisitions.'
+      answer: 'A Requisition is an internal request for goods or services made by a department. A Purchase Order is the official authorization to procure the items from external sources. Purchase Orders are created from approved requisitions when items are NOT available in stock.'
+    },
+    {
+      question: 'What is the difference between Stock Requisition and Purchase Order?',
+      answer: 'A Stock Requisition is used when items are available in the store/warehouse and need to be issued from existing stock. A Purchase Order is used when items are NOT available in stock and need to be procured from external vendors or through staff market purchases. Both originate from approved requisitions.'
+    },
+    {
+      question: 'How does the system decide between Stock and Purchase Order?',
+      answer: 'After a requisition is approved, the system checks each item\'s availability in stock. Items with available stock are routed to Stock Requisition for issuance from the warehouse. Items with insufficient or zero stock are routed to Purchase Order for procurement from external sources. This ensures efficient use of existing inventory while procuring what\'s needed.'
     },
     {
       question: 'Can a staff member be the "vendor" for a Purchase Order?',
       answer: 'Yes! When a staff member is tasked with going to the market or a specific store to purchase items, they can be designated as the vendor on the Purchase Order. This is common for items that need to be procured locally or where a formal vendor relationship does not exist.'
+    },
+    {
+      question: 'What is Income & Sales Revenue used for?',
+      answer: 'The Income module is used to record all income and sales revenue generated from procurement activities. This includes sales of goods, services rendered, and other revenue streams. It helps track financial performance and monitor revenue collection across departments and locations.'
     },
     {
       question: 'How do I know when my document has been approved?',
@@ -506,10 +603,6 @@ export default function LearningPage() {
     {
       question: 'What happens if my requisition is rejected?',
       answer: 'If a requisition is rejected, you will receive feedback from the approver on why it was rejected. You can then make the necessary changes and resubmit it for approval. The rejection reason is recorded in the audit trail.'
-    },
-    {
-      question: 'How do I combine multiple requisitions into one Purchase Order?',
-      answer: 'Once requisitions are approved, you can go to the Purchase Order section, select "Create from Requisitions", and choose the approved requisitions you want to combine. The system will merge all items into a single purchase order. This is useful when multiple departments need items from the same vendor or when a staff member is making a single shopping trip.'
     },
     {
       question: 'When should I use a Cash Advance instead of a Purchase Order?',
@@ -587,32 +680,41 @@ export default function LearningPage() {
               <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               Understanding the Workflow
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-2">
                   <FileText className="h-5 w-5" />
-                  <span className="font-medium">1. Create Document</span>
+                  <span className="font-medium">1. Create Requisition</span>
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Create any document type (Requisition, Purchase Order, Cash Advance, etc.) with all required details and items
+                  Create a requisition with items needed. Submit for approval.
                 </p>
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-2">
-                  <Send className="h-5 w-5" />
-                  <span className="font-medium">2. Submit for Approval</span>
+                  <CheckCircle className="h-5 w-5" />
+                  <span className="font-medium">2. Requisition Approved</span>
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Submit to the approval workflow. The system routes it based on document type, amount, and your organization's approval matrix
+                  After approval, system checks item availability in stock.
+                </p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400 mb-2">
+                  <Package className="h-5 w-5" />
+                  <span className="font-medium">3. Stock or Purchase</span>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  In stock → Stock Requisition (issuance from warehouse). Not in stock → Purchase Order (external procurement).
                 </p>
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 mb-2">
                   <CheckCircle className="h-5 w-5" />
-                  <span className="font-medium">3. Approval & Execution</span>
+                  <span className="font-medium">4. Fulfillment Complete</span>
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  After approval, execute the document - order items (PO), disburse cash (Cash Advance), transfer funds (Cash Transfer), or track spending (Budget)
+                  Items are issued from stock or procured via purchase order. Requisition is fulfilled.
                 </p>
               </div>
             </div>

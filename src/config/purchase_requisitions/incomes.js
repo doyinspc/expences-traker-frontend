@@ -2,13 +2,14 @@
 
 const incomes = {
     frontendRoutes: ['/procurement/incomes'],
-    description: 'Record income recived or sales made withing this window.',
+    description: 'Record and manage all income and sales revenue generated from procurement activities, including sales of goods, services, and other revenue streams. This module helps track financial performance and monitor revenue collection across departments and locations.',
     form: 'IncomeForm',
     tableName: 'incomes',
-    displayName: 'Incomes',
+    displayName: 'Income & Sales Revenue',
     icon: 'ShoppingCart',
     defaultSort: { field: 'created_at', direction: 'DESC' },
     defaultFilters: { status: 'pending_approval' },
+    
     analysisConfig: {
         enabled: true,
         defaultGroupBy: 'department_id',
@@ -17,25 +18,27 @@ const incomes = {
         availableMetrics: ['count', 'total_amount', 'avg_amount', 'pending_count', 'approved_count'],
         availableDimensions: ['department_id', 'income_type', 'status', 'priority', 'created_at'],
     },
+    
     fields: {
         id: {
-            label: 'PR Number',
+            label: 'Income Reference',
             type: 'text',
             hidden: true,
             disabled: true,
-            description: 'Auto-generated purchase income number',
+            description: 'Auto-generated unique reference number for this income record',
             showInTable: true,
             tableWidth: '120px',
             filterable: true,
             filterType: 'text',
             analyzable: false,
         },
+        
         title: {
-            label: 'Title',
-            placeholder: 'Office Supplies Purchase',
+            label: 'Income Title',
+            placeholder: 'e.g., Q1 2024 Sales Revenue',
             type: 'text',
             required: true,
-            description: 'Brief title of the income',
+            description: 'A clear title that identifies this income source and period',
             showInTable: true,
             showInForm: true,
             tableWidth: '200px',
@@ -45,55 +48,25 @@ const incomes = {
             analysisType: 'group',
             analysisGroup: 'title',
         },
+        
         description: {
             label: 'Description',
-            placeholder: 'Detailed description of income',
+            placeholder: 'Describe the income or sales revenue in detail...',
             type: 'textarea',
-            description: 'Detailed description of the income',
+            description: 'Detailed description of the income or sales transaction',
             showInTable: false,
             showInForm: true,
             filterable: false,
             analyzable: false,
         },
-        budget_id: {
-            label: 'Budget',
-            placeholder: 'Select budget',
-            hidden:true,
-            type: 'select',
-            options: 'budgets',
-            description: 'Budget making the request',
-            showInTable: false,
-            showInForm: true,
-            tableWidth: '150px',
-            filterable: true,
-            filterType: 'select',
-            filterOptions: 'budgets',
-            analyzable: true,
-            analysisType: 'group',
-            analysisGroup: 'budget',
-            nameField: 'budget_name',
-        },
-        budget_name: {
-            label: 'Budget Name',
-            type: 'text',
-            hidden: false, // ✅ Changed from true to false
-            disabled: true,
-            description: 'Budget name',
-            showInTable: true,
-            showInForm: false, // ✅ Explicitly set to false
-            filterable: true,
-            filterType: 'text',
-            analyzable: true,
-            analysisType: 'group',
-            analysisGroup: 'budget',
-        },
+        
         requester_id: {
             label: 'Requester',
             placeholder: 'Select requester',
             type: 'select',
             hidden: true,
             options: 'users',
-            description: 'Employee requesting the purchase',
+            description: 'Employee recording this income',
             showInTable: false,
             showInForm: true,
             tableWidth: '150px',
@@ -105,14 +78,15 @@ const incomes = {
             analysisGroup: 'requester',
             nameField: 'requester_name',
         },
+        
         requester_name: {
             label: 'Requester Name',
             type: 'text',
-            hidden: false, // ✅ Changed from true to false
+            hidden: false,
             disabled: true,
-            description: 'Requester full name',
+            description: 'Full name of the person who recorded this income',
             showInTable: true,
-            showInForm: false, // ✅ Explicitly set to false
+            showInForm: false,
             tableWidth: '150px',
             filterable: true,
             filterType: 'text',
@@ -120,13 +94,14 @@ const incomes = {
             analysisType: 'group',
             analysisGroup: 'requester',
         },
+        
         department_id: {
             label: 'Department',
             placeholder: 'Select department',
             type: 'select',
             required: true,
             options: 'departments',
-            description: 'Department making the request',
+            description: 'Department responsible for this income',
             showInTable: false,
             showInForm: true,
             tableWidth: '150px',
@@ -138,58 +113,29 @@ const incomes = {
             analysisGroup: 'department',
             nameField: 'department_name',
         },
+        
         department_name: {
             label: 'Department Name',
             type: 'text',
-            hidden: false, // ✅ Changed from true to false
+            hidden: false,
             disabled: true,
             description: 'Department name',
             showInTable: true,
-            showInForm: false, // ✅ Explicitly set to false
+            showInForm: false,
             filterable: true,
             filterType: 'text',
             analyzable: true,
             analysisType: 'group',
             analysisGroup: 'department',
         },
-        vendor_id: {
-            label: 'Vendor',
-            placeholder: 'Select vendor',
-            type: 'select',
-            options: 'vendors',
-            description: 'Preferred vendor for this request',
-            showInTable: false,
-            showInForm: true,
-            tableWidth: '150px',
-            filterable: true,
-            filterType: 'select',
-            filterOptions: 'vendors',
-            analyzable: true,
-            analysisType: 'group',
-            analysisGroup: 'vendor',
-            nameField: 'vendor_name',
-        },
-        vendor_name: {
-            label: 'Vendor Name',
-            type: 'text',
-            hidden: false, // ✅ Changed from true to false
-            disabled: true,
-            description: 'Vendor name',
-            showInTable: true,
-            showInForm: false, // ✅ Explicitly set to false
-            filterable: true,
-            filterType: 'text',
-            analyzable: true,
-            analysisType: 'group',
-            analysisGroup: 'vendor',
-        },
+        
         location_id: {
             label: 'Location',
             placeholder: 'Select location',
             type: 'select',
             hidden: true,
             options: 'locations',
-            description: 'Location where items will be delivered',
+            description: 'Location where income was generated',
             showInTable: false,
             showInForm: true,
             tableWidth: '150px',
@@ -201,44 +147,28 @@ const incomes = {
             analysisGroup: 'location',
             nameField: 'location_name',
         },
+        
         location_name: {
             label: 'Location Name',
             type: 'text',
-            hidden: false, // ✅ Changed from true to false
+            hidden: false,
             disabled: true,
             description: 'Location name',
             showInTable: true,
-            showInForm: false, // ✅ Explicitly set to false
+            showInForm: false,
             filterable: true,
             filterType: 'text',
             analyzable: true,
             analysisType: 'group',
             analysisGroup: 'location',
         },
-        requsition_type: {
-            label: 'Income Type',
-            placeholder: 'Select type',
-            type: 'select',
-            required: true,
-            hidden: true,
-            options: 'income_types',
-            description: 'Type of income ',
-            showInTable: true,
-            showInForm: true,
-            tableWidth: '140px',
-            filterable: true,
-            filterType: 'select',
-            filterOptions: 'income_types',
-            analyzable: true,
-            analysisType: 'group',
-            analysisGroup: 'type',
-        },
+        
         credit_amount: {
             label: 'Total Amount',
             placeholder: '0.00',
             hidden: true,
             type: 'number',
-            description: 'Total estimated amount',
+            description: 'Total income amount',
             showInTable: true,
             showInForm: true,
             tableWidth: '150px',
@@ -260,13 +190,14 @@ const incomes = {
                 message: 'Amount cannot be negative',
             },
         },
+        
         currency_id: {
             label: 'Currency',
             placeholder: 'USD',
             type: 'select',
             options: 'currencies',
             default: 'USD',
-            description: 'Currency for the transaction',
+            description: 'Currency for this income',
             showInTable: false,
             showInForm: true,
             filterable: true,
@@ -276,6 +207,7 @@ const incomes = {
             analysisType: 'group',
             analysisGroup: 'currency',
         },
+        
         currency_name: {
             label: 'Currency',
             placeholder: 'NGR',
@@ -283,7 +215,7 @@ const incomes = {
             type: 'select',
             options: 'currencies',
             default: 'NGR',
-            description: 'Currency for the transaction',
+            description: 'Currency for this income',
             showInTable: false,
             showInForm: false,
             filterable: true,
@@ -293,71 +225,7 @@ const incomes = {
             analysisType: 'group',
             analysisGroup: 'currency',
         },
-        priority: {
-            label: 'Priority',
-            placeholder: 'Select priority',
-            type: 'select',
-            options: 'priorities',
-            description: 'Priority level of the request',
-            showInTable: true,
-            showInForm: true,
-            tableWidth: '120px',
-            filterable: true,
-            filterType: 'select',
-            filterOptions: 'priorities',
-            analyzable: true,
-            analysisType: 'group',
-            analysisGroup: 'priority',
-        },
-        priority_name: {
-            label: 'Priority',
-            placeholder: 'Select priority',
-            type: 'select',
-            options: 'priorities',
-            description: 'Priority level of the request',
-            showInTable: true,
-            showInForm: false,
-            tableWidth: '120px',
-            filterable: true,
-            filterType: 'select',
-            filterOptions: 'priorities',
-            analyzable: true,
-            analysisType: 'group',
-            analysisGroup: 'priority',
-        },
-        status: {
-            label: 'Status',
-            placeholder: 'draft',
-            type: 'select',
-            options: 'requisition_status',
-            description: 'Current status of the requisition',
-            showInTable: true,
-            showInForm: true,
-            tableWidth: '150px',
-            filterable: true,
-            filterType: 'select',
-            filterOptions: 'requisition_status',
-            analyzable: true,
-            analysisType: 'group',
-            analysisGroup: 'status',
-        },
-        status_name: {
-            label: 'Status',
-            placeholder: 'draft',
-            type: 'select',
-            options: 'income_status',
-            disabled: true,
-            description: 'Current status of the income',
-            showInTable: true,
-            showInForm: false,
-            tableWidth: '150px',
-            filterable: true,
-            filterType: 'select',
-            filterOptions: 'income_status',
-            analyzable: true,
-            analysisType: 'group',
-            analysisGroup: 'status',
-        },
+        
         approver_id: {
             label: 'Approver',
             placeholder: 'Select approver',
@@ -376,14 +244,15 @@ const incomes = {
             analysisGroup: 'approver',
             nameField: 'approver_name',
         },
+        
         approver_name: {
             label: 'Approver Name',
             type: 'text',
-            hidden: false, // ✅ Changed from true to false
+            hidden: false,
             disabled: true,
             description: 'Approver full name',
             showInTable: true,
-            showInForm: false, // ✅ Explicitly set to false
+            showInForm: false,
             tableWidth: '150px',
             filterable: true,
             filterType: 'text',
@@ -391,6 +260,7 @@ const incomes = {
             analysisType: 'group',
             analysisGroup: 'approver',
         },
+        
         approve_date: {
             label: 'Approval Date',
             type: 'datetime',
@@ -406,10 +276,11 @@ const incomes = {
             analysisType: 'trend',
             analysisGroup: 'timeline',
         },
+        
         approval_workflow_id: {
             label: 'Approval Workflow',
             placeholder: 'Select workflow',
-            hidden:true,
+            hidden: true,
             type: 'select',
             options: 'approval_workflows',
             description: 'Approval workflow to follow',
@@ -421,18 +292,19 @@ const incomes = {
             analyzable: false,
             nameField: 'approval_workflow_name',
         },
+        
         approval_workflow_name: {
             label: 'Workflow Name',
             type: 'text',
-            hidden:true,
-            hidden: false, // ✅ Changed from true to false
+            hidden: false,
             disabled: true,
             description: 'Approval workflow name',
             showInTable: true,
-            showInForm: false, // ✅ Explicitly set to false
+            showInForm: false,
             filterable: false,
             analyzable: false,
         },
+        
         current_approval_level: {
             label: 'Current Approval Level',
             type: 'number',
@@ -447,27 +319,11 @@ const incomes = {
             analysisType: 'avg',
             analysisGroup: 'approval',
         },
-        expected_delivery_date: {
-            label: 'Expected Delivery Date',
+        
+        created_at: {
+            label: 'Start Date',
             type: 'date',
-            description: 'Expected delivery date',
-            showInTable: true,
-            showInForm: true,
-            tableWidth: '150px',
-            tableFormat: function(value) {
-                if (!value) return '';
-                const date = new Date(value);
-                return date.toLocaleDateString();
-            },
-            filterable: true,
-            filterType: 'date',
-            analyzable: true,
-            analysisType: 'trend',
-            analysisGroup: 'timeline',
-        },
-         created_at: {
-            label: 'Created Date',
-            type: 'date',
+            description: 'Start date of this income period',
             showInTable: true,
             showInForm: true,
             tableWidth: '150px',
@@ -477,6 +333,21 @@ const incomes = {
             analysisType: 'trend',
             analysisGroup: 'activity',
         },
+        
+        expected_delivery_date: {
+            label: 'End Date',
+            type: 'date',
+            description: 'End date of this income period',
+            showInTable: true,
+            showInForm: true,
+            tableWidth: '150px',
+            filterable: true,
+            filterType: 'date',
+            analyzable: true,
+            analysisType: 'trend',
+            analysisGroup: 'timeline',
+        },
+        
         created_by_id: {
             label: 'Created By',
             type: 'select',
@@ -494,23 +365,25 @@ const incomes = {
             analysisGroup: 'creator',
             nameField: 'created_by_name',
         },
+        
         created_by_name: {
             label: 'Created By',
             type: 'text',
-            hidden: false, // ✅ Changed from true to false
+            hidden: false,
             disabled: true,
             description: 'Creator full name',
             showInTable: true,
-            showInForm: false, // ✅ Explicitly set to false
+            showInForm: false,
             filterable: true,
             filterType: 'text',
             analyzable: true,
             analysisType: 'group',
             analysisGroup: 'creator',
         },
+        
         notes: {
             label: 'Notes',
-            placeholder: 'Additional notes',
+            placeholder: 'Additional notes...',
             type: 'textarea',
             description: 'Additional notes or comments',
             showInTable: false,
@@ -529,6 +402,7 @@ const incomes = {
             filterable: false,
             analyzable: false,
         },
+        
         updated_by_id: {
             label: 'Updated By',
             type: 'select',
@@ -546,14 +420,15 @@ const incomes = {
             analysisGroup: 'updater',
             nameField: 'updated_by_name',
         },
+        
         updated_by_name: {
             label: 'Updated By',
             type: 'text',
-            hidden: false, // ✅ Changed from true to false
+            hidden: false,
             disabled: true,
             description: 'Updater full name',
             showInTable: true,
-            showInForm: false, // ✅ Explicitly set to false
+            showInForm: false,
             filterable: true,
             filterType: 'text',
             analyzable: true,
