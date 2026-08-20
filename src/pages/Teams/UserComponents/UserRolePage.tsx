@@ -213,6 +213,7 @@ const Userroles: React.FC<UserrolesProps> = ({
 
     const handleReload = useCallback((): void => {
         loadQuery(initialData);
+        loadRoleData()
     }, [loadQuery, initialData]);
 
     const toggleInfo = useCallback((e?: React.MouseEvent): void => {
@@ -267,7 +268,7 @@ const Userroles: React.FC<UserrolesProps> = ({
         if (userid && !hasLoaded.current) {
             hasLoaded.current = true;
             loadQuery(initialData);
-            loadRoleData({ grp: TABLE_PAGE_NUM, userid: staffId });
+            loadRoleData();
         }
         
         // Cleanup
