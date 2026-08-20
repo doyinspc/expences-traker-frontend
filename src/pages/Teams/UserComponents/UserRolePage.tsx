@@ -257,6 +257,7 @@ const Userroles: React.FC<UserrolesProps> = ({
             value: role.id
         }));
     }, [roleData, isAdmin]);
+    console.log(processedRoleRows)
 
     // ==================== EFFECTS ====================
     // 🛡️ ONLY run when userid or staffId changes, NOT on function changes
