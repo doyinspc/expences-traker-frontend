@@ -2,13 +2,56 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { API_PATH_SETTING, axiosConfig, axiosConfig1, MAIN_TOKEN } from '../actions/common';
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import toast, { Toaster } from 'react-hot-toast';
 
 // ============================================
 // CONSTANT: Get tenant DB from sessionStorage or env
 // ============================================
 const getTenantDb = () => {
     return sessionStorage.getItem('tenantDb') || import.meta.env.VITE_APP_TENANT_DB || 'expences1';
+};
+
+// ============================================
+// Toast notification functions using react-hot-toast
+// ============================================
+const showToast = (message, type = 'success', title = '') => {
+    const styles = {
+        success: {
+            icon: '✅',
+            style: {
+                background: '#10B981',
+                color: '#fff',
+                fontWeight: '500',
+                padding: '16px 20px',
+                borderRadius: '12px',
+                boxShadow: '0 10px 25px rgba(16, 185, 129, 0.35)',
+            },
+        },
+        error: {
+            icon: '❌',
+            style: {
+                background: '#EF4444',
+                color: '#fff',
+                fontWeight: '500',
+                padding: '16px 20px',
+                borderRadius: '12px',
+                boxShadow: '0 10px 25px rgba(239, 68, 68, 0.35)',
+            },
+        },
+    };
+
+    const config = styles[type] || styles.success;
+    
+    // If title is provided, show it as bold text before the message
+    const displayMessage = title ? `${title}\n${message}` : message;
+    
+    toast(displayMessage, {
+        duration: 5000,
+        position: 'bottom-right',
+        style: config.style,
+        icon: config.icon,
+        className: 'custom-toast',
+    });
 };
 
 const loadApi = async (table, queryType, mainParam, param, narration) => {
@@ -144,21 +187,18 @@ export default function useTanstackQuery(props) {
 
             queryClient.invalidateQueries({ queryKey: [table, uniqueKey] });
 
-            Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                text: 'Data updated successfully! ',
-            });
+            // Success toast with react-hot-toast
+            const action = cat.includes('insert') ? 'Created' : cat.includes('update') ? 'Updated' : cat.includes('delete') ? 'Deleted' : 'Processed';
+            showToast(`Data ${action.toLowerCase()} successfully!`, 'success', `${action} ✓`);
+            
             if (onSuccess) {
                 onSuccess();
             }
         },
         onError: (error) => {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error!',
-                text: 'Failed to update data.'
-            });
+            // Error toast with react-hot-toast
+            showToast('Failed to update data. Please try again.', 'error', 'Error ✕');
+            
             if (onError) {
                 onError(error);
             }

@@ -8,7 +8,7 @@ import ComponentCard from "../../../components/common/ComponentCard.js";
 import Tables from '../../../components/table/index.jsx';
 import Loader from '../../../components/ui/Loader.js';
 import DynamicForm from "../../../components/ui/DynamicForm.js";
-import { TableAction } from '../../../components/ui/TableAction.js';
+import { FullSettingActionDeleteMinimal } from '../../../components/ui/TableActionSetting.js';
 import { InfoPanel } from '../../../components/ui/InfoPanel.js';
 import { BackIcon, AddIcon, ReloadIcon, InfoIcon } from '../../../components/ui/TableIcons.js';
 import useReduxApiData from "../../../hooks/useTanstackQuery.js";
@@ -282,7 +282,7 @@ const Userroles: React.FC<UserrolesProps> = ({
     const columns = useMemo(() => {
         return columnBuilder(
             { 
-                table_action: TableAction, 
+                table_action: FullSettingActionDeleteMinimal, 
                 table_data: tableData 
             },
             { onNext, onView, onActivate, onEdit, onDelete }

@@ -35,6 +35,7 @@ const saveAuthToStorage = (state) => {
                 accountId: state.accountId,
                 userType: state.userType,
                 isAuthenticated: state.isAuthenticated,
+                isAdmin: state.isAdmin,
                 location_id: state.location_id,
                 locations: state.locations,
                 location: state.location,
@@ -83,6 +84,7 @@ const baseInitialState = {
     accountId: null,
     userType: USER_TYPES.GUEST,
     isAuthenticated: false,
+    isAdmin:true,
     location_id: 0,
     locations: [],
     location: {},
@@ -148,7 +150,7 @@ export default function auth(state = initialState, action) {
             let default_role  = action?.payload.user?.role_id || 0;
             let default_location_details = action?.payload.user?.locations.find(rw =>rw.id == default_location)
             let default_role_details = action?.payload.user?.roles.find(rw =>rw.id == default_role)
-
+            const isAdminLogin = parseInt(default_location_details?.is_active) === 1 ? true : false;
             const newState = {
                 ...state,
                 user: action.payload.user,
@@ -160,6 +162,7 @@ export default function auth(state = initialState, action) {
                 role: default_role_details,
                 location_id:default_location,
                 role_id:default_role,
+                isAdmin:isAdminLogin,
                 jwt: action.payload.jwt || null,
                 tenantDb: action.payload.tenantDb || null,
                 accountId: action.payload.accountId || null,
@@ -179,14 +182,17 @@ export default function auth(state = initialState, action) {
                 loading: false,
                 error: action.payload,
                 isAuthenticated: false,
+                isAdmin:false
             };
         case AUTH_TYPES.SWITCH_LOCATION_SUCCESS:
             let df = action?.payload
             let new_role = state.roles.find(rw=>rw.location_id == action?.payload.id) || {}
+            const isAdmin = parseInt(action?.payload?.is_active) === 1 ? true : false;
             let updateState = {
                 ...state,
                 location: action?.payload,
                 location_id: action?.payload.id,
+                isAdmin:isAdmin,
                 role:new_role,
                 role_id:new_role?.id || 0,
                 error: null,

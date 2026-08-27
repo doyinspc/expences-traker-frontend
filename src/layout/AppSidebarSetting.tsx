@@ -56,6 +56,17 @@ const AppSidebar: React.FC = () => {
         ],
       },
       // ============================================
+      // GUEST HOUSE Settings (grp  30 & 31)
+      // ============================================
+      {
+        icon: <Banknote size={24} strokeWidth={1.5} />,
+        name: "Guest House Settings",
+        subItems: [
+          { name: "Buildings and Rooms", path: "/setting/room" },
+          { name: "Services and Pricing", path: "/setting/service" },
+        ],
+      },
+      // ============================================
       // Reference Data (grp 10-19)
       // ============================================
       {

@@ -38,6 +38,14 @@ import SettingLanding from "./pages/Settings/SettingsLanding.tsx";
 import SettingPage from "./pages/Settings/Index.tsx";
 import SettingSubPage from "./pages/Settings/IndexChild.tsx";
 
+
+// Finance & Expenses
+import Booking from "./pages/Bookings/Bookings.tsx";
+import BookingPage from "./pages/Bookings/BookingsPage.tsx";
+import BookingReport from "./pages/Bookings/Reports.tsx";
+import BookingClient from "./pages/Bookings/Clients.tsx";
+import BookingCompany from "./pages/Bookings/Companies.tsx";
+
 // Cash & Advances
 import AdvanceRequests from "./pages/CashAdvances/AdvanceRequests";
 
@@ -76,6 +84,10 @@ import ExpensePage from "./pages/Settings/Expenses";
 import ExpenseItemsPage from "./pages/Settings/ExpenseItems.tsx";
 import IncomePage from "./pages/Settings/Incomes.tsx";
 import IncomeItemsPage from "./pages/Settings/IncomeItems.tsx";
+import RoomPage from "./pages/Settings/Rooms";
+import RoomItemsPage from "./pages/Settings/RoomItems.tsx";
+import ServicePage from "./pages/Settings/Services.tsx";
+import ServiceItemsPage from "./pages/Settings/ServiceItems.tsx";
 
 
 export default function App() {
@@ -106,13 +118,19 @@ export default function App() {
             <Route path="/procurement/budgets" element={<BudgetList />} />
             <Route path="/procurement/budgets/:budgetId" element={<BudgetItems />} />
             <Route path="/procurement/learnmore" element={<LearnMore />} />
-
             <Route path="/procurement/approvals" element={<ApprovalCenter />} />
             <Route path="/procurement/approvals/:workflow_id" element={<ApprovalCenterDetails />} />
             <Route path="/procurement/controls" element={<ControlCenter />} />
 
             {/* Cash & Advances */}
             <Route path="/procurement/requests" element={<AdvanceRequests />} />
+
+            {/* Bookings */}
+            <Route path="/bookings/booking" element={<Booking/>} />
+            <Route path="/bookings/booking/:id" element={<BookingPage/>} />
+            <Route path="/bookings/report" element={<BookingReport />} />
+            <Route path="/bookings/client" element={<BookingClient />} />
+            <Route path="/bookings/company" element={<BookingCompany />} />
 
             {/* Finance & Expenses */}
             <Route path="/finance/payable" element={<AccountsPayable />} />
@@ -155,6 +173,10 @@ export default function App() {
             <Route path="/setting/expense/:page_id" element={<ExpenseItemsPage />} />
             <Route path="/setting/income" element={<IncomePage />} />
             <Route path="/setting/income/:page_id" element={<IncomeItemsPage />} />
+            <Route path="/setting/room" element={<RoomPage />} />
+            <Route path="/setting/room/:page_id" element={<RoomItemsPage />} />
+            <Route path="/setting/service" element={<ServicePage />} />
+            <Route path="/setting/service/:page_id" element={<ServiceItemsPage />} />
           </Route>
           <Route path="/admin" element={<AppLayoutAdmin />}>
           </Route>

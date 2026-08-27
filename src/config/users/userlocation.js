@@ -70,11 +70,11 @@ const userlocations = {
         },
         // ==================== STATUS ====================
         is_active: {
-            label: 'Active',
+            label: 'Is an Admin',
             type: 'toggle',
             default: true,
             hidden:true,
-            description: 'Whether the user account is active',
+            description: 'Specify if this user is an admin in the location or not',
             showInTable: false,
             showInForm: true,
             tableWidth: '80px',

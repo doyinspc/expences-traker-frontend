@@ -7,7 +7,10 @@ import {
     Users, 
     Shield, 
     Building, 
-    Key, 
+    Key,
+    CheckCircle,
+    XCircle,
+    UserCog
 } from 'lucide-react';
 
 interface UserTableActionProps {
@@ -18,6 +21,8 @@ interface UserTableActionProps {
     onRoles?: (row: any) => void;
     onDepartment?: (row: any) => void;
     onAccess?: (row: any) => void;
+    onActivate?: (row: any) => void;
+    onDeactivate?: (row: any) => void;
     // Visibility controls
     showEdit?: boolean;
     showDelete?: boolean;
@@ -25,6 +30,7 @@ interface UserTableActionProps {
     showRoles?: boolean;
     showDepartment?: boolean;
     showAccess?: boolean;
+    showAdminToggle?: boolean;
     // Size
     size?: 'sm' | 'md' | 'lg';
     // Disable states
@@ -34,7 +40,9 @@ interface UserTableActionProps {
     disableRoles?: boolean;
     disableDepartment?: boolean;
     disableAccess?: boolean;
+    disableAdminToggle?: boolean;
     is_active?: number | string;
+    is_admin?: number | string;
 }
 
 // ============ BUTTON STYLES ============
@@ -67,12 +75,15 @@ export const UserTableAction: React.FC<UserTableActionProps> = ({
     onRoles,
     onDepartment,
     onAccess,
+    onActivate,
+    onDeactivate,
     showEdit = true,
     showDelete = true,
     showManagers = true,
     showRoles = true,
     showDepartment = true,
     showAccess = true,
+    showAdminToggle = true,
     size = 'md',
     disableEdit = false,
     disableDelete = false,
@@ -80,16 +91,59 @@ export const UserTableAction: React.FC<UserTableActionProps> = ({
     disableRoles = false,
     disableDepartment = false,
     disableAccess = false,
+    disableAdminToggle = false,
+    is_active,
+    is_admin,
 }) => {
     const buttonSize = getButtonStyles(size);
     const iconSize = getIconSize(size);
+    
+    // Get values from row or props
+    const rowIsActive = row?.is_active !== undefined ? row.is_active : is_active;
+    const isActive = rowIsActive === 1 || rowIsActive === '1';
+    
+    const rowIsAdmin = row?.is_active !== undefined ? row.is_active : is_admin;
+    const isAdmin = rowIsAdmin === 1 || rowIsAdmin === '1';
 
     // Check if any buttons are visible
-    const hasVisibleButtons = showEdit || showDelete || showManagers || showRoles || showDepartment || showAccess;
+    const hasVisibleButtons = showEdit || showDelete || showManagers || showRoles || showDepartment || showAccess || showAdminToggle;
     if (!hasVisibleButtons) return null;
 
     return (
         <div className="flex items-center gap-1.5 flex-wrap min-w-max">
+            {/* Admin Badge - Clickable Toggle */}
+            {showAdminToggle && (
+                <button
+                    onClick={() => {
+                        if (isAdmin) {
+                            onDeactivate && onDeactivate(row);
+                        } else {
+                            onActivate && onActivate(row);
+                        }
+                    }}
+                    disabled={disableAdminToggle}
+                    className={`
+                        inline-flex items-center gap-1.5 rounded-md
+                        ${isAdmin 
+                            ? 'bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/30' 
+                            : 'bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-gray-800/50 dark:text-gray-400 dark:hover:bg-gray-700/50'
+                        }
+                        transition-colors duration-200
+                        font-medium
+                        ${buttonSize}
+                        ${disableAdminToggle ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-sm'}
+                    `}
+                    title={isAdmin ? 'Click to remove Admin rights' : 'Click to grant Admin rights'}
+                >
+                    {isAdmin ? (
+                        <CheckCircle className={iconSize} />
+                    ) : (
+                        <XCircle className={iconSize} />
+                    )}
+                    <span>{isAdmin ? 'Admin' : 'Not Admin'}</span>
+                </button>
+            )}
+
             {/* Edit Button */}
             {showEdit && (
                 <button
@@ -231,6 +285,7 @@ export const FullUserActions = (props: UserTableActionProps) => (
         showRoles={true}
         showDepartment={true}
         showAccess={true}
+        showAdminToggle={true}
     />
 );
 
@@ -244,6 +299,7 @@ export const ManagementUserActions = (props: UserTableActionProps) => (
         showRoles={true}
         showDepartment={true}
         showAccess={true}
+        showAdminToggle={true}
     />
 );
 
@@ -257,6 +313,7 @@ export const BasicUserActions = (props: UserTableActionProps) => (
         showRoles={false}
         showDepartment={false}
         showAccess={false}
+        showAdminToggle={false}
     />
 );
 
@@ -268,6 +325,48 @@ export const CompactUserActions = (props: UserTableActionProps) => (
 // Large version
 export const LargeUserActions = (props: UserTableActionProps) => (
     <UserTableAction {...props} size="lg" />
+);
+
+// Admin toggle only
+export const AdminToggleOnly = (props: UserTableActionProps) => (
+    <UserTableAction 
+        {...props} 
+        showEdit={false}
+        showDelete={false}
+        showManagers={false}
+        showRoles={false}
+        showDepartment={false}
+        showAccess={false}
+        showAdminToggle={true}
+    />
+);
+
+// With Admin toggle + Basic actions
+export const AdminWithBasicActions = (props: UserTableActionProps) => (
+    <UserTableAction 
+        {...props} 
+        showEdit={true}
+        showDelete={true}
+        showManagers={false}
+        showRoles={false}
+        showDepartment={false}
+        showAccess={false}
+        showAdminToggle={true}
+    />
+);
+
+// With Admin toggle + Management actions
+export const AdminWithManagementActions = (props: UserTableActionProps) => (
+    <UserTableAction 
+        {...props} 
+        showEdit={false}
+        showDelete={false}
+        showManagers={true}
+        showRoles={true}
+        showDepartment={true}
+        showAccess={true}
+        showAdminToggle={true}
+    />
 );
 
 // ============ EXPORT ============

@@ -1,5 +1,4 @@
 import axios from "axios";
-import Swal from 'sweetalert2';
 import { API_PATH_SETTING, axiosConfig, axiosConfig1 } from "./common";
 
 // ============================================
@@ -7,6 +6,48 @@ import { API_PATH_SETTING, axiosConfig, axiosConfig1 } from "./common";
 // ============================================
 const getTenantDb = () => {
     return sessionStorage.getItem('tenantDb') || import.meta.env.VITE_APP_TENANT_DB || 'expences1';
+};
+
+// ============================================
+// Toast notification functions using Tailwind CSS
+// ============================================
+const showToast = (message, type = 'success') => {
+    // Remove existing toast if any
+    const existingToast = document.querySelector('.custom-toast');
+    if (existingToast) {
+        existingToast.remove();
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `custom-toast fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg transform transition-all duration-500 ease-in-out ${
+        type === 'success' 
+            ? 'bg-green-500 text-white' 
+            : 'bg-red-500 text-white'
+    }`;
+    
+    toast.innerHTML = `
+        <div class="flex items-center space-x-3">
+            <span class="text-xl">${type === 'success' ? '✓' : '✕'}</span>
+            <span class="font-medium">${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Trigger slide-in animation
+    setTimeout(() => {
+        toast.style.transform = 'translateX(0)';
+    }, 10);
+    
+    // Auto dismiss after 3 seconds
+    setTimeout(() => {
+        toast.style.transform = 'translateX(120%)';
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 500);
+    }, 3000);
 };
 
 /**
@@ -222,23 +263,11 @@ class ActionCreators {
     }
 
     successAlert = (res) => {
-        Swal.fire({
-            icon: 'success',
-            title: 'Success!',
-            text: res.msg || 'Operation was successful!',
-            timer: 3000,
-            showConfirmButton: false,
-        });
+        showToast(res.msg || 'Operation was successful!', 'success');
     }
     
     failAlert = (err) => {
-        Swal.fire({
-            icon: 'error',
-            title: 'Failed!',
-            text: err.msg || 'An unknown error occurred.',
-            timer: 3000,
-            showConfirmButton: false,
-        });
+        showToast(err.msg || 'An unknown error occurred.', 'error');
     }
 }
 

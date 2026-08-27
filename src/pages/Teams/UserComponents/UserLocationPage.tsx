@@ -327,6 +327,7 @@ const Userlocations: React.FC<UserlocationsProps> = ({
         e?.stopPropagation();
         setIsEdit(true);
         setRow(rowData);
+        console.log(rowData)
         setPage(6);
     }, []);
 
@@ -594,8 +595,11 @@ const Userlocations: React.FC<UserlocationsProps> = ({
                                                 <UserAccessPage 
                                                     UserData={UserData} 
                                                     location={row} 
+                                                    userId={UserData?.id || 0} 
+                                                    locationId={row?.itemid1 || 0} 
                                                     onClose={() => setPage(0)} 
                                                 />  
+                                                
                                             </React.Suspense>
                                         </ErrorBoundary>
                                     </div>

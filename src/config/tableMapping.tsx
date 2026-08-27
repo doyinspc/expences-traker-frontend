@@ -13,6 +13,10 @@ import departments from "./users/departments";
 import locations from "./users/locations";
 import expenses from "./users/expenses.js";
 import expenseitems from "./users/expenseitems.js";
+import rooms from "./users/rooms.js";
+import roomitems from "./users/roomitems.js";
+import services from "./users/services.js";
+import serviceitems from "./users/serviceitems.js";
 import currencys from "./users/currency.js";
 import vendors from "./users/vendors";
 import accounts from "./users/accounts";
@@ -72,6 +76,10 @@ export const tableMapping = {
     // Financial
     expenses,
     expenseitems,
+    rooms,
+    roomitems,
+    services,
+    serviceitems,
     currencys,
     vendors,
     

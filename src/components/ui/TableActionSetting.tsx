@@ -395,6 +395,28 @@ export const FullSettingActionNoDelete = (props: TableActionSettingProps) => (
         showNext={true}
     />
 );
+export const FullSettingActionNoDeleteMinimal = (props: TableActionSettingProps) => (
+    <TableActionSetting 
+        {...props} 
+        showEdit={true}
+        showDelete={false}
+        showActivate={true}
+        showDeactivate={true}
+        showNext={false}
+        iconOnly={true}
+    />
+);
+export const FullSettingActionDeleteMinimal = (props: TableActionSettingProps) => (
+    <TableActionSetting 
+        {...props} 
+        showEdit={true}
+        showDelete={true}
+        showActivate={true}
+        showDeactivate={true}
+        showNext={false}
+        iconOnly={true}
+    />
+);
 
 export const MinimalSettingAction = (props: TableActionSettingProps) => (
     <TableActionSetting 
