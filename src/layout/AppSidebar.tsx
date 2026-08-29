@@ -260,7 +260,6 @@ const othersItems: NavItem[] = [
 const AppSidebar: React.FC = () => {
   const authState = useSelector((state: any) => state.auth);
   const { access, location_id, isAdmin = false } = authState;
-  console.log("ADMIN ACTIVE STATE" ,isAdmin)
   
   // Memoize current location access
   const current_location = useMemo(() => {

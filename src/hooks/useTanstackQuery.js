@@ -47,7 +47,7 @@ const showToast = (message, type = 'success', title = '') => {
     
     toast(displayMessage, {
         duration: 5000,
-        position: 'bottom-right',
+        position: 'bottom-center',
         style: config.style,
         icon: config.icon,
         className: 'custom-toast',
@@ -158,13 +158,13 @@ export default function useTanstackQuery(props) {
             let responseData = responseDatas?.data || {};
             const cat = variables?.cat || "insert";
             const id = variables?.id || null;
+            const act = variables?.act || null;
 
             if (cat && data) {
                 queryClient.setQueryData([table, uniqueKey], (oldData) => {
                     let currentData = Array.isArray(oldData) ? oldData : [];
 
                     if (cat.includes('insert') && responseData && responseData.id) {
-                        console.log('insert into cache', oldData);
                         if (currentData.some(row => row.id == id)) {
                             currentData = currentData.map(row =>
                                 row.id === responseData.id ? responseData : row
@@ -188,7 +188,7 @@ export default function useTanstackQuery(props) {
             queryClient.invalidateQueries({ queryKey: [table, uniqueKey] });
 
             // Success toast with react-hot-toast
-            const action = cat.includes('insert') ? 'Created' : cat.includes('update') ? 'Updated' : cat.includes('delete') ? 'Deleted' : 'Processed';
+            const action = cat.includes('insert') && id == null ? 'Created' : cat.includes('update') ? 'Updated' : cat.includes('delete') || act == 3 ? 'Deleted' : 'Processed';
             showToast(`Data ${action.toLowerCase()} successfully!`, 'success', `${action} ✓`);
             
             if (onSuccess) {
