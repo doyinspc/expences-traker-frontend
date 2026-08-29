@@ -150,7 +150,7 @@ export default function auth(state = initialState, action) {
             let default_role  = action?.payload.user?.role_id || 0;
             let default_location_details = action?.payload.user?.locations.find(rw =>rw.id == default_location)
             let default_role_details = action?.payload.user?.roles.find(rw =>rw.id == default_role)
-            const isAdminLogin = parseInt(default_location_details?.is_active) === 1 ? true : false;
+            const isAdminLogin = true;// parseInt(default_location_details?.is_active) === 1 ? true : false;
             const newState = {
                 ...state,
                 user: action.payload.user,
@@ -187,7 +187,7 @@ export default function auth(state = initialState, action) {
         case AUTH_TYPES.SWITCH_LOCATION_SUCCESS:
             let df = action?.payload
             let new_role = state.roles.find(rw=>rw.location_id == action?.payload.id) || {}
-            const isAdmin = parseInt(action?.payload?.is_active) === 1 ? true : false;
+            const isAdmin = true;// parseInt(action?.payload?.is_active) === 1 ? true : false;
             let updateState = {
                 ...state,
                 location: action?.payload,

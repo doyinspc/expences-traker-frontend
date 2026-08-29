@@ -36,7 +36,7 @@ const departments = {
             analyzable: false,
         },
         code: {
-            label: 'Department Code',
+            label: 'Department Code',        
             placeholder: 'FIN-001',
             type: 'text',
             required: true,
