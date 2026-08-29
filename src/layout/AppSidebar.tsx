@@ -259,7 +259,8 @@ const othersItems: NavItem[] = [
 // ============================================
 const AppSidebar: React.FC = () => {
   const authState = useSelector((state: any) => state.auth);
-  const { access, location_id, isAdmin = true } = authState;
+  const { access, location_id, isAdmin = false } = authState;
+  console.log("ADMIN ACTIVE STATE" ,isAdmin)
   
   // Memoize current location access
   const current_location = useMemo(() => {
@@ -274,7 +275,7 @@ const AppSidebar: React.FC = () => {
         navItems1: navItems,
         othersItems1: othersItems,
       };
-    }
+    } 
 
     // Helper function to check if user has access to a specific item
     const hasAccess = (parentPathNumber: number, childPathNumber: number = 0): boolean => {
