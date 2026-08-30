@@ -7,6 +7,7 @@ import UserPasswordPage from './UserPasswordPage.tsx';
 import ErrorBoundary from '../../../utils/functions/ErrorBoundary.jsx';
 import useReduxApiData from '../../../hooks/useTanstackQuery.js';
 import { useSelector } from 'react-redux';
+import AccessTable from './AccessTable.tsx';
 const TABLE_NAME = "users";
 const TABLE_PATH = "user";
 export default function UserInfoPage() {
@@ -60,7 +61,6 @@ export default function UserInfoPage() {
   // Define tabs with their corresponding Lucide icons
   const tabs = [
     { name: 'Profile', icon: User },
-    { name: 'Locations', icon: MapPin },
     { name: 'Password Manager', icon: Key },
     { name: 'Profile Photo', icon: Camera },
   ];
@@ -117,25 +117,23 @@ export default function UserInfoPage() {
       {/* Tab Content Rendering */}
       <div className="mt-4">
         {activeTab === 'Profile' && (
-          <UserInfoCard
-            user={userData}
-            onSave={onSave}
-            onClose={()=>setActiveTab("Profile")}
-            showEdit={true}
-            loading={isProcessing}
-          />
-        )}
-        
-        {activeTab === 'Locations' && (
           <ErrorBoundary>
             <React.Suspense fallback={<div>Loading Locations...</div>}>
-              <UserLocationPage 
-                UserData={userData} 
-                onClose={()=>setActiveTab("Profile")} 
+            <>
+              <UserInfoCard
+                user={userData}
+                onSave={onSave}
+                onClose={()=>setActiveTab("Profile")}
+                showEdit={true}
+                loading={isProcessing}
               />
-            </React.Suspense>
+              <AccessTable user={userData} />
+              </>
+          </React.Suspense>
           </ErrorBoundary>
         )}
+        
+        
         
         {activeTab === 'Password Manager' && (
           <ErrorBoundary>

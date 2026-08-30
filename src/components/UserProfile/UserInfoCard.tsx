@@ -7,6 +7,7 @@ import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
 import PhoneInput from "../form/group-input/PhoneInput";
+import { SERVER_URL } from '../../actions/common';
 
 // ==================== TYPES ====================
 
@@ -190,9 +191,10 @@ const UserInfoCard: React.FC<UserInfoCardProps> = ({
     }
 
     if (field === 'photo' && value) {
+      console.log("TECHNOLOGICAL STAND POINT", SERVER_URL + String(value))
       return (
         <img 
-          src={String(value)} 
+          src={SERVER_URL + String(value)} 
           alt="Profile" 
           className="w-12 h-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
         />
@@ -342,7 +344,7 @@ const UserInfoCard: React.FC<UserInfoCardProps> = ({
           {user.photo && (
             <div className="flex items-center gap-4 mb-4">
               <img 
-                src={user.photo} 
+                src={SERVER_URL + (user.photo + '')} 
                 alt={`${user.first_name} ${user.last_name}`}
                 className="w-16 h-16 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
               />
