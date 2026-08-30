@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { selectAuth } from "../../reducers/auth";
 import { logoutUser, checkAuth } from "../../actions/auth";
 import { AppDispatch } from "../../store";
+import { SERVER_PATHS, SERVER_URL } from "../../actions/common";
 
 // Define User type
 interface User {
@@ -45,7 +46,6 @@ export default function UserDropdown(): React.ReactElement {
 
     // Get auth state from Redux
     const authState = useSelector(selectAuth) as AuthState;
-    console.log('UserDropdown - Auth State:', authState);
 
     // If authState is undefined or null, use default values
     const { user = null, isAuthenticated = false, loading = false } = authState || {};
@@ -101,8 +101,9 @@ export default function UserDropdown(): React.ReactElement {
 
     // Get user avatar
     const getUserAvatar = (): string | null => {
+        console.log("USER PATH AND KANA SUPPORT", SERVER_URL + (user?.photo || ''))
         if (!user) return null;
-        return user.photo || user.avatar || null;
+        return SERVER_URL + user.photo || user.avatar || null;
     };
 
     // Get user role

@@ -13,6 +13,7 @@ import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
 import Dashboard from "./pages/Dashboard/Dashboard.tsx";
 import Welcome from "./pages/Dashboard/Location";
+import Profile from "./pages/Teams/UserComponents/UserInfoPagePrivate.jsx";
 
 // Procurement
 import ApprovalCenter from "./pages/Procurement/ApprovalCenter.jsx";
@@ -101,6 +102,7 @@ export default function App() {
             <Route index path="/welcome" element={<Home />} />
             <Route index path="/" element={<Welcome />} />
             <Route index path="/dashboard" element={<Dashboard />} />
+            <Route index path="/profile" element={<Profile />} />
 
             {/* Procurement */}
             <Route path="/procurement/cashadvance" element={<CashAdvance />} />

@@ -86,7 +86,7 @@ const AppHeader: React.FC = () => {
               className="hidden dark:block"
               height="60px"
               style={{maxHeight:'60px'}}
-              src="./images/logo/logo-dark.svg"
+              src="./images/logo/logo.svg"
               alt="Logo"
             />
           </Link>

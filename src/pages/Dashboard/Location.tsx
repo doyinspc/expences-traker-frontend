@@ -39,7 +39,7 @@ import {
 } from 'lucide-react';
 import PageMeta from '../../components/common/PageMeta';
 import { useDispatch, useSelector } from 'react-redux';
-import { API_PATHS } from '../../actions/common';
+import { API_PATHS, SERVER_PATHS, SERVER_URL } from '../../actions/common';
 import { authActions } from '../../actions/auth';
 
 // ============ LOCATION DATA ============
@@ -230,9 +230,9 @@ const UserProfileCard = () => {
   const { user } = useSelector((state: any) => state.auth);
   const { roles } = useSelector((state: any) => state.auth);
   const { first_name, last_name, email, locations, phone, photo } = user || {};
-  const photo_url = photo ? API_PATHS + photo : null;
+  const photo_url = photo ? SERVER_URL + photo : null;
   const fullname = first_name + " " + last_name;
-  
+
   const [showMenu, setShowMenu] = useState(false);
 
   const getInitials = (name: string) => {

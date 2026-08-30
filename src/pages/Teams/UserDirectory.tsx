@@ -1,7 +1,6 @@
 ﻿// src/pages/Procurement/Requisitions.tsx
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { columnBuilder } from '../../actions/common';
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
