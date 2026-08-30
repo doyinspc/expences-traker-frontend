@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { Camera, Upload, X, User, Trash2, RefreshCw, Image } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { SERVER_URL } from '../../../actions/common';
 
 interface UserPhotoPageProps {
     UserData: {
@@ -241,7 +242,7 @@ const UserPhotoPage: React.FC<UserPhotoPageProps> = ({
                         />
                     ) : UserData?.photo ? (
                         <img 
-                            src={UserData.photo} 
+                            src={UserData.photo || SERVER_URL + UserData.photo} 
                             alt={`${userFullName}'s profile`} 
                             className="w-full h-full object-cover"
                         />

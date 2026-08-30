@@ -14,9 +14,11 @@ import {
   MoreHorizontal,
   LogOut,
   BedDoubleIcon,
+  Building2,
 } from "lucide-react";
 
 import { useSidebar } from "../context/SidebarContext";
+import { SERVER_URL } from "../actions/common";
 
 const { logout } = authActions;
 
@@ -259,8 +261,17 @@ const othersItems: NavItem[] = [
 // ============================================
 const AppSidebar: React.FC = () => {
   const authState = useSelector((state: any) => state.auth);
-  const { access, location_id, isAdmin = false } = authState;
-  
+  const { access, location_id, isAdmin = false, user } = authState;
+
+  // ===== COMPANY LOGO & SHORT NAME =====
+  const company = user?.company || {};
+  const companyName = company.name || 'Company';
+  const shortName = company.short_name || '';
+  const logoPath = company.logo_path || '';
+  const companyLogo = logoPath ? SERVER_URL + logoPath : null;
+  const [logoError, setLogoError] = useState(false);
+  const showCompanyLogo = companyLogo && !logoError;
+
   // Memoize current location access
   const current_location = useMemo(() => {
     return access?.filter((rw: any) => rw.location_id == location_id) || [];
@@ -274,7 +285,7 @@ const AppSidebar: React.FC = () => {
         navItems1: navItems,
         othersItems1: othersItems,
       };
-    } 
+    }
 
     // Helper function to check if user has access to a specific item
     const hasAccess = (parentPathNumber: number, childPathNumber: number = 0): boolean => {
@@ -306,7 +317,6 @@ const AppSidebar: React.FC = () => {
       if (hasParentAccess) {
         // Filter sub-items based on child access
         const filteredSubItems = rw.subItems?.filter((subItem) => {
-          // Check if user has access to this specific child
           return hasAccess(subItem.parent_path_number, subItem.child_path_number);
         });
 
@@ -317,7 +327,6 @@ const AppSidebar: React.FC = () => {
             subItems: filteredSubItems,
           });
         } else if (!rw.subItems || rw.subItems.length === 0) {
-          // If no sub-items, just add the parent
           filteredNavItems.push(rw);
         }
       }
@@ -332,11 +341,9 @@ const AppSidebar: React.FC = () => {
         return;
       }
 
-      // Check if user has access to this parent
       const hasParentAccess = hasAccess(rw.parent_path_number, 0);
 
       if (hasParentAccess) {
-        // Settings has no sub-items
         filteredOthersItems.push(rw);
       }
     });
@@ -443,6 +450,9 @@ const AppSidebar: React.FC = () => {
     [handleLogout, navigate]
   );
 
+  // ============================================
+  // RENDER MENU ITEMS
+  // ============================================
   const renderMenuItems = (items: NavItem[], menuType: "main" | "others") => (
     <ul className="flex flex-col gap-4">
       {items.map((nav, index) => (
@@ -566,6 +576,23 @@ const AppSidebar: React.FC = () => {
     </ul>
   );
 
+  // ============================================
+  // LOGO CONTAINER STYLES
+  // ============================================
+  const logoContainerClass = `
+    flex items-center justify-center 
+    w-10 h-10 
+    rounded-full 
+    overflow-hidden 
+    bg-gray-100 dark:bg-gray-800 
+    border border-gray-200 dark:border-gray-700 
+    flex-shrink-0
+    transition-all duration-300
+  `;
+
+  // ============================================
+  // MAIN RENDER
+  // ============================================
   return (
     <aside
       className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
@@ -581,40 +608,45 @@ const AppSidebar: React.FC = () => {
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+      {/* ===== LOGO AREA WITH COMPANY LOGO & SHORT NAME ===== */}
       <div
-        className={`py-8 flex ${
+        className={`py-6 flex items-center gap-3 border-b border-gray-200 dark:border-gray-700 ${
           !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
         }`}
       >
-        <Link to="/">
-          {isExpanded || isHovered || isMobileOpen ? (
-            <>
+        <Link to="/" className="flex items-center gap-3 flex-shrink-0">
+          {/* Circular Logo */}
+          <div className={logoContainerClass}>
+            {showCompanyLogo ? (
               <img
-                className="dark:hidden"
-                src="/images/logo/logo.svg"
-                alt="Logo"
-                width={100}
-                height={40}
+                src={companyLogo}
+                alt={companyName}
+                className="w-full h-full object-cover"
+                onError={() => setLogoError(true)}
               />
-              <img
-                className="hidden dark:block"
-                src="/images/logo/logo.svg"
-                alt="Logo"
-                width={100}
-                height={40}
-              />
-            </>
-          ) : (
-            <img
-              src="/images/logo/icon.svg"
-              alt="Logo"
-              width={32}
-              height={32}
-            />
+            ) : (
+              <Building2 className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+            )}
+          </div>
+
+          {/* Company Short Name - Only visible when expanded or hovered */}
+          {(isExpanded || isHovered || isMobileOpen) && (
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[140px]">
+                {shortName || companyName}
+              </span>
+              {shortName && shortName !== companyName && (
+                <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[140px]">
+                  {companyName}
+                </span>
+              )}
+            </div>
           )}
         </Link>
       </div>
-      <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
+
+      {/* ===== NAVIGATION ===== */}
+      <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar flex-1 pt-4">
         <nav className="mb-6">
           <div className="flex flex-col gap-4">
             <div>
@@ -633,7 +665,7 @@ const AppSidebar: React.FC = () => {
               </h2>
               {renderMenuItems(navItems1, "main")}
             </div>
-            <div className="">
+            <div>
               <h2
                 className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
                   !isExpanded && !isHovered

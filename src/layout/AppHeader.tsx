@@ -1,3 +1,5 @@
+// src/components/header/AppHeader.tsx
+
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { useSidebar } from "../context/SidebarContext";
@@ -5,14 +7,25 @@ import { ThemeToggleButton } from "../components/common/ThemeToggleButton";
 import NotificationDropdown from "../components/header/NotificationDropdown";
 import UserDropdown from "../components/header/UserDropdown";
 import { useSelector } from 'react-redux';
-import { Building, Shield, MapPin, ChevronDown } from 'lucide-react';
+import { Building, Shield, Building2 } from 'lucide-react';
+import { SERVER_URL } from "../actions/common";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
-  
-  // Get location and role from Redux
-  const { location, role } = useSelector((state: any) => state.auth);
+
+  // Get location, role, and user from Redux
+  const { location, role, user } = useSelector((state: any) => state.auth);
+
+  // Safely extract company data with fallbacks
+  const company = user?.company || {};
+  const companyName = company.name || 'Company';
+  const shortName = company.short_name || '';
+  const logoPath = company.logo_path || '';
+  const companyLogo = logoPath ? SERVER_URL + logoPath : null;
+
+  // State for logo error – fallback to default icon
+  const [logoError, setLogoError] = useState(false);
 
   const handleToggle = () => {
     if (window.innerWidth >= 1024) {
@@ -29,6 +42,31 @@ const AppHeader: React.FC = () => {
   // Format location and role for display
   const locationName = location?.name || 'No Location';
   const roleName = role?.name || 'No Role';
+
+  // Get initials for fallback
+  const getInitials = (name: string) => {
+    if (!name) return 'C';
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  // Determine if we should show the company logo or fallback
+  const showCompanyLogo = companyLogo && !logoError;
+
+  // Circular logo container styles
+  const logoContainerClass = `
+    flex items-center justify-center 
+    w-10 h-10 
+    rounded-full 
+    overflow-hidden 
+    bg-gray-100 dark:bg-gray-800 
+    border border-gray-200 dark:border-gray-700 
+    flex-shrink-0
+  `;
 
   return (
     <header className="sticky top-0 flex w-full bg-white border-gray-200 z-99999 dark:border-gray-800 dark:bg-gray-900 lg:border-b">
@@ -73,22 +111,20 @@ const AppHeader: React.FC = () => {
             )}
           </button>
 
-          {/* Logo */}
-          <Link to="/" className="lg:hidden">
-            <img
-              className="dark:hidden"
-              height="60px"
-              style={{maxHeight:'60px'}}
-              src="./images/logo/logo.svg"
-              alt="Logo"
-            />
-            <img
-              className="hidden dark:block"
-              height="60px"
-              style={{maxHeight:'60px'}}
-              src="./images/logo/logo.svg"
-              alt="Logo"
-            />
+          {/* Circular Logo Container */}
+          <Link to="/" className="flex-shrink-0">
+            <div className={logoContainerClass}>
+              {showCompanyLogo ? (
+                <img
+                  src={companyLogo}
+                  alt={companyName}
+                  className="w-full h-full object-cover"
+                  onError={() => setLogoError(true)}
+                />
+              ) : (
+                <Building2 className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+              )}
+            </div>
           </Link>
 
           {/* Location & Role Display - Shows on md and above */}

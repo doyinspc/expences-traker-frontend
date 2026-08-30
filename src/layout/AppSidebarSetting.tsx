@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router"; // or "react-router-dom" depending on your version
+import { Link, useLocation, useNavigate } from "react-router";
+import { useSelector } from 'react-redux';
 
 // Imported icons from Lucide React
 import {
@@ -10,24 +11,51 @@ import {
   MoreHorizontal,
   Database,
   ArrowLeft,
+  Building2,
 } from "lucide-react";
 
 import { useSidebar } from "../context/SidebarContext";
+import { SERVER_URL } from "../actions/common";
+
 
 type NavItem = {
   name: string;
   icon: React.ReactNode;
-  // Changed from Function to a specific void function for better TS safety
-  path?: string | (() => void); 
+  path?: string | (() => void);
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const location = useLocation();
-  const navigate = useNavigate(); // Moved inside the component
+  const navigate = useNavigate();
 
-  // Wrap settingsItems in useMemo so it can safely access 'navigate'
+  // Get user and company data from Redux
+  const { user } = useSelector((state: any) => state.auth);
+  const company = user?.company || {};
+  const companyName = company.name || 'Company';
+  const shortName = company.short_name || '';
+  const logoPath = company.logo_path || '';
+  const companyLogo = logoPath ? SERVER_URL + logoPath : null;
+
+  // State for logo error – fallback to default icon
+  const [logoError, setLogoError] = useState(false);
+
+  // Determine if we should show the company logo or fallback
+  const showCompanyLogo = companyLogo && !logoError;
+
+  // Get initials for fallback
+  const getInitials = (name: string) => {
+    if (!name) return 'C';
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  // Settings items (unchanged)
   const settingsItems: NavItem[] = useMemo(
     () => [
       // ============================================
@@ -56,7 +84,7 @@ const AppSidebar: React.FC = () => {
         ],
       },
       // ============================================
-      // GUEST HOUSE Settings (grp  30 & 31)
+      // GUEST HOUSE Settings (grp 30 & 31)
       // ============================================
       {
         icon: <Banknote size={24} strokeWidth={1.5} />,
@@ -106,7 +134,7 @@ const AppSidebar: React.FC = () => {
       {
         icon: <ArrowLeft size={24} strokeWidth={1.5} />,
         name: "Back",
-        path: () => navigate('/'), // Now safely accesses the navigate hook
+        path: () => navigate('/'),
       },
     ],
     [navigate]
@@ -173,6 +201,18 @@ const AppSidebar: React.FC = () => {
       return { type: "settings", index };
     });
   };
+
+  // Circular logo container styles
+  const logoContainerClass = `
+    flex items-center justify-center 
+    w-10 h-10 
+    rounded-full 
+    overflow-hidden 
+    bg-gray-100 dark:bg-gray-800 
+    border border-gray-200 dark:border-gray-700 
+    flex-shrink-0
+    transition-all duration-300
+  `;
 
   const renderMenuItems = () => (
     <ul className="flex flex-col gap-4">
@@ -333,40 +373,45 @@ const AppSidebar: React.FC = () => {
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+      {/* Logo Area with Company Logo and Short Name */}
       <div
-        className={`py-8 flex ${
+        className={`py-6 flex items-center gap-3 border-b border-gray-200 dark:border-gray-700 ${
           !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
         }`}
       >
-        <Link to="/">
-          {isExpanded || isHovered || isMobileOpen ? (
-            <>
+        <Link to="/" className="flex items-center gap-3 flex-shrink-0">
+          {/* Circular Logo */}
+          <div className={logoContainerClass}>
+            {showCompanyLogo ? (
               <img
-                className="dark:hidden"
-                src="/images/logo/logo.svg"
-                alt="Logo"
-                width={150}
-                height={40}
+                src={companyLogo}
+                alt={companyName}
+                className="w-full h-full object-cover"
+                onError={() => setLogoError(true)}
               />
-              <img
-                className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
-                alt="Logo"
-                width={150}
-                height={40}
-              />
-            </>
-          ) : (
-            <img
-              src="/images/logo/logo-icon.svg"
-              alt="Logo"
-              width={32}
-              height={32}
-            />
+            ) : (
+              <Building2 className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+            )}
+          </div>
+
+          {/* Company Short Name - Only visible when expanded or hovered */}
+          {(isExpanded || isHovered || isMobileOpen) && (
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[140px]">
+                {shortName || companyName}
+              </span>
+              {shortName && shortName !== companyName && (
+                <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[140px]">
+                  {companyName}
+                </span>
+              )}
+            </div>
           )}
         </Link>
       </div>
-      <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
+
+      {/* Navigation */}
+      <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar flex-1 pt-4">
         <nav className="mb-6">
           <div className="flex flex-col gap-4">
             <div>

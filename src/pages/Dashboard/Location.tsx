@@ -35,7 +35,13 @@ import {
   TrendingUp,
   Activity,
   Calendar,
-  ChevronUp
+  ChevronUp,
+  Phone,
+  Mail,
+  MapPin as MapPinIcon,
+  Building2,
+  Award,
+  ExternalLink
 } from 'lucide-react';
 import PageMeta from '../../components/common/PageMeta';
 import { useDispatch, useSelector } from 'react-redux';
@@ -225,12 +231,31 @@ const PermissionInfoCard: React.FC<{ role: Role | null; location: Location | nul
   );
 };
 
-// ============ USER PROFILE CARD ============
+// ============ USER PROFILE CARD (with Company Details) ============
 const UserProfileCard = () => {
   const { user } = useSelector((state: any) => state.auth);
   const { roles } = useSelector((state: any) => state.auth);
-  const { first_name, last_name, email, locations, phone, photo } = user || {};
+  const { first_name, last_name, email, company, locations, phone, photo } = user || {};
+  const { 
+    name: companyName, 
+    logo_path, 
+    favicon_path,
+    address_line1, 
+    address_line2, 
+    city: companyCity, 
+    state: companyState, 
+    email: companyEmail, 
+    phone: companyPhone, 
+    registration_number: registrationNumber,
+    country: companyCountry,
+    industry,
+    established_year: establishedYear,
+    website,
+    description
+  } = company || {};
+
   const photo_url = photo ? SERVER_URL + photo : null;
+  const logo_url = logo_path ? SERVER_URL + logo_path : null;
   const fullname = first_name + " " + last_name;
 
   const [showMenu, setShowMenu] = useState(false);
@@ -244,6 +269,10 @@ const UserProfileCard = () => {
       .toUpperCase()
       .slice(0, 2);
   };
+
+  // Build company address
+  const addressParts = [address_line1, address_line2, companyCity, companyState, companyCountry].filter(Boolean);
+  const fullAddress = addressParts.join(', ');
 
   return (
     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-6 text-white shadow-xl">
@@ -268,6 +297,7 @@ const UserProfileCard = () => {
 
       {/* Content */}
       <div className="relative z-10">
+        {/* Top row: User avatar + name + actions */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             {/* Avatar */}
@@ -327,26 +357,47 @@ const UserProfileCard = () => {
           </div>
         </div>
 
-        {/* Quick Stats */}
-        <div className="mt-6 grid grid-cols-3 gap-4 border-t border-white/20 pt-6">
-          <div>
-            <p className="text-sm text-white/70">Total Locations</p>
-            <p className="text-2xl font-bold">{locations?.length || 0}</p>
+        {/* Company Info Section */}
+        {companyName && (
+          <div className="mt-4 flex flex-wrap items-start gap-4 border-t border-white/20 pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+                {logo_url ? (
+                  <img src={logo_url} alt={companyName} className="h-8 w-8 rounded-full object-cover" />
+                ) : (
+                  <span className="text-sm font-bold text-white">{getInitials(companyName)}</span>
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-semibold flex items-center gap-2">
+                  {companyName}
+                  {registrationNumber && (
+                    <span className="text-[10px] font-normal bg-white/20 px-2 py-0.5 rounded-full">
+                      {registrationNumber}
+                    </span>
+                  )}
+                </p>
+                {fullAddress && (
+                  <p className="text-xs text-white/70 flex items-center gap-1">
+                    <MapPinIcon className="h-3 w-3" />
+                    {fullAddress}
+                  </p>
+                )}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-white/70 mt-0.5">
+                  {companyPhone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{companyPhone}</span>}
+                  {companyEmail && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{companyEmail}</span>}
+                  {website && <span className="flex items-center gap-1"><ExternalLink className="h-3 w-3" /><a href={website} target="_blank" rel="noopener noreferrer" className="hover:underline">Website</a></span>}
+                  {industry && <span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{industry}</span>}
+                </div>
+              </div>
+            </div>
+            {description && (
+              <p className="text-xs text-white/60 max-w-md line-clamp-2">{description}</p>
+            )}
           </div>
-          <div>
-            <p className="text-sm text-white/70">Total Roles</p>
-            <p className="text-2xl font-bold">
-              {locations?.reduce((total: number, loc: Location) => {
-                const locationRoles = roles?.filter((role: Role) => role.location_id === loc.id) || [];
-                return total + locationRoles.length;
-              }, 0) || 0}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-white/70">Total Employees</p>
-            <p className="text-2xl font-bold">567</p>
-          </div>
-        </div>
+        )}
+
+    
       </div>
     </div>
   );
@@ -737,10 +788,10 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Collapsible Info Banner with Bouncing Arrow */}
+          {/* Collapsible Info Banner */}
           <InfoBanner />
 
-          {/* User Profile Card */}
+          {/* User Profile Card (with company details) */}
           <div className="mb-6">
             <UserProfileCard />
           </div>

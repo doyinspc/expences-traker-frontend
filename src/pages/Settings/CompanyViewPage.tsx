@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import companyConfig from './../../config/users/company'; 
-import { Pencil } from 'lucide-react';
+import { Camera, Pencil } from 'lucide-react';
 import { isObjectWithValue } from '../../actions/common';
 
 // ------------------------------------------------------------------
@@ -106,12 +106,13 @@ function formatFieldValue(value: any, fieldConfig: any): string | JSX.Element {
 interface CompanyViewPageProps {
   companyData?: CompanyData | null; // allow null/undefined
   onEdit: () => void;
+  onPhoto: () => void;
 }
 
 // ------------------------------------------------------------------
 // Main Component (Defensive)
 // ------------------------------------------------------------------
-const CompanyViewPage: React.FC<CompanyViewPageProps> = ({ companyData, onEdit }) => {
+const CompanyViewPage: React.FC<CompanyViewPageProps> = ({ companyData, onEdit, onPhoto }) => {
   // 1. Guard: no data provided
   if (!companyData || !isObjectWithValue(companyData)) {
     return (
@@ -119,7 +120,7 @@ const CompanyViewPage: React.FC<CompanyViewPageProps> = ({ companyData, onEdit }
         <p className="text-gray-500 dark:text-gray-400">No company data available. Please add company information.</p>
         <button
           onClick={onEdit}
-          className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+          className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
         >
           <Pencil size={16} />
           Add Company Info
@@ -170,13 +171,22 @@ const CompanyViewPage: React.FC<CompanyViewPageProps> = ({ companyData, onEdit }
         <h2 className="text-2xl font-semibold text-gray-800 dark:text-white flex items-center gap-2">
           <span>🏢</span> Company Details
         </h2>
-        <button
-          onClick={onEdit}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
-        >
-          <Pencil size={16} />
-          Edit
-        </button>
+        <div>
+            <button
+            onClick={onEdit}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
+            >
+            <Pencil size={16} />
+            Edit
+            </button>
+            <button
+            onClick={onPhoto}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
+            >
+            <Camera size={16} />
+            Photo
+            </button>
+        </div>
       </div>
 
       {/* Table */}

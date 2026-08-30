@@ -5,6 +5,7 @@ import CompanyViewPage from "./CompanyViewPage";
 import DynamicForm from "../../components/ui/DynamicForm";
 import useTanstackQuery from "../../hooks/useTanstackQuery";
 import { isArrayWithValue } from "../../actions/common";
+import CompanyFileUpload from "./CompanyPhoto";
 
 const CompanyProfile: React.FC = () => {
   const [page, setPage] = useState<number>(0);
@@ -16,6 +17,17 @@ const CompanyProfile: React.FC = () => {
     mainParam: {},
     narration: "get all company",
   });
+   
+    const handleUploadFile = async (formData: FormData) => {
+        // POST to your backend endpoint
+        formData.cat = "updateFile"
+        loadUpdate(formData)
+    };
+
+    const handleRemoveFile = async (data: { id: number; photo: null; field: string }) => {
+        data.cat = "removeFile"
+        loadUpdate(data)
+    };
 
   // Extract company object safely
   const company = isArrayWithValue(data) ? data[0] : {};
@@ -36,6 +48,9 @@ const CompanyProfile: React.FC = () => {
     }
     setPage(0); // Return to view mode after save
   };
+  const fetchCompany = () =>{
+
+  }
 
   useEffect(() => {
     loadQuery();
@@ -59,8 +74,10 @@ const CompanyProfile: React.FC = () => {
               <CompanyViewPage
                 companyData={company}
                 onEdit={() => setPage(1)}
+                onPhoto={() => setPage(2)}
               />
-            ) : (
+            ) :null}
+            {page === 1 ?  (
               <div className="space-y-6">
                 <DynamicForm
                   tableName="company"
@@ -73,7 +90,30 @@ const CompanyProfile: React.FC = () => {
                   optionData={{}}
                 />
               </div>
-            )}
+            ):null}
+            {page === 2 ?  (
+              <div className="space-y-6">
+            <CompanyFileUpload
+                companyData={company}
+                fieldName="logo_path"
+                fieldLabel="Logo"
+                onUploadFile={handleUploadFile}
+                onRemoveFile={handleRemoveFile}
+                onSave={() => fetchCompany()}
+                onClose={() => setPage(0)}
+            />
+
+            <CompanyFileUpload
+                companyData={company}
+                fieldName="favicon_path"
+                fieldLabel="Favicon"
+                onUploadFile={handleUploadFile}
+                onRemoveFile={handleRemoveFile}
+                onSave={() => fetchCompany()}
+                onClose={() => setPage(0)}
+            />
+        </div>
+            ):null}
           </div>
         </ComponentCard>
       </div>
