@@ -78,7 +78,7 @@ import Departments from "./pages/Teams/Departments";
 import AuthorityDelegation from "./pages/Teams/AuthorityDelegation";
 
 // System Settings
-import CompanyProfile from "./pages/Settings/CompanyProfile";
+import SettingCompany from "./pages/Settings/CompanyProfile";
 import WorkFlowPage from "./pages/Settings/ApprovalWorkflows";
 import WorkFlowStepsPage from "./pages/Settings/ApprovalWorkflowSteps.tsx";
 import ExpensePage from "./pages/Settings/Expenses";
@@ -165,7 +165,8 @@ export default function App() {
             {/* System Settings */}
           </Route>
           <Route path="/setting" element={<AppLayoutSetting />}>
-            <Route index path="/setting/" element={<SettingLanding />} />
+            <Route index path="/setting/" element={<SettingLanding />} />\
+            <Route index path="/setting/company-profile" element={<SettingCompany/>} />
             <Route path="/setting/page/:grp" element={<SettingPage />} />
             <Route path="/setting/page/:grp/:page_id" element={<SettingSubPage />} />
             <Route path="/setting/user" element={<UserDirectory />} />

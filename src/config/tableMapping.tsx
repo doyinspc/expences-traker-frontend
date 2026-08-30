@@ -20,6 +20,7 @@ import serviceitems from "./users/serviceitems.js";
 import currencys from "./users/currency.js";
 import vendors from "./users/vendors";
 import accounts from "./users/accounts";
+import company from "./users/company.js";
 
 // Import commons groups (grp 10-19) from users folder
 import documenttypes from "./users/documenttypes";
@@ -72,6 +73,7 @@ export const tableMapping = {
     departments,
     locations,
     accounts,
+    company,
     
     // Financial
     expenses,

@@ -1,8 +1,8 @@
 import React from 'react';
-import { flatNavItems, FlatNavItem } from './../../../config/navigationConfig'; // adjust path
+import { flatNavItems, FlatNavItem } from './../../../config/navigationConfig'; // adjust import
 
 // ------------------------------------------------------------------
-// Types (extended with location_id on Role)
+// Types
 // ------------------------------------------------------------------
 interface AccessEntry {
   id: number;
@@ -18,8 +18,8 @@ interface Location {
   name: string;
   locationid: number;
   address: string;
-  is_active?: number;    // 0 or 1
-  is_admin?: number;     // 0 or 1
+  is_active?: number;
+  is_admin?: number;
 }
 
 interface Role {
@@ -28,7 +28,7 @@ interface Role {
   name: string;
   description: string;
   isActive: number;
-  location_id?: number;  // if missing → global role
+  location_id?: number | string | null; // may be string or null from API
 }
 
 interface UserData {
@@ -48,7 +48,7 @@ interface AccessTableProps {
 }
 
 // ------------------------------------------------------------------
-// Helper: build a map from (parent, child) -> nav item
+// Navigation helpers
 // ------------------------------------------------------------------
 const navMap = new Map<string, FlatNavItem>();
 flatNavItems.forEach((item) => {
@@ -88,21 +88,25 @@ export const AccessTable: React.FC<AccessTableProps> = ({ user }) => {
     const locId = location.id;
     const accessEntries = accessByLocation.get(locId) || [];
 
-    // Determine if this location is admin
+    // Admin check
     const isAdmin = location.is_admin === 1 || location.is_active === 1;
 
-    // ---- Roles ----
+    // ---- Roles (with numeric conversion + dedupe) ----
     let filteredRoles: Role[];
     if (isAdmin) {
-      // Admin: all roles are permitted
       filteredRoles = user.roles;
     } else {
-      // Non‑admin: only roles with matching location_id (or global)
-      filteredRoles = user.roles.filter(
-        (role) => role.location_id === undefined || parseInt(role?.location_id) === parseInt(locId)
-      );
+      filteredRoles = user.roles.filter((role) => {
+        // Convert to number, treat null/undefined as global
+        const roleLocId = role.location_id != null ? Number(role.location_id) : undefined;
+        const locationIdNum = Number(locId);
+        // Global roles have no location_id → include
+        if (roleLocId === undefined) return true;
+        // Strict numeric comparison
+        return roleLocId === locationIdNum;
+      });
     }
-    // Deduplicate roles by id (in case a role appears multiple times)
+    // Deduplicate by role id
     const uniqueRoles = Array.from(
       new Map(filteredRoles.map((role) => [role.id, role])).values()
     );
@@ -112,7 +116,6 @@ export const AccessTable: React.FC<AccessTableProps> = ({ user }) => {
     if (isAdmin) {
       accessDisplay = 'Full Access';
     } else {
-      // Build the enumerated access string
       const parentGroups = new Map<number, { parentName: string; childNames: string[] }>();
       accessEntries.forEach((entry) => {
         const parent = entry.parent_path_number;
@@ -153,7 +156,7 @@ export const AccessTable: React.FC<AccessTableProps> = ({ user }) => {
     };
   });
 
-  // Stats for header
+  // Stats
   const totalLocations = rows.length;
   const totalRoles = user.roles.length;
   const totalAccessible = rows.filter((r) => r.access !== 'No access').length;
@@ -168,7 +171,7 @@ export const AccessTable: React.FC<AccessTableProps> = ({ user }) => {
 
   return (
     <div className="space-y-4">
-      {/* ===== TILE HEADER ===== */}
+      {/* Header tiles */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-colors dark:border-gray-700 dark:bg-gray-800">
           <div className="flex items-center justify-between">
@@ -215,27 +218,18 @@ export const AccessTable: React.FC<AccessTableProps> = ({ user }) => {
         </div>
       </div>
 
-      {/* ===== TABLE ===== */}
+      {/* Table */}
       <div className="w-full overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-md dark:border-gray-700 dark:bg-gray-800">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
-              >
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
                 Location
               </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
-              >
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
                 Roles
               </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
-              >
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
                 Access Granted
               </th>
             </tr>
