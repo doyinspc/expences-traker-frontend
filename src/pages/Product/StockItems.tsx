@@ -52,7 +52,6 @@ const columnVisibility = {
     quantity: true,
     unit_price: true,
     total_price: true,
-    sku_id: false,
     delivery_required_by: false,
     special_instructions: false,
     resolved: false,

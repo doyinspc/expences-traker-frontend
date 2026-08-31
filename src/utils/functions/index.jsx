@@ -352,9 +352,9 @@ export const columnBuilder = (page_data, actions = null, showSelect = false) => 
         } 
     },
     size: tableWidth?.sn ?? 0.8,
-    meta: { style: { textAlign: 'center', maxWidth: '8px',
-            width: '8px' } },
-    size: 1,
+    // meta: { style: { textAlign: 'center', maxWidth: '8px',
+    //         width: '8px' } },
+    // size: 1,
     cell: ({ row }) => {
       return row.index + 1;
     },

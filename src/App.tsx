@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router";
-import SignIn from "./pages/AuthPages/SignIn";
-import SignUp from "./pages/AuthPages/SignUp";
-import NotFound from "./pages/OtherPage/NotFound";
+import { lazy, Suspense } from "react";
+
+// Layouts – keep static (they are shared and not too heavy)
 import AppLayout from "./layout/AppLayout";
 import AppLayoutHome from "./layout/AppLayoutHome";
 import AppLayoutAdmin from "./layout/AppLayoutAdmin";
@@ -9,93 +9,98 @@ import AppLayoutSetting from "./layout/AppLayoutSetting";
 import AppLayoutMIS from "./layout/AppLayoutMIS";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 
+// Lazy‑load all page components
+const SignIn = lazy(() => import("./pages/AuthPages/SignIn"));
+const SignUp = lazy(() => import("./pages/AuthPages/SignUp"));
+const NotFound = lazy(() => import("./pages/OtherPage/NotFound"));
+
 // Dashboard
-import Home from "./pages/Dashboard/Home";
-import Dashboard from "./pages/Dashboard/Dashboard.tsx";
-import Welcome from "./pages/Dashboard/Location";
-import Profile from "./pages/Teams/UserComponents/UserInfoPagePrivate.jsx";
+const Home = lazy(() => import("./pages/Dashboard/Home"));
+const Dashboard = lazy(() => import("./pages/Dashboard/Dashboard.tsx"));
+const Welcome = lazy(() => import("./pages/Dashboard/Location"));
+const Profile = lazy(() => import("./pages/Teams/UserComponents/UserInfoPagePrivate.jsx"));
 
 // Procurement
-import ApprovalCenter from "./pages/Procurement/ApprovalCenter.jsx";
-import ApprovalCenterDetails from "./pages/Procurement/ApprovalCenterDetails.jsx";
-import ControlCenter from "./pages/Procurement/ControlCenter.jsx";
+const ApprovalCenter = lazy(() => import("./pages/Procurement/ApprovalCenter.jsx"));
+const ApprovalCenterDetails = lazy(() => import("./pages/Procurement/ApprovalCenterDetails.jsx"));
+const ControlCenter = lazy(() => import("./pages/Procurement/ControlCenter.jsx"));
+const Requisitions = lazy(() => import("./pages/Product/Requisition"));
+const RequisitionItems = lazy(() => import("./pages/Product/RequisitionItems.tsx"));
+const PurchaseOrders = lazy(() => import("./pages/Product/PurchaseOrder"));
+const PurchaseOrderRequisitions = lazy(() => import("./pages/Product/PurchaseOrderRequisitions"));
+const CashTransfer = lazy(() => import("./pages/Product/CashTransfer.jsx"));
+const CashTransferItems = lazy(() => import("./pages/Product/CashTransferItems.tsx"));
+const Incomes = lazy(() => import("./pages/Product/Income.jsx"));
+const IncomeItems = lazy(() => import("./pages/Product/IncomeItems.tsx"));
+const Stocks = lazy(() => import("./pages/Product/Stock.jsx"));
+const StockItems = lazy(() => import("./pages/Product/StockItems.tsx"));
+const CashAdvance = lazy(() => import("./pages/Product/CashAdvance.jsx"));
+const BudgetList = lazy(() => import("./pages/Budgets/Budgets"));
+const BudgetItems = lazy(() => import("./pages/Budgets/BudgetItems.jsx"));
+const LearnMore = lazy(() => import("./pages/Product/LearnMore.tsx"));
 
-import Requisitions from "./pages/Product/Requisition";
-import RequisitionItems from "./pages/Product/RequisitionItems.tsx";
-import PurchaseOrders from "./pages/Product/PurchaseOrder";
-import PurchaseOrderRequisitions from "./pages/Product/PurchaseOrderRequisitions";
-import CashTransfer from "./pages/Product/CashTransfer.jsx";
-import CashTransferItems from "./pages/Product/CashTransferItems.tsx";
-import Incomes from "./pages/Product/Income.jsx";
-import IncomeItems from "./pages/Product/IncomeItems.tsx";
-import Stocks from "./pages/Product/Stock.jsx";
-import StockItems from "./pages/Product/StockItems.tsx";
-import CashAdvance from "./pages/Product/CashAdvance.jsx";
-import BudgetList from "./pages/Budgets/Budgets";
-import BudgetItems from "./pages/Budgets/BudgetItems.jsx";
-import LearnMore from "./pages/Product/LearnMore.tsx";
+// Settings
+const SettingLanding = lazy(() => import("./pages/Settings/SettingsLanding.tsx"));
+const SettingPage = lazy(() => import("./pages/Settings/Index.tsx"));
+const SettingSubPage = lazy(() => import("./pages/Settings/IndexChild.tsx"));
 
-import SettingLanding from "./pages/Settings/SettingsLanding.tsx";
-import SettingPage from "./pages/Settings/Index.tsx";
-import SettingSubPage from "./pages/Settings/IndexChild.tsx";
+// Bookings
+const Booking = lazy(() => import("./pages/Bookings/Bookings.tsx"));
+const BookingPage = lazy(() => import("./pages/Bookings/BookingsPage.tsx"));
+const BookingReport = lazy(() => import("./pages/Bookings/Reports.tsx"));
+const BookingClient = lazy(() => import("./pages/Bookings/Clients.tsx"));
+const BookingCompany = lazy(() => import("./pages/Bookings/Companies.tsx"));
 
+// Cash Advances
+const AdvanceRequests = lazy(() => import("./pages/CashAdvances/AdvanceRequests"));
 
-// Finance & Expenses
-import Booking from "./pages/Bookings/Bookings.tsx";
-import BookingPage from "./pages/Bookings/BookingsPage.tsx";
-import BookingReport from "./pages/Bookings/Reports.tsx";
-import BookingClient from "./pages/Bookings/Clients.tsx";
-import BookingCompany from "./pages/Bookings/Companies.tsx";
+// Finance
+const AccountsPayable = lazy(() => import("./pages/Finance/AccountsPayable"));
+const Payments = lazy(() => import("./pages/Finance/Payments"));
+const Budgets = lazy(() => import("./pages/Finance/Budgets"));
 
-// Cash & Advances
-import AdvanceRequests from "./pages/CashAdvances/AdvanceRequests";
+// Inventory
+const GoodsReceived = lazy(() => import("./pages/Inventory/GoodsReceived"));
+const FixedAssets = lazy(() => import("./pages/Inventory/FixedAssets"));
+const StockLevels = lazy(() => import("./pages/Inventory/StockLevels"));
+const Allocations = lazy(() => import("./pages/Inventory/Allocations"));
 
-// Finance & Expenses
-import AccountsPayable from "./pages/Finance/AccountsPayable";
-import Payments from "./pages/Finance/Payments";
-import Budgets from "./pages/Finance/Budgets";
-
-
-// Inventory & Assets
-import GoodsReceived from "./pages/Inventory/GoodsReceived";
-import FixedAssets from "./pages/Inventory/FixedAssets";
-import StockLevels from "./pages/Inventory/StockLevels";
-import Allocations from "./pages/Inventory/Allocations";
-
-// Reports & Analytics
-import ExpenseAsset from "./pages/Reports/ExpenseAsset";
-import CashFlow from "./pages/Reports/CashFlow.jsx";
-import AuditTrails from "./pages/Reports/AuditTrails";
-import ExpenseReport from "./pages/Reports/ExpenseReport.jsx";
-import Opex from "./pages/Reports/Opex";
-import Capex from "./pages/Reports/Capex";
-import BudgetGraph from "./pages/Reports/Budget.jsx";
+// Reports
+const ExpenseAsset = lazy(() => import("./pages/Reports/ExpenseAsset"));
+const CashFlow = lazy(() => import("./pages/Reports/CashFlow.jsx"));
+const AuditTrails = lazy(() => import("./pages/Reports/AuditTrails"));
+const ExpenseReport = lazy(() => import("./pages/Reports/ExpenseReport.jsx"));
+const Opex = lazy(() => import("./pages/Reports/Opex"));
+const Capex = lazy(() => import("./pages/Reports/Capex"));
+const BudgetGraph = lazy(() => import("./pages/Reports/Budget.jsx"));
 
 // Teams & Permissions
-import UserDirectory from "./pages/Teams/UserDirectory";
-import RolesAccess from "./pages/Teams/RolesAccess";
-import Departments from "./pages/Teams/Departments";
-import AuthorityDelegation from "./pages/Teams/AuthorityDelegation";
+const UserDirectory = lazy(() => import("./pages/Teams/UserDirectory"));
+const RolesAccess = lazy(() => import("./pages/Teams/RolesAccess"));
+const Departments = lazy(() => import("./pages/Teams/Departments"));
+const AuthorityDelegation = lazy(() => import("./pages/Teams/AuthorityDelegation"));
 
-// System Settings
-import SettingCompany from "./pages/Settings/CompanyProfile";
-import WorkFlowPage from "./pages/Settings/ApprovalWorkflows";
-import WorkFlowStepsPage from "./pages/Settings/ApprovalWorkflowSteps.tsx";
-import ExpensePage from "./pages/Settings/Expenses";
-import ExpenseItemsPage from "./pages/Settings/ExpenseItems.tsx";
-import IncomePage from "./pages/Settings/Incomes.tsx";
-import IncomeItemsPage from "./pages/Settings/IncomeItems.tsx";
-import RoomPage from "./pages/Settings/Rooms";
-import RoomItemsPage from "./pages/Settings/RoomItems.tsx";
-import ServicePage from "./pages/Settings/Services.tsx";
-import ServiceItemsPage from "./pages/Settings/ServiceItems.tsx";
+// System Settings (detail pages)
+const SettingCompany = lazy(() => import("./pages/Settings/CompanyProfile"));
+const WorkFlowPage = lazy(() => import("./pages/Settings/ApprovalWorkflows"));
+const WorkFlowStepsPage = lazy(() => import("./pages/Settings/ApprovalWorkflowSteps.tsx"));
+const ExpensePage = lazy(() => import("./pages/Settings/Expenses"));
+const ExpenseItemsPage = lazy(() => import("./pages/Settings/ExpenseItems.tsx"));
+const IncomePage = lazy(() => import("./pages/Settings/Incomes.tsx"));
+const IncomeItemsPage = lazy(() => import("./pages/Settings/IncomeItems.tsx"));
+const RoomPage = lazy(() => import("./pages/Settings/Rooms"));
+const RoomItemsPage = lazy(() => import("./pages/Settings/RoomItems.tsx"));
+const ServicePage = lazy(() => import("./pages/Settings/Services.tsx"));
+const ServiceItemsPage = lazy(() => import("./pages/Settings/ServiceItems.tsx"));
 
+// Optional: a global loading fallback component
+const PageLoader = () => <div className="loading-spinner">Loading...</div>;
 
 export default function App() {
   return (
-    <>
-      <Router>
-        <ScrollToTop />
+    <Router>
+      <ScrollToTop />
+      <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Dashboard Layout */}
           <Route path="/" element={<AppLayout />}>
@@ -128,8 +133,8 @@ export default function App() {
             <Route path="/procurement/requests" element={<AdvanceRequests />} />
 
             {/* Bookings */}
-            <Route path="/bookings/booking" element={<Booking/>} />
-            <Route path="/bookings/booking/:id" element={<BookingPage/>} />
+            <Route path="/bookings/booking" element={<Booking />} />
+            <Route path="/bookings/booking/:id" element={<BookingPage />} />
             <Route path="/bookings/report" element={<BookingReport />} />
             <Route path="/bookings/client" element={<BookingClient />} />
             <Route path="/bookings/company" element={<BookingCompany />} />
@@ -155,18 +160,17 @@ export default function App() {
             <Route path="/reports/opex" element={<Opex />} />
             <Route path="/reports/budget-performance" element={<BudgetGraph />} />
 
-
             {/* Teams & Permissions */}
             <Route path="/teams/directory" element={<UserDirectory />} />
             <Route path="/teams/roles" element={<RolesAccess />} />
             <Route path="/teams/departments" element={<Departments />} />
             <Route path="/teams/delegation" element={<AuthorityDelegation />} />
-
-            {/* System Settings */}
           </Route>
+
+          {/* Settings Layout */}
           <Route path="/setting" element={<AppLayoutSetting />}>
-            <Route index path="/setting/" element={<SettingLanding />} />\
-            <Route index path="/setting/company-profile" element={<SettingCompany/>} />
+            <Route index path="/setting/" element={<SettingLanding />} />
+            <Route index path="/setting/company-profile" element={<SettingCompany />} />
             <Route path="/setting/page/:grp" element={<SettingPage />} />
             <Route path="/setting/page/:grp/:page_id" element={<SettingSubPage />} />
             <Route path="/setting/user" element={<UserDirectory />} />
@@ -181,12 +185,10 @@ export default function App() {
             <Route path="/setting/service" element={<ServicePage />} />
             <Route path="/setting/service/:page_id" element={<ServiceItemsPage />} />
           </Route>
-          <Route path="/admin" element={<AppLayoutAdmin />}>
-          </Route>
-          <Route path="/home" element={<AppLayoutHome />}>
-          </Route>
-          <Route path="/mis" element={<AppLayoutMIS />}>
-          </Route>
+
+          <Route path="/admin" element={<AppLayoutAdmin />} />
+          <Route path="/home" element={<AppLayoutHome />} />
+          <Route path="/mis" element={<AppLayoutMIS />} />
 
           {/* Auth Layout */}
           <Route path="/signin" element={<SignIn />} />
@@ -196,7 +198,7 @@ export default function App() {
           {/* Fallback Route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </Router>
-    </>
+      </Suspense>
+    </Router>
   );
 }
