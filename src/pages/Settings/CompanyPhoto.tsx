@@ -110,10 +110,10 @@ const CompanyFileUpload: React.FC<CompanyFileUploadProps> = ({
             //   - id: company ID
             //   - field: the column name (e.g., 'logo_path')
             //   - photo: the actual file
-            const formData = new FormData();
-            formData.append('id', String(companyData.id));
-            formData.append('field', fieldName);
-            formData.append('photo', selectedFile);
+            const formData = {};
+            formData.id = String(companyData.id);
+            formData.field = fieldName;
+            formData.photo = selectedFile;
 
             await onUploadFile(formData);
 
