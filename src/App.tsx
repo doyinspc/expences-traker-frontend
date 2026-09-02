@@ -98,7 +98,7 @@ const PageLoader = () => <div className="loading-spinner">Loading...</div>;
 
 export default function App() {
   return (
-    <Router>
+    <Router >
       <ScrollToTop />
       <Suspense fallback={<PageLoader />}>
         <Routes>

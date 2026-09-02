@@ -119,8 +119,8 @@ export default function ApprovalCenterDetails() {
     const { previous: previousStep, current: activeStep, next: nextStep } = getStepContext(steps);
     
     const canApprove = activeStep && 
-                       activeStep.role_id === role_id &&
-                       parseInt(activeStep.assigned_to_user_id)  === 1 &&
+                       parseInt(activeStep.role_id) === parseInt(role_id) &&
+                       (parseInt(activeStep.assigned_to_user_id)  === 1  || parseInt(activeStep.assigned_to_user_id)  === 0) &&
                        workflowInstance.is_active === 1 &&
                        workflowInstance.is_completed === 0;
     

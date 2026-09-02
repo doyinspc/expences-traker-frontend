@@ -112,7 +112,6 @@ class ReducerCreator {
                 case self.#actionTypes.GET_ONE:
                     const allItemsForGetOne = state[self.#pluralItemsKey];
                     const selectedItem = allItemsForGetOne.find(row => row.id == action.payload);
-                    console.log("WISKEY PEAK", selectedItem, action.payload, allItemsForGetOne);
                     return {
                         ...state,
                         [self.#singularItemKey]: selectedItem,

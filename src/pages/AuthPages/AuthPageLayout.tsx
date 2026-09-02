@@ -2,6 +2,9 @@ import React from "react";
 import { Link } from "react-router";
 import ThemeTogglerTwo from "../../components/common/ThemeTogglerTwo";
 
+
+const image_location = import.meta.env.VITE_APP_NAME;
+
 export default function AuthLayout({
   children,
 }: {
@@ -15,7 +18,7 @@ export default function AuthLayout({
         <div 
           className="items-center hidden w-full h-full lg:w-1/2 lg:grid bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage: `url('/images/bg.jpg')`
+            backgroundImage: image_location === 'SILHMS' ? `url('/images/bg-hms.jpg')` : `url('/images/bg.jpg')`
           }}
         >
           <div className="relative flex items-center justify-center z-1 w-full h-full bg-gradient-to-br from-black/80 via-black/60 to-black/40">
