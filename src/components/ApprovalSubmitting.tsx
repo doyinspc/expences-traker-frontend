@@ -307,7 +307,7 @@ const ApprovalSubmitModal: React.FC<ApprovalSubmitModalProps> = ({
             </div>
 
             {/* Status Selection */}
-            <div>
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Select Status <span className="text-red-500">*</span>
               </label>
@@ -336,7 +336,7 @@ const ApprovalSubmitModal: React.FC<ApprovalSubmitModalProps> = ({
                   <Loader2 className="w-3 h-3 animate-spin" /> Loading statuses...
                 </p>
               )}
-            </div>
+            </div> */}
 
             {/* Comment */}
             <div>

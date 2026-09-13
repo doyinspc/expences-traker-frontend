@@ -76,7 +76,8 @@ const table_data = [
     {label: 'Approver Name', name:'approver_name', type:'text', showTable: true, editable:false, element:null},
     {label: 'Approval Date', name:'approve_date', type:'datetime', showTable: true, editable:false, element:null},
     {label: 'Approval Workflow', name:'approval_workflow_id', type:'select', showTable: false, editable:true, element:null},
-    {label: 'Workflow Name', name:'approval_workflow_name', type:'text', showTable: true, editable:false, element:null},
+    {label: 'Budget Name', name:'budget_name', type:'text', showTable: true, editable:false, element:null},
+    {label: 'Workflow Name', name:'workflow_name', type:'text', showTable: true, editable:false, element:null},
     {label: 'Current Approval Level', name:'current_approval_level', type:'number', showTable: false, editable:false, element:null},
     {label: 'Expected Delivery Date', name:'expected_delivery_date', type:'date', showTable: true, editable:true, element:null},
     {label: 'Notes', name:'notes', type:'textarea', showTable: false, editable:true, element:null},
@@ -95,7 +96,7 @@ const DEFAULT_COLUMN_VISIBILITY: ColumnVisibility = {
     pr_id: true,
     title: true,
     budget_id: false,
-    budget_name: false,
+    budget_name: true,
     requester_id: false,
     requester_name: false,
     department_id: false,
@@ -104,7 +105,7 @@ const DEFAULT_COLUMN_VISIBILITY: ColumnVisibility = {
     vendor_name: false,
     location_id: false,
     location_name: false,
-    total_amount: true,
+    total_amount: false,
     total_amount_record: true,
     total_count_number: false,
     currency_id: false,
@@ -116,7 +117,7 @@ const DEFAULT_COLUMN_VISIBILITY: ColumnVisibility = {
     approver_name: false,
     approve_date: false,
     approval_workflow_id: false,
-    approval_workflow_name: true,
+    workflow_name: true,
     current_approval_level: false,
     expected_delivery_date: false,
     notes: false,
@@ -182,7 +183,7 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
     const [isDateRangeApplied, setIsDateRangeApplied] = useState<boolean>(true);
 
     // ==================== API HOOKS ====================
-    const { data, loadQuery, loadUpdate, isLoading } = useReduxApiData({
+    const { data, loadQuery, loadUpdate, isLoading, isProcessing, getOne, row:document} = useReduxApiData({
         table: 'requisitions',
         uniqueKey: TABLE_PATH,
         queryType: 'gets',
@@ -333,6 +334,7 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
 
     const onView = useCallback((row: any): void => {
         setRow(row);
+        getOne({ id: row.id });
         setIsEdit(false);
         setPage(2);
     }, []);
@@ -424,11 +426,21 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
         loadUpdate(requestData);
     }, [user_id, location_id, row, loadUpdate]);
 
+    const resetForApproval = useCallback((formData: any): void => {
+        const requestData = {
+            id: formData?.id,
+            submitted_by: user_id,
+            act: 5,
+            cat: "insert"
+        };
+        loadUpdate(requestData);
+    }, [user_id, location_id, row, loadUpdate]);
+
     const clearDateRange = useCallback((): void => {
         setIsDateRangeApplied(false);
         setDateRange({ start: '', end: '' });
         loadQuery();
-    }, [loadQuery]);
+    }, []);
 
     const setQuickDateRange = useCallback((months: number): void => {
         const end = new Date();
@@ -440,7 +452,7 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
         });
         setIsDateRangeApplied(true);
         loadQuery();
-    }, [loadQuery]);
+    }, []);
 
     // ==================== DATA PROCESSING ====================
     const processedRows = useMemo(() => {
@@ -745,16 +757,27 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
                             ) : null}
                             {page === 2 ? (
                                 <DisplayPageDetails
-                                    document={row}
+                                    document={document || row}
+                                    table_path={TABLE_PATH}
+                                    mainParamData={{
+                                        location_id: location_id || 0,
+                                        requisition_type: DOCUMENT_TYPE,
+                                         ...(isDateRangeApplied && dateRange.start && dateRange.end ? {
+                                            start_date: dateRange.start,
+                                            end_date: dateRange.end
+                                        } : {})   
+                                    }}
                                     documentTypeId={document_type}
                                     onClose={() => setPage(0)}
                                     onDeactivate={onDeactivate}
                                     deactivateLoading={false}
                                     title={`${displayName} Details`}
                                     showDeactivate={true}
+                                    isProcessing={isProcessing}
                                     statusData={statusData || []}
                                     priorityData={priorityData || []}
                                     onSubmitForApproval={submitForApproval}
+                                    onResetApproval={resetForApproval}
                                 />
                             ) : null} 
                         </>

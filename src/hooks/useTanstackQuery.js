@@ -125,6 +125,9 @@ export default function useTanstackQuery(props) {
     const [param, setParam] = useState({});
     const [isEnabled, setIsEnabled] = useState(enabled);
 
+    // Holds the last single row (set by getOne or loadUpdate)
+    const [row, setRow] = useState(null);
+
     const {
         data,
         isLoading,
@@ -160,6 +163,37 @@ export default function useTanstackQuery(props) {
             const id = variables?.id || null;
             const act = variables?.act || null;
 
+            // ============================================
+            // Surface the affected row as `row` for ALL actions:
+            // insert, update, delete — as long as we got a usable object
+            // ============================================
+            const rowPayload = responseData?.data ?? responseData;
+
+            if (rowPayload && !Array.isArray(rowPayload) && typeof rowPayload === 'object') {
+                // insert / update → single object returned
+                setRow(rowPayload);
+            } else if (Array.isArray(rowPayload) && rowPayload.length > 0) {
+                // insert / update → array returned, take the match by id or first
+                const match =
+                    rowPayload.find((r) => String(r.id) === String(id ?? rowPayload[0]?.id)) ??
+                    rowPayload[0];
+                setRow(match);
+            } else if (cat.includes('delete') && id) {
+                // delete → clear the current row if it was the one removed
+                setRow((prev) => (prev && String(prev.id) === String(id) ? null : prev));
+            } else {
+                // fallback: keep whatever is already in cache as `row`
+                const cached = queryClient.getQueryData([table, uniqueKey]);
+                const payload = cached?.data ?? cached;
+                if (Array.isArray(payload) && id) {
+                    const match = payload.find((r) => String(r.id) === String(id)) ?? null;
+                    setRow(match);
+                }
+            }
+
+            // ============================================
+            // UNCHANGED: cache update (insert / update / delete)
+            // ============================================
             if (cat && data) {
                 queryClient.setQueryData([table, uniqueKey], (oldData) => {
                     let currentData = Array.isArray(oldData) ? oldData : [];
@@ -217,12 +251,59 @@ export default function useTanstackQuery(props) {
         setIsEnabled(true);
     };
 
+    // ============================================
+    // LOAD UPDATE: mutate + always set `row`
+    // Cache update (insert / update / delete) is handled inside the mutation's onSuccess
+    // ============================================
     const loadUpdate = async (newParam) => {
-        await mutateAsync(newParam);
+        const result = await mutateAsync(newParam);
+        const cat = newParam?.cat || 'insert';
+        const id = newParam?.id ?? null;
+
+        const payload = result?.data ?? result;
+
+        if (payload && !Array.isArray(payload) && typeof payload === 'object') {
+            // insert / update → single row object
+            setRow(payload);
+        } else if (Array.isArray(payload) && payload.length > 0) {
+            // array response → pick the matching id, else first
+            const match =
+                payload.find((r) => String(r.id) === String(id)) ?? payload[0];
+            setRow(match);
+        } else if (cat.includes('delete') && id) {
+            setRow((prev) => (prev && String(prev.id) === String(id) ? null : prev));
+        }
+
+        return result;
     };
 
     const refetch = () => {
         refetchQuery();
+    };
+
+    // ============================================
+    // GET ONE: read a single row from cached state
+    // Also sets `row` so it can be destructured from the hook
+    // Returns { row: <object|null> }
+    // ============================================
+    const getOne = (id) => {
+        // Prefer live cache, fall back to the hook's `data`
+        const cached = queryClient.getQueryData([table, uniqueKey]) ?? data;
+
+        let match = null;
+
+        if (cached) {
+            const payload = cached?.data ?? cached;
+
+            if (Array.isArray(payload)) {
+                match = payload.find((r) => String(r.id) === String(id)) ?? null;
+            } else if (payload && typeof payload === 'object') {
+                match = String(payload.id) === String(id) ? payload : null;
+            }
+        }
+
+        setRow(match);
+        return { row: match };
     };
 
     return {
@@ -239,5 +320,7 @@ export default function useTanstackQuery(props) {
         loadQuery,
         loadUpdate,
         refetch,
+        getOne,
+        row,
     };
 }

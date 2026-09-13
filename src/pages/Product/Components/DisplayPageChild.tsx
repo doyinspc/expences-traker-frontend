@@ -1,7 +1,7 @@
 // src/components/common/DisplayPageChild.tsx
 
 import React, { useEffect, useState } from 'react';
-import { X, ArrowLeft, Power, Loader2, Send, AlertTriangle } from 'lucide-react';
+import { X, ArrowLeft, Power, Loader2, Send, AlertTriangle, DeleteIcon } from 'lucide-react';
 import useReduxApiData from '../../../hooks/useTanstackQuery';
 import { useSelector } from 'react-redux';
 import ApprovalSubmitModal from '../../../components/ApprovalSubmitting';
@@ -110,6 +110,7 @@ export interface DisplayPageChildProps {
   document: DocumentData;
   statusData?: CommonData[];
   priorityData?: CommonData[];
+  isProcessing?: boolean;
   onClose?: () => void;
   onDeactivate?: (document: DocumentData) => void;
   onApproveItem?: (item: DocumentItem) => void;
@@ -136,6 +137,9 @@ export interface DisplayPageChildProps {
     comment: string;
     document_type_id: number;
   }) => void;
+  onResetApproval?: (data: {
+    id: number;
+  }) => void;
   documentType?: string;
   documentTypeId?: number;
   documentNumberPrefix?: string;
@@ -160,6 +164,7 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
   onDownloadAttachment,
   onDeleteAttachment,
   onUploadReceipt,
+  isProcessing = false,
   deactivateLoading = false,
   submitLoading = false,
   className = '',
@@ -175,7 +180,8 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
   itemsTablePath = 'documentitem',
   leftFields,
   rightFields,
-  onSubmitForApproval
+  onSubmitForApproval,
+  onResetApproval
 }) => {
   const { user: { id: userId } } = useSelector((state: any) => state.auth);
   const [isDeactivating, setIsDeactivating] = useState(false);
@@ -196,17 +202,17 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
   // ============================================
   // DATA FETCHING
   // ============================================
-   const documentId = document?.id || 0;
-   let mainParam:any = {};
-   if(documentTypeId == 2){
-     mainParam.purchaseorder_id = document.id || 0;
-   }
-   else if(documentTypeId == 8){
-     mainParam.sku_id = document.id || 0;
-   }
-   else{
-    mainParam.requisition_id = document.id || 0;
-   }
+  const documentId = document?.id || 0;
+  let mainParam: any = {};
+  if (documentTypeId == 2) {
+    mainParam.purchaseorder_id = document?.id || 0;
+  }
+  else if (documentTypeId == 8) {
+    mainParam.sku_id = document?.id || 0;
+  }
+  else {
+    mainParam.requisition_id = document?.id || 0;
+  }
 
   const { data: documentItemsData, loadQuery, isLoading, loadUpdate } = useReduxApiData({
     table: 'requisitionitems',
@@ -216,19 +222,19 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
     narration: `get ${documentType} items`,
   });
 
-  const { data: budgetCategories, loadQuery:loadBudgetCategory } = useReduxApiData({
+  const { data: budgetCategories, loadQuery: loadBudgetCategory } = useReduxApiData({
     table: 'requisitionitems',
     uniqueKey: "budgetcategory",
     queryType: 'getBudgetCategorySummary',
-    mainParam: {budget_id: document.budget_id || 0},
+    mainParam: { budget_id: document?.budget_id || 0 },
     narration: `get ${documentType} items`,
   });
 
-  const { data: budgetCategoryItems, loadQuery:loadBudgetCategoryItem } = useReduxApiData({
+  const { data: budgetCategoryItems, loadQuery: loadBudgetCategoryItem } = useReduxApiData({
     table: 'requisitionitems',
     uniqueKey: "budgetitems",
     queryType: 'getBudgetCategoryItemSummary',
-    mainParam: {budget_id: document.budget_id || 0},
+    mainParam: { budget_id: document?.budget_id || 0 },
     narration: `get ${documentType} items`,
   });
 
@@ -248,8 +254,6 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
     narration: 'get Priority items',
   });
 
-
-
   // ============================================
   // MODAL HANDLERS
   // ============================================
@@ -262,16 +266,15 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
     status_id: number;
     comment: string;
   }) => {
-   
-      onSubmitForApproval({
-        id: Number(document.id),
-        workflow_id: data.workflow_id,
-        status_id: data.status_id,
-        priority_id: data.priority_id,
-        comment: data.comment || 'Submitting for approval',
-        document_type_id: documentTypeId
-      });
-      closeModal();
+    onSubmitForApproval({
+      id: Number(document.id),
+      workflow_id: data.workflow_id,
+      status_id: 255,
+      priority_id: data.priority_id,
+      comment: data.comment || 'Submitting for approval',
+      document_type_id: documentTypeId
+    });
+    closeModal();
   };
 
   // ============================================
@@ -329,7 +332,7 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
         rw.column = 'doc_path';
         await loadUpdate(rw);
       }
-      
+
       setUploadModalOpen(false);
       // Refresh attachments list
       await handleViewAttachments(selectedItem);
@@ -388,18 +391,24 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
     openModal();
   };
 
+  const handleResetApproval = () => {
+    onResetApproval({
+      id: Number(document.id)
+    });
+  };
+
   const getCurrency = (): string => {
-    const currency = document.currency_name || 
-                    document.currency_code ||
-                    document.currency || 
-                    'NGN';
+    const currency = document?.currency_name ||
+      document?.currency_code ||
+      document?.currency ||
+      'NGN';
     return typeof currency === 'string' && currency !== 'null' && currency !== '' ? currency : 'NGN';
   };
 
   const getWorkflowName = (): string => {
-    const workflow = document.approval_workflow_name || 
-                    document.workflow_name || 
-                    'N/A';
+    const workflow = document?.approval_workflow_name ||
+      document?.workflow_name ||
+      'N/A';
     return typeof workflow === 'string' && workflow !== 'null' && workflow !== '' ? workflow : 'N/A';
   };
 
@@ -494,15 +503,15 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
   };
 
   const getStatusValue = () => {
-    return document.status_name || document.status || 'N/A';
+    return document?.status_name || document?.status || 'N/A';
   };
 
   const getPriorityValue = () => {
-    return document.priority_name || document.priority || 'N/A';
+    return document?.priority_name || document?.priority || 'N/A';
   };
 
   const getDocumentTypeValue = () => {
-    return document.document_type_name || document.document_type || documentType;
+    return document?.document_type_name || document?.document_type || documentType;
   };
 
   const getItemStatusLabel = (item: DocumentItem) => {
@@ -543,14 +552,14 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
   // LOAD DATA
   // ============================================
   useEffect(() => {
-    if (document.id) {
+    if (document?.id) {
       loadQuery();
       loadStatus();
       loadPriority();
-      loadBudgetCategory()
-      loadBudgetCategoryItem()
+      loadBudgetCategory();
+      loadBudgetCategoryItem();
     }
-  }, [document.id]);
+  }, [document?.id]);
 
   useEffect(() => {
     if (documentItemsData && Array.isArray(documentItemsData)) {
@@ -602,7 +611,46 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
   };
 
   const isDeactivatingNow = deactivateLoading || isDeactivating;
-  const displayId = document.document_number || document.id;
+  const displayId = document?.document_number || document?.id;
+
+  // ============================================
+  // GUARD: Missing document id
+  // All hooks above have already run — safe to early return here.
+  // ============================================
+  if (!document?.id) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] p-6">
+        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
+          <div className="mx-auto w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-4">
+            <AlertTriangle className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            No {documentType} Selected
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+            We couldn't find a {documentType.toLowerCase()} to display. Please go back and select one to continue.
+          </p>
+          {onClose ? (
+            <button
+              onClick={onClose}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-md hover:shadow-lg"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Go Back
+            </button>
+          ) : (
+            <button
+              onClick={() => window.history.back()}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-md hover:shadow-lg"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Go Back
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // ============================================
   // MAIN RENDER
@@ -661,149 +709,184 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
           </div>
         </div>
 
-        {/* Details Section - Using DetailFields Child Component */}
-        <DetailFields
-          document={document}
-          statusData={statusData || []}
-          priorityData={priorityData || []}
-          documentType={documentType}
-          documentTypeId={documentTypeId}
-          currency={currency}
-          formatCurrency={formatCurrency}
-          formatDate={formatDate}
-          formatBoolean={formatBoolean}
-          safeValue={safeValue}
-          getStatusValue={getStatusValue}
-          getPriorityValue={getPriorityValue}
-          getDocumentTypeValue={getDocumentTypeValue}
-          getStatusColorFromData={getStatusColorFromData}
-          getPriorityColorFromData={getPriorityColorFromData}
-          getWorkflowName={getWorkflowName}
-          leftFields={leftFields}
-          rightFields={rightFields}
-        />
-
-
-{documentTypeId === 6 ? (
-  <MiniCashTransfers
-    items={documentItems}
-    isLoading={isLoading}
-    currency={currency}
-    statusData={statusData || []}
-    formatCurrency={formatCurrency}
-    formatDate={formatDate}
-    getItemStatusLabel={getItemStatusLabel}
-    getItemStatusColor={getItemStatusColor}
-    onApproveItem={onApproveItem ? handleApproveItem : undefined}
-    onRejectItem={onRejectItem ? handleRejectItem : undefined}
-    onResolveFromStock={onResolveFromStock ? handleResolveFromStock : undefined}
-    onUploadItem={handleUploadItem}
-    onRemoveItem={onRemoveItem}
-    onViewItemDetails={onViewItemDetails}
-    onViewAttachments={handleViewAttachments}
-    processingItemId={processingItemId}
-    title={`${documentType} Items`}
-    emptyMessage={`No items found for this ${documentType.toLowerCase()}`}
-    documentId={documentId}
-    documentTypeId={documentTypeId}
-  />
-) : (
-  <ItemsTable
-    items={documentItems}
-    isLoading={isLoading}
-    currency={currency}
-    statusData={statusData || []}
-    formatCurrency={formatCurrency}
-    formatDate={formatDate}
-    getItemStatusLabel={getItemStatusLabel}
-    getItemStatusColor={getItemStatusColor}
-    onApproveItem={onApproveItem ? handleApproveItem : undefined}
-    onRejectItem={onRejectItem ? handleRejectItem : undefined}
-    onResolveFromStock={onResolveFromStock ? handleResolveFromStock : undefined}
-    onUploadItem={handleUploadItem}
-    onRemoveItem={onRemoveItem}
-    onViewItemDetails={onViewItemDetails}
-    onViewAttachments={handleViewAttachments}
-    budgetCategories={budgetCategories}
-    budgetCategoryItems={budgetCategoryItems}
-    showBudgetInfo ={true}
-    processingItemId={processingItemId}
-    title={`${documentType} Items`}
-    documentTypeId={documentTypeId}
-    emptyMessage={`No items found for this ${documentType.toLowerCase()}`}
-  />
-)}
-
-        {/* Summary Footer */}
-        <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/80">
-          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-200 dark:divide-gray-700">
-            <div className="px-4 py-2 text-center">
-              <p className="text-xs text-gray-500 dark:text-gray-400">Total Amount</p>
-              <p className="text-sm font-bold text-gray-900 dark:text-white">
-                {formatCurrency(totalAmount, currency)}
-              </p>
-            </div>
-            <div className="px-4 py-2 text-center">
-              <p className="text-xs text-gray-500 dark:text-gray-400">Total Approved</p>
-              <p className="text-sm font-bold text-green-600 dark:text-green-400">
-                {formatCurrency(totalApproved, currency)}
-              </p>
-            </div>
-            <div className="px-4 py-2 text-center">
-              <p className="text-xs text-gray-500 dark:text-gray-400">Total Items</p>
-              <p className="text-sm font-bold text-gray-900 dark:text-white">
-                {totalItems}
-              </p>
-            </div>
+        {isProcessing ? (
+          <div className="flex items-center justify-center py-10">
+            <Loader2 className="w-6 h-6 animate-spin text-gray-500 dark:text-gray-400" />
           </div>
-        </div>
+        ) : (
+          <React.Fragment>
+            {/* Details Section - Using DetailFields Child Component */}
+            <DetailFields
+              document={document}
+              statusData={statusData || []}
+              priorityData={priorityData || []}
+              documentType={documentType}
+              documentTypeId={documentTypeId}
+              currency={currency}
+              formatCurrency={formatCurrency}
+              formatDate={formatDate}
+              formatBoolean={formatBoolean}
+              safeValue={safeValue}
+              getStatusValue={getStatusValue}
+              getPriorityValue={getPriorityValue}
+              getDocumentTypeValue={getDocumentTypeValue}
+              getStatusColorFromData={getStatusColorFromData}
+              getPriorityColorFromData={getPriorityColorFromData}
+              getWorkflowName={getWorkflowName}
+              leftFields={leftFields}
+              rightFields={rightFields}
+            />
+            {documentTypeId === 6 ? (
+              <MiniCashTransfers
+                items={documentItems}
+                isLoading={isLoading}
+                currency={currency}
+                statusData={statusData || []}
+                formatCurrency={formatCurrency}
+                formatDate={formatDate}
+                getItemStatusLabel={getItemStatusLabel}
+                getItemStatusColor={getItemStatusColor}
+                onApproveItem={onApproveItem ? handleApproveItem : undefined}
+                onRejectItem={onRejectItem ? handleRejectItem : undefined}
+                onResolveFromStock={onResolveFromStock ? handleResolveFromStock : undefined}
+                onUploadItem={handleUploadItem}
+                onRemoveItem={onRemoveItem}
+                onViewItemDetails={onViewItemDetails}
+                onViewAttachments={handleViewAttachments}
+                processingItemId={processingItemId}
+                title={`${documentType} Items`}
+                emptyMessage={`No items found for this ${documentType.toLowerCase()}`}
+                documentId={documentId}
+                documentTypeId={documentTypeId}
+              />
+            ) : (
+              <ItemsTable
+                items={documentItems}
+                isLoading={isLoading}
+                currency={currency}
+                statusData={statusData || []}
+                formatCurrency={formatCurrency}
+                formatDate={formatDate}
+                getItemStatusLabel={getItemStatusLabel}
+                getItemStatusColor={getItemStatusColor}
+                onApproveItem={onApproveItem ? handleApproveItem : undefined}
+                onRejectItem={onRejectItem ? handleRejectItem : undefined}
+                onResolveFromStock={onResolveFromStock ? handleResolveFromStock : undefined}
+                onUploadItem={handleUploadItem}
+                onRemoveItem={onRemoveItem}
+                onViewItemDetails={onViewItemDetails}
+                onViewAttachments={handleViewAttachments}
+                budgetCategories={budgetCategories}
+                budgetCategoryItems={budgetCategoryItems}
+                showBudgetInfo={true}
+                processingItemId={processingItemId}
+                title={`${documentType} Items`}
+                documentTypeId={documentTypeId}
+                emptyMessage={`No items found for this ${documentType.toLowerCase()}`}
+              />
+            )}
 
-        {/* Footer with actions */}
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 rounded-b-lg">
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            Created: {formatDate(document.created_at)}
-          </span>
-          <div className="flex items-center gap-2 flex-wrap">
-            {userId && document.is_active !== 1 && (
-              <button
-                onClick={handleSubmitForApproval}
-                disabled={submitLoading || isLoading || !canSubmitForApproval()}
-                className={`
-                  inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg
-                  transition-all duration-200
-                  ${submitLoading || isLoading || !canSubmitForApproval()
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'
-                    : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg dark:bg-blue-600 dark:hover:bg-blue-700'
-                  }
-                  shadow-md hover:shadow-lg transform hover:scale-[1.02]
-                `}
-              >
-                {submitLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4" />
-                    Submit For Approval
-                    <AlertTriangle className="w-4 h-4 text-yellow-300" />
-                  </>
+            {/* Summary Footer */}
+            <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/80">
+              <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-200 dark:divide-gray-700">
+                <div className="px-4 py-2 text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Total Amount</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">
+                    {formatCurrency(totalAmount, currency)}
+                  </p>
+                </div>
+                <div className="px-4 py-2 text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Total Approved</p>
+                  <p className="text-sm font-bold text-green-600 dark:text-green-400">
+                    {formatCurrency(totalApproved, currency)}
+                  </p>
+                </div>
+                <div className="px-4 py-2 text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Total Items</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">
+                    {totalItems}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer with actions */}
+            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 rounded-b-lg">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                Created: {formatDate(document.created_at)}
+              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                {userId && parseInt(document.is_active) !== 1 && (
+                  <button
+                    onClick={handleSubmitForApproval}
+                    disabled={submitLoading || isLoading || !canSubmitForApproval()}
+                    className={`
+                      inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg
+                      transition-all duration-200
+                      ${submitLoading || isLoading || !canSubmitForApproval()
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'
+                        : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg dark:bg-blue-600 dark:hover:bg-blue-700'
+                      }
+                      shadow-md hover:shadow-lg transform hover:scale-[1.02]
+                    `}
+                  >
+                    {submitLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Submit For Approval
+                        <AlertTriangle className="w-4 h-4 text-yellow-300" />
+                      </>
+                    )}
+                  </button>
                 )}
-              </button>
-            )}
 
-            {onClose && (
-              <button
-                onClick={onClose}
-                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-md transition-colors duration-200 dark:text-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:hover:bg-gray-600"
-              >
-                <X className="w-3.5 h-3.5" />
-                Close
-              </button>
-            )}
-          </div>
-        </div>
+                {userId && parseInt(document.is_active) === 1 && (
+                  <button
+                    onClick={handleResetApproval}
+                    disabled={submitLoading || isLoading || !canSubmitForApproval()}
+                    className={`
+                      inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg
+                      transition-all duration-200
+                      ${submitLoading || isLoading || !canSubmitForApproval()
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'
+                        : 'bg-red-600 text-white hover:bg-red-700 hover:shadow-lg dark:bg-red-600 dark:hover:bg-red-700'
+                      }
+                      shadow-md hover:shadow-lg transform hover:scale-[1.02]
+                    `}
+                  >
+                    {submitLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Reset Approval
+                        <DeleteIcon className="w-4 h-4 text-yellow-300" />
+                      </>
+                    )}
+                  </button>
+                )}
+
+                {onClose && (
+                  <button
+                    onClick={onClose}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-md transition-colors duration-200 dark:text-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:hover:bg-gray-600"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Close
+                  </button>
+                )}
+              </div>
+            </div>
+          </React.Fragment>
+        )}
       </div>
 
       {/* Approval Submit Modal */}
@@ -823,7 +906,7 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
         defaultValues={{
           workflow_id: document?.approval_workflow_id || '',
           priority_id: document?.priority || '',
-          status_id: document?.status_id || document?.status || '',
+          status_id: 1,
           comment: '',
         }}
       />
