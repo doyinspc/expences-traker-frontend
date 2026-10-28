@@ -65,7 +65,8 @@ export default function UserManagementControls({ users = [] }) {
         <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} className="mt-1" />I confirm sending password-reset links to all eligible users.</label>
         <div className="flex gap-3"><button type="button" disabled={busy || !confirmed || !preview.eligible} onClick={() => run(async () => {
           const r = await post('requestPasswordResets', { confirmation: 'SEND RESET LINKS' });
-          setMessage(`${r.requested} reset invitations queued; ${r.delivery?.sent || 0} delivered now. ${r.already_requested} recent requests skipped. Remaining invitations use the email worker.`);
+          setMessage(`${r.requested} reset invitations queued; ${r.delivery?.sent || 0} accepted by the mail server; ${r.delivery?.failed || 0} failed attempts. ${r.already_requested} recent requests skipped. Remaining invitations use the email worker.`);
+          if (Number(r.delivery?.failed) > 0) setError('Some emails were not accepted. Check Email delivery below and send a test to your own email.');
           setPreview(null); setConfirmed(false);
         })} className="min-h-11 rounded-lg bg-brand-600 px-4 text-sm text-white disabled:opacity-50">{busy ? 'Sending…' : 'Send reset links'}</button><button type="button" disabled={busy} onClick={() => setPreview(null)} className="min-h-11 px-3 text-sm text-gray-600 dark:text-gray-300">Cancel</button></div>
       </div>}
