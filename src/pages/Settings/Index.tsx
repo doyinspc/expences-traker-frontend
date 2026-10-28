@@ -256,6 +256,7 @@ const Index: React.FC = () => {
     return (
         <>
             <PageBreadcrumb pageTitle={displayName} />
+            <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">Company-wide reference data · Changing your working location does not change this list.</p>
             
             {/* Header Actions */}
             <div className="flex items-center justify-end gap-2 mb-4">

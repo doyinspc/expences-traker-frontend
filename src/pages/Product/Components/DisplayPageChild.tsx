@@ -1,3 +1,4 @@
+import { safeHttpUrl, openAttachment } from '../../../utils/functions/safeUrls';
 // src/components/common/DisplayPageChild.tsx
 
 import React, { useEffect, useState } from 'react';
@@ -345,11 +346,10 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
   };
 
   const handleDownloadAttachment = (attachment: Attachment) => {
-    if (onDownloadAttachment) {
-      onDownloadAttachment(attachment);
-    } else {
-      window.open(attachment.file_path, '_blank');
-    }
+    const url = safeHttpUrl(attachment.file_path, window.location.origin);
+    if (!url) { alert('This attachment address is not valid. Contact your administrator.'); return; }
+    if (onDownloadAttachment) onDownloadAttachment({ ...attachment, file_path: url });
+    else openAttachment(url);
   };
 
   const handleDeleteAttachment = async (attachment: Attachment) => {

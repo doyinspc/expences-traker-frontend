@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { useSelector } from 'react-redux';
 import { API_PATH_SETTING, axiosConfig, axiosConfig1, tokenHelpers } from '../actions/common';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -124,7 +125,9 @@ export default function useTanstackQuery(props) {
     const [param, setParam] = useState({});
     const [isEnabled, setIsEnabled] = useState(enabled ?? autoLoad);
 
-    const queryKey = [table, uniqueKey, getTenantDb(), tokenHelpers.getToken(), queryType, mainParam || {}, param || {}];
+    const selected = useSelector(state => state.auth || {});
+    const queryScope = ['commons', 'company', 'locations'].includes(table) ? 'company' : [selected.location_id || 0, selected.role_id || 0];
+    const queryKey = [table, queryScope, uniqueKey, getTenantDb(), tokenHelpers.getToken(), queryType, mainParam || {}, param || {}];
 
     // Holds the last single row (set by getOne or loadUpdate)
     const [row, setRow] = useState(null);
@@ -222,7 +225,7 @@ export default function useTanstackQuery(props) {
 
     const killQuery = () => {
         setIsEnabled(false);
-        queryClient.removeQueries({ queryKey: [table, uniqueKey] });
+        queryClient.removeQueries({ queryKey: [table, queryScope, uniqueKey] });
         setParam({});
     };
 

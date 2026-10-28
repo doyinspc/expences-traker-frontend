@@ -1,3 +1,4 @@
+import { safeHttpUrl } from '../utils/functions/safeUrls';
 // src/components/purchase_orders/ViewAttachmentsModal.tsx
 
 import React, { useState, useEffect } from 'react';
@@ -187,7 +188,7 @@ const ViewAttachmentsModal: React.FC<ViewAttachmentsModalProps> = ({
                     <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
                       {attachment.file_type?.startsWith('image/') ? (
                         <img
-                          src={attachment.file_path}
+                          src={safeHttpUrl(attachment.file_path, window.location.origin) || undefined}
                           alt={attachment.file_name}
                           className="max-h-64 w-auto mx-auto rounded-lg"
                         />

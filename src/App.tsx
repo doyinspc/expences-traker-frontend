@@ -10,6 +10,7 @@ import AppLayoutMIS from "./layout/AppLayoutMIS";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 
 // Lazy‑load all page components
+const ResetPassword = lazy(() => import('./pages/AuthPages/ResetPassword'));
 const SignIn = lazy(() => import("./pages/AuthPages/SignIn"));
 const SignUp = lazy(() => import("./pages/AuthPages/SignUp"));
 const NotFound = lazy(() => import("./pages/OtherPage/NotFound"));
@@ -192,6 +193,7 @@ export default function App() {
           <Route path="/mis" element={<AppLayoutMIS />} />
 
           {/* Auth Layout */}
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/login" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />

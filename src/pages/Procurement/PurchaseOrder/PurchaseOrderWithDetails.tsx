@@ -1,3 +1,4 @@
+import { safeHttpUrl, openAttachment } from '../../../utils/functions/safeUrls';
 // src/components/purchase_orders/PurchaseOrderViewWithDetails.tsx
 
 import React, { useEffect, useState } from 'react';
@@ -302,12 +303,10 @@ const PurchaseOrderViewWithDetails: React.FC<PurchaseOrderViewWithDetailsProps> 
   };
 
   const handleDownloadAttachment = (attachment: Attachment) => {
-    if (onDownloadAttachment) {
-      onDownloadAttachment(attachment);
-    } else {
-      // Default: open in new tab
-      window.open(attachment.file_path, '_blank');
-    }
+    const url = safeHttpUrl(attachment.file_path, window.location.origin);
+    if (!url) { alert('This attachment address is not valid. Contact your administrator.'); return; }
+    if (onDownloadAttachment) onDownloadAttachment({ ...attachment, file_path: url });
+    else openAttachment(url);
   };
 
   const handleDeleteAttachment = async (attachment: Attachment) => {

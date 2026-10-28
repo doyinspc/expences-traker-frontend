@@ -1,3 +1,4 @@
+import useManagementAccess from '../hooks/useManagementAccess';
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
@@ -261,6 +262,7 @@ const othersItems: NavItem[] = [
 // AppSidebar Component
 // ============================================
 const AppSidebar: React.FC = () => {
+  const { data: management } = useManagementAccess();
   const authState = useSelector((state: any) => state.auth);
   const { access, location_id, isAdmin = false, user } = authState;
 
@@ -290,6 +292,7 @@ const AppSidebar: React.FC = () => {
 
     // Helper function to check if user has access to a specific item
     const hasAccess = (parentPathNumber: number, childPathNumber: number = 0): boolean => {
+      if (parentPathNumber === 6 && management?.is_super_admin) return true;
       // Dashboard (id: 1) and Logout (id: 7) are always accessible
       if (parentPathNumber === 1 || parentPathNumber === 7) {
         return true;
@@ -349,7 +352,7 @@ const AppSidebar: React.FC = () => {
       navItems1: filteredNavItems,
       othersItems1: filteredOthersItems,
     };
-  }, [current_location, isAdmin, location_id]);
+  }, [current_location, isAdmin, location_id, management?.is_super_admin]);
 
   const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleMobileSidebar, isMobile } = useSidebar();
   useEffect(() => {

@@ -7,11 +7,13 @@ const root = process.env.PROKURE_ROOT || path.resolve(__dirname, '..');
 const { transformSync } = require(path.join(root, 'node_modules/esbuild'));
 function setup() {
   let query, mutation, request;
+  const selected = { location_id: 1, role_id: 10 };
   const storage = new Map([['tenantDb', 'tenant_a']]);
   const sessionStorage = { getItem: k => storage.get(k) || null };
   let response = { data: { status: 'success', data: { id: 1 } } };
   const common = { API_PATH_SETTING: '/api', axiosConfig: { headers: { Authorization: 'Bearer current' } }, axiosConfig1: {}, tokenHelpers: { getToken: () => 'current-token' } };
   const mocks = {
+    'react-redux': { useSelector: select => select({ auth: selected }) },
     react: { useState: v => [v, () => {}] },
     '@tanstack/react-query': {
       useQuery: opts => { query = opts; return {}; },
@@ -27,7 +29,7 @@ function setup() {
   const module = { exports: {} };
   vm.runInNewContext(code, { module, exports: module.exports, require: id => mocks[id], sessionStorage, FormData, console: { error() {} } });
   const hook = props => module.exports.default({ table: 'requisitions', uniqueKey: 'req', queryType: 'gets', mainParam: { location_id: 1 }, ...props });
-  return { hook, storage, get query() { return query; }, get mutation() { return mutation; }, get request() { return request; }, fail() { response = { data: { status: 'error', message: 'Save rejected' } }; } };
+  return { hook, storage, selected, get query() { return query; }, get mutation() { return mutation; }, get request() { return request; }, fail() { response = { data: { status: 'error', message: 'Save rejected' } }; } };
 }
 test('read requests carry authentication and current token', async () => {
   const s = setup(); s.hook(); await s.query.queryFn();
@@ -71,3 +73,6 @@ test('tenant login can restore its session and does not store a null JWT as a to
   assert.equal(module.exports.checkAuth()(() => {}).success, true);
   assert.equal(storage.get('jwt'), '');
 });
+
+test('Changing selected location or role separates operational caches even without explicit filters',()=>{const s=setup();s.hook({mainParam:{}});const a=JSON.stringify(s.query.queryKey);s.selected.location_id=2;s.hook({mainParam:{}});const b=JSON.stringify(s.query.queryKey);s.selected.role_id=11;s.hook({mainParam:{}});assert.notEqual(a,b);assert.notEqual(b,JSON.stringify(s.query.queryKey));});
+test('Shared Settings queries keep the same cache when the working location changes',()=>{const s=setup();s.hook({table:'commons',mainParam:{grp:7}});const a=JSON.stringify(s.query.queryKey);s.selected.location_id=2;s.selected.role_id=11;s.hook({table:'commons',mainParam:{grp:7}});assert.equal(a,JSON.stringify(s.query.queryKey));});

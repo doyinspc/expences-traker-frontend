@@ -41,7 +41,7 @@ export const FilterSection: React.FC<FilterSectionProps> = ({
     if (!filterConfig) return null;
 
     return (
-        <div className={`mb-4 overflow-hidden transition-all duration-300 ease-in-out ${
+        <div hidden={!show} className={`mb-4 overflow-hidden transition-all duration-300 ease-in-out ${
             show ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
         }`}>
             <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">

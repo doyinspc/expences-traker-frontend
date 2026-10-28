@@ -1,3 +1,5 @@
+import UserManagementControls from './UserManagementControls';
+import useManagementAccess from '../../hooks/useManagementAccess';
 ﻿// src/pages/Procurement/Requisitions.tsx
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -45,6 +47,7 @@ type TabType = 'table' | 'analysis';
 // ==================== COMPONENT ====================
 const Users: React.FC = () => {
     const nav = useNavigate();
+    const { data: management } = useManagementAccess();
     // const userx = useSelector((state: any) => state.userReducer);
     
 
@@ -76,7 +79,7 @@ const Users: React.FC = () => {
     const [analysisMetric, setAnalysisMetric] = useState<string>('');
 
     // ==================== API HOOKS ====================
-    const { data, loadQuery, loadUpdate, deleteData, isLoading, isProcessing } = useReduxApiData({
+    const { data, loadQuery, loadUpdate, isLoading, isProcessing, error: usersError } = useReduxApiData({
         table: TABLE_NAME,
         uniqueKey: TABLE_PATH,
         queryType: 'gets',
@@ -113,19 +116,14 @@ const Users: React.FC = () => {
         mainParam: { is_active: 1, grp: 1 },
         narration: 'get all roles data'
     });
-    const { 
-        data: employmenttypeData, 
-        loadQuery: loademploymenttypeData,
-    } = useReduxApiData({
-        table: "commons",
-        uniqueKey: 'employmenttype',
-        queryType: 'gets',
-        mainParam: { is_active: 1, grp: 1 },
-        narration: 'get all employmenttypes data'
-    });
-        
-    
-    
+    // Reuse only verified employment references already present in shared user data.
+    // There is no configured employment-type master group; role IDs must never be offered here.
+    const employmenttypeData = useMemo(() => {
+        const choices = new Map();
+        for (const user of Array.isArray(data) ? data : []) if(user.employment_type && user.employment_type_name) choices.set(user.employment_type, {id:user.employment_type,name:user.employment_type_name});
+        return [...choices.values()];
+    }, [data]);
+
     // ==================== HANDLERS ====================
     const onAdd = useCallback((): void => {
         setIsEdit(false);
@@ -139,31 +137,17 @@ const Users: React.FC = () => {
         setPage(1);
     }, []);
 
-    const onDelete = useCallback((row: any): void => {
-        Swal.fire({
-            title: 'Are you sure?',
-            text: "You won't be able to revert this!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, delete it!'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                deleteData({ id: row.id, cat: 'delete' }, row.id);
-                Swal.fire(
-                    'Deleted!',
-                    'Your record has been deleted.',
-                    'success'
-                );
-            }
-        });
-    }, []);
+    const onDelete = useCallback(async (row: any) => {
+        const result = await Swal.fire({ title:'Delete this user?', text:'This permanently removes the user account.', icon:'warning', showCancelButton:true, confirmButtonText:'Delete user' });
+        if(!result.isConfirmed)return;
+        try { await loadUpdate({id:row.id,cat:'insert',act:3}); }
+        catch { /* The API hook displays the server's error; no success is shown on failure. */ }
+    }, [loadUpdate]);
 
-    const onActivate = useCallback((row: any): void => {
-        const { id, is_active } = row;
-        loadUpdate({ id, cat: 'insert', is_active: is_active === 0 ? 1 : 0 });
-    }, []);
+    const onActivate = useCallback(async (row: any) => {
+        try { await loadUpdate({id:row.id,cat:'insert',is_active:Number(row.is_active)===1?0:1}); }
+        catch { /* Keep the visible state until the server confirms the change. */ }
+    }, [loadUpdate]);
 
     const onNext = useCallback((row: any): void => {
         nav(`/teams/requisition/${row.id}`);
@@ -175,18 +159,19 @@ const Users: React.FC = () => {
         setPage(2);
     }, []);
 
-    const handleSave = useCallback((formData: any): void => {
-        loadUpdate(formData);
+    const handleSave = useCallback(async (formData: any) => {
+        const result = await loadUpdate(formData);
+        setPage(0);
+        return result;
     }, []);
 
-    const handleUpdate = useCallback((formData: any): void => {
-        loadUpdate(formData);
+    const handleUpdate = useCallback(async (formData: any) => {
+        return await loadUpdate(formData);
     }, []);
 
     const handleReload = useCallback((): void => {
         loadQuery(initialData);
         loaddepartmentData()
-        loademploymenttypeData()
         loadroleData()
         loadlocationData()
     }, []);
@@ -281,7 +266,6 @@ const Users: React.FC = () => {
     useEffect(() => {
         loadQuery(initialData);
         loaddepartmentData()
-        loademploymenttypeData()
         loadroleData()
         loadlocationData()
     }, []);
@@ -306,7 +290,7 @@ const Users: React.FC = () => {
                     departments: formatOptions(safeData(departmentData), 'name', 'id'),
                     roles: formatOptions(safeData(roleData), 'name', 'id'),
                     locations: formatOptions(safeData(locationData), 'name', 'id'),
-                    employmenttypes: formatOptions(safeData(employmenttypeData), 'name', 'id'),
+                    employment_type: formatOptions(safeData(employmenttypeData), 'name', 'id'),
                 };
             }, [departmentData, roleData, locationData, employmenttypeData]);
         
@@ -323,6 +307,9 @@ const Users: React.FC = () => {
     return (
         <>
             <PageBreadcrumb pageTitle={displayName} />
+            <p className="mb-3 text-sm text-gray-500 dark:text-gray-400">{management?.is_super_admin ? 'Company-wide directory · All locations' : 'Users assigned to your selected location'}</p>
+            <UserManagementControls users={Array.isArray(data) ? data : (data?.data || [])} />
+            {usersError && <div role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"><p className="font-semibold">Users could not be loaded</p><p className="mt-1">{usersError.response?.data?.message || usersError.message || 'Please try again.'}</p><button type="button" onClick={handleReload} className="mt-2 min-h-11 underline">Retry loading users</button></div>}
             
             {/* Header */}
             <div className="flex items-center justify-end gap-2 mb-4">
@@ -417,7 +404,7 @@ const Users: React.FC = () => {
                                         onSearchChange={handleSearchChange}
                                         onFilterChange={handleFilterChange}
                                         onClearFilters={clearFilters}
-                                        OPTION_DATA={{}}
+                                        OPTION_DATA={formattedSelectRows}
                                     />
 
                                     <TabNavigation
@@ -427,6 +414,7 @@ const Users: React.FC = () => {
                                         recordCount={filteredRows.length}
                                     />
 
+                                    {!usersError && !isLoading && filteredRows.length === 0 && <p role="status" className="my-4 rounded-lg border border-gray-200 p-4 text-sm text-gray-600 dark:border-gray-800 dark:text-gray-300">{searchTerm || activeFilterCount ? 'No users match your search or filters. Clear them to see all available users.' : management?.is_super_admin ? 'No users are available in the company directory.' : 'No users are assigned to your selected location. Ask an administrator to review user location memberships.'}</p>}
                                     {activeTab === 'table' && (
                                         <Tables
                                             onAdd={onAdd}
