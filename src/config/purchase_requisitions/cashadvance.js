@@ -1,6 +1,6 @@
 const cashadvances = {
     frontendRoutes: ['/procurement/cashadvances'],
-    description: 'Manage employee cash advance requests for procurement and business-related expenses. This module handles the request, approval, and tracking of cash advances issued to employees for official purposes, including travel, purchases, and other business expenses.',
+    description: 'Request cash to pay directly for items or official expenses. Cash advances follow their own approval workflow and bypass requisition and procurement routing. Record the purpose, account, budget and supporting receipts.',
     form: 'CashadvanceForm',
     tableName: 'cashadvances',
     displayName: 'Cash Advance Requests',

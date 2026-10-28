@@ -2,18 +2,19 @@ import { Link } from "react-router";
 
 interface BreadcrumbProps {
   pageTitle: string;
+  hideTitle?: boolean;
 }
 
-const PageBreadcrumb: React.FC<BreadcrumbProps> = ({ pageTitle }) => {
+const PageBreadcrumb: React.FC<BreadcrumbProps> = ({ pageTitle, hideTitle = false }) => {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-      <h2
+    <div className={`flex flex-wrap items-center justify-between gap-3 ${hideTitle ? "mb-3" : "mb-6"}`}>
+      {!hideTitle && <h2
         className="text-xl font-semibold text-gray-800 dark:text-white/90"
         x-text="pageName"
       >
         {pageTitle}
-      </h2>
-      <nav>
+      </h2>}
+      <nav aria-label="Breadcrumb">
         <ol className="flex items-center gap-1.5">
           <li>
             <Link
@@ -39,7 +40,7 @@ const PageBreadcrumb: React.FC<BreadcrumbProps> = ({ pageTitle }) => {
               </svg>
             </Link>
           </li>
-          <li className="text-sm text-gray-800 dark:text-white/90">
+          <li aria-current="page" className="text-sm text-gray-800 dark:text-white/90">
             {pageTitle}
           </li>
         </ol>

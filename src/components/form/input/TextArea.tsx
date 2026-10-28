@@ -1,6 +1,6 @@
 import React from "react";
 
-interface TextareaProps {
+interface TextareaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, "value" | "onChange"> {
   placeholder?: string; // Placeholder text
   rows?: number; // Number of rows
   value?: string; // Current value
@@ -20,6 +20,7 @@ const TextArea: React.FC<TextareaProps> = ({
   disabled = false, // Disabled state
   error = false, // Error state
   hint = "", // Default hint text
+  ...textareaProps
 }) => {
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (onChange) {
@@ -40,6 +41,8 @@ const TextArea: React.FC<TextareaProps> = ({
   return (
     <div className="relative">
       <textarea
+        {...textareaProps}
+        aria-invalid={error || textareaProps["aria-invalid"]}
         placeholder={placeholder}
         rows={rows}
         value={value}

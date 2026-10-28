@@ -120,6 +120,11 @@ const workflowsteps = {
             filterable: true,
             filterType: 'number',
         },
+        text_5: {
+            label: 'Escalation Role', type: 'select', options: 'roles', filterOptions: { grp: 1 },
+            description: 'Review role for escalations at this step. Resolution returns to the original approver.',
+            showInTable: true, required: false,
+        },
         text_3: {
             label: 'Mandatory',
             type: 'toggle',

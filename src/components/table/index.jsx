@@ -24,12 +24,13 @@ function Index(props) {
   const [columnVisibility, setcolumnVisibility] = useState({ ...cV });
 
   useEffect(() => {
-    setdata(rows);
+    setdata(Array.isArray(rows) ? rows : []);
   }, [rows, columns]);
 
   const table = useReactTable({
     data,
     columns,
+    sortDescFirst: false,
     state: {
       sorting,
       globalFilter,
@@ -61,7 +62,7 @@ function Index(props) {
       acc[row.id] = row.original;
       return acc;
     }, {});
-    props.selected(selectedRowsObject);
+    props.selected?.(selectedRowsObject);
   };
 
   const download = () => DownloadExcel(table, data);
@@ -74,43 +75,43 @@ function Index(props) {
           <div className="flex-grow flex flex-wrap gap-2">
             <div className="flex items-center space-x-1">
               <button
-                className="p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                onClick={() => props.home()}
+                className="min-h-11 min-w-11 rounded-lg p-2 focus-visible:outline-2 focus-visible:outline-brand-500 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                type="button" title="Return to overview" aria-label="Return to overview" disabled={!props.home} onClick={() => props.home?.()}
               >
                 <FontAwesomeIcon icon={faHome} />
               </button>
               <button
-                className="p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                onClick={() => props.onAdd()}
+                className="min-h-11 min-w-11 rounded-lg p-2 focus-visible:outline-2 focus-visible:outline-brand-500 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                type="button" title="Add record" aria-label="Add record" disabled={!props.onAdd} onClick={() => props.onAdd?.()}
               >
                 <FontAwesomeIcon icon={faPlus} />
               </button>
               <button
-                className="p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                onClick={() => props.reload()}
+                className="min-h-11 min-w-11 rounded-lg p-2 focus-visible:outline-2 focus-visible:outline-brand-500 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                type="button" title="Refresh records" aria-label="Refresh records" disabled={!props.reload} onClick={() => props.reload?.()}
               >
                 <FontAwesomeIcon icon={faDownload} />
               </button>
               <button
-                className="p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                onClick={() => window.print()}
+                className="min-h-11 min-w-11 rounded-lg p-2 focus-visible:outline-2 focus-visible:outline-brand-500 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                type="button" title="Print table" aria-label="Print table" onClick={() => window.print()}
               >
                 <FontAwesomeIcon icon={faPrint} />
               </button>
               {num_rows > 0 && (
                 <button
-                  className="p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white relative"
+                  className="min-h-11 min-w-11 rounded-lg p-2 focus-visible:outline-2 focus-visible:outline-brand-500 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white relative"
                   onClick={handleSelectedRows}
                 >
                   <FontAwesomeIcon icon={faCheck} />
                   <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full transform translate-x-1/2 -translate-y-1/2">
                     {num_rows}
-                  </span><span style={{ color: "teal", fontWeight: 'bolder' }}> Click here for more.</span>
+                  </span><span style={{ color: "teal", fontWeight: 'bolder' }}> View selected records.</span>
                 </button>
               )}
             </div>
             <button
-              className="p-2 text-gray-500 hover:text-green-900 dark:text-green-400 dark:hover:text-white relative0"
+              className="min-h-11 min-w-11 rounded-lg p-2 focus-visible:outline-2 focus-visible:outline-brand-500 text-gray-500 hover:text-green-900 dark:text-green-400 dark:hover:text-white relative0"
               onClick={() => download()}
             >
               <FontAwesomeIcon icon={faFileExcel} className="mr-2" /> Excel
@@ -126,8 +127,8 @@ function Index(props) {
         </div>
       </div>
       <div className="p-4">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm font-light text-gray-900 dark:text-gray-200">
+        <div role="region" aria-label="Records table" tabIndex={0} className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+          <table className="min-w-full text-sm text-gray-900 dark:text-gray-200">
             <TableHeader table={table} columns={columns} />
             <TableBody
               table={table}
@@ -136,6 +137,7 @@ function Index(props) {
           </table>
         </div>
       </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 px-4 py-3 text-xs text-gray-500 dark:border-gray-700" aria-live="polite"><span>{table.getFilteredRowModel().rows.length} of {data.length} loaded records{num_rows > 0 ? ` · ${num_rows} selected` : ''}</span><span>Sort with column headings · Choose columns to customise your view</span></div>
       {/* Floating button for selected rows */}
       {num_rows > 0 && (
         <button
@@ -143,7 +145,7 @@ function Index(props) {
           onClick={handleSelectedRows}
         >
           <CheckIcon className="mr-2" />
-          <span>Click here for more ({num_rows})</span>
+          <span>View selected records ({num_rows})</span>
         </button>
       )}
     </div>

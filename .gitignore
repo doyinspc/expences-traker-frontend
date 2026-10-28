@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment files stay local; configure hosted values in Vercel.
+.env
+.env.*
+!.env.example
+.vercel

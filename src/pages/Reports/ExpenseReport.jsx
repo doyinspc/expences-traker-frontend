@@ -1,3 +1,4 @@
+import { buildReportCsv } from '../../utils/functions/reportExport';
 // components/ExpenseAnalysis/ExpenseAnalysis.js
 import React, { useState, useEffect } from 'react';
 import ExpenseFilters from './ExpenseFilters';
@@ -33,12 +34,14 @@ const ExpenseAnalysis = () => {
   const { 
     data: expenseData, 
     loadQuery: loadExpenseData,
+    error: reportError,
     isLoading: isExpenseLoading
   } = useReduxApiData({
     table: 'requisitionitems',
     uniqueKey: 'expense_analysis',
     queryType: 'getExpensesAnalysis',
     mainParam: filters,
+    autoLoad: false,
     narration: 'get expense analysis data'
   });
 
@@ -49,7 +52,7 @@ const ExpenseAnalysis = () => {
 
   // Update analysis data when expense data changes
   useEffect(() => {
-    if (expenseData && expenseData.length > 0) {
+    if (Array.isArray(expenseData)) {
       setAnalysisData(expenseData);
       setStep(2);
     }
@@ -67,7 +70,7 @@ const ExpenseAnalysis = () => {
     setCurrentFilters(filterData);
     
     // Load expense data with new filters
-    await loadExpenseData();
+    loadExpenseData(newFilters);
   };
 
   const handleExportCSV = () => {
@@ -81,15 +84,12 @@ const ExpenseAnalysis = () => {
       item.account_name || 'N/A',
       item.document_type || 'N/A',
       item.total_amount || 0,
-      item.type === 0 ? 'OPEX' : 'CAPEX',
-      item.resolved_at ? new Date(item.resolved_at).toLocaleDateString() : 'N/A',
+      Number(item.type) === 0 ? 'OPEX' : 'CAPEX',
+      item.resolved_date ? new Date(item.resolved_date).toLocaleDateString() : 'N/A',
       item.location_name || 'N/A'
     ]);
     
-    const csv = [
-      headers.join(','),
-      ...rows.map(row => row.join(','))
-    ].join('\n');
+    const csv = buildReportCsv(headers, rows);
     
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
@@ -116,14 +116,16 @@ const ExpenseAnalysis = () => {
   const isLoading = isLocationsLoading || isExpenseLoading;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 md:p-8">
+    <div className="min-w-0">
       <div className="max-w-7xl mx-auto space-y-6">
+        {step===2&&currentFilters&&<p className="text-xs font-medium text-gray-500 dark:text-gray-400">Reporting dates: {currentFilters.start_date} to {currentFilters.end_date}</p>}
+        {reportError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"><p>{reportError.response?.data?.message || reportError.message || "The report could not be loaded."}</p><button type="button" onClick={() => loadExpenseData(filters)} className="mt-2 min-h-11 underline">Try again</button></div>}
         {/* Header */}
-        <div className="flex justify-between items-center bg-white rounded-lg shadow p-4">
-          <h1 className="text-2xl font-bold text-gray-900">
+        <div className="flex flex-wrap gap-3 justify-between items-center bg-white dark:bg-gray-900 rounded-lg shadow p-4">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             Expense Analysis
           </h1>
-          <div className="flex items-center space-x-2 text-sm text-gray-500">
+          <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
             <span className={`px-3 py-1 rounded-full ${step === 1 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
               Step 1: Filters
             </span>
@@ -141,6 +143,7 @@ const ExpenseAnalysis = () => {
           <ExpenseFilters
             locations={locations}
             onApplyFilters={handleApplyFilters}
+            initialFilters={currentFilters}
             isLoading={isLoading}
           />
         )}
@@ -148,17 +151,17 @@ const ExpenseAnalysis = () => {
         {/* Step 2: Results */}
         {step === 2 && (
           <div className="space-y-4">
-            <div className="flex justify-between items-center bg-white rounded-lg shadow p-4">
+            <div className="flex flex-wrap gap-3 justify-between items-center bg-white dark:bg-gray-900 rounded-lg shadow p-4">
               <button
                 onClick={handleBack}
-                className="inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors"
+                className="inline-flex items-center text-blue-600 dark:text-blue-300 hover:text-blue-800 transition-colors"
               >
                 <svg className="h-5 w-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
                 Back to Filters
               </button>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-500 dark:text-gray-400">
                 {analysisData.length} items found
               </span>
             </div>

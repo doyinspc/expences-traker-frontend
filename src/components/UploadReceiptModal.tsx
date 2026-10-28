@@ -31,6 +31,10 @@ const UploadReceiptModal: React.FC<UploadReceiptModalProps> = ({
   if (!isOpen) return null;
 
   const handleFileSelect = (file: File) => {
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    if (!extension || !['pdf','jpg','jpeg','png','webp','txt','csv','docx','xlsx'].includes(extension) || file.size < 1 || file.size > 25 * 1024 * 1024) {
+      alert('Select a supported receipt file between 1 byte and 25 MB.'); return;
+    }
     setSelectedFile(file);
     
     // Create preview for images
@@ -160,12 +164,12 @@ const UploadReceiptModal: React.FC<UploadReceiptModalProps> = ({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.tiff,.doc,.docx"
+                accept=".pdf,.jpg,.jpeg,.png,.webp,.txt,.csv,.docx,.xlsx"
                 onChange={handleFileChange}
                 className="hidden"
               />
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
-                Supported: PDF, Images, Word documents (Max 10MB)
+                PDF, JPG/PNG/WebP, TXT, CSV, DOCX or XLSX (up to 25 MB)
               </p>
             </div>
           ) : (

@@ -26,7 +26,13 @@ type NavItem = {
 };
 
 const AppSidebar: React.FC = () => {
-  const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
+  const { isExpanded, isMobileOpen, isHovered, setIsHovered, isMobile, toggleMobileSidebar } = useSidebar();
+  useEffect(() => {
+    if (!isMobileOpen) return;
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") { toggleMobileSidebar(); document.getElementById("navigation-toggle")?.focus(); } };
+    document.addEventListener("keydown", escape);
+    return () => document.removeEventListener("keydown", escape);
+  }, [isMobileOpen, toggleMobileSidebar]);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -80,7 +86,7 @@ const AppSidebar: React.FC = () => {
         subItems: [
           { name: "Expense/Income Types", path: "/setting/expense" },
           { name: "Currency", path: "/setting/page/6" },
-          { name: "Accounts/Banks", path: "/setting/page/7" },
+          { name: "Chart of Accounts", path: "/setting/page/7" },
         ],
       },
       // ============================================
@@ -122,9 +128,6 @@ const AppSidebar: React.FC = () => {
         subItems: [
           { name: "Company Profile", path: "/setting/company-profile" },
           { name: "Approval Workflows", path: "/setting/workflow" },
-          { name: "Chart of Accounts", path: "/setting/chart-of-accounts" },
-          { name: "Tax & Deductions", path: "/setting/taxes" },
-          { name: "Audit Trail", path: "/setting/audit" },
           { name: "Vendors", path: "/setting/page/8" },
         ],
       },
@@ -150,7 +153,7 @@ const AppSidebar: React.FC = () => {
 
   const isActive = useCallback(
     (path: string | (() => void) | undefined) => {
-      if (typeof path === "string") return location.pathname === path;
+      if (typeof path === "string") return location.pathname === path || (path !== "/" && location.pathname.startsWith(`${path}/`));
       return false;
     },
     [location.pathname]
@@ -220,6 +223,10 @@ const AppSidebar: React.FC = () => {
         <li key={nav.name}>
           {nav.subItems ? (
             <button
+              type="button"
+              aria-label={nav.name}
+              aria-expanded={openSubmenu?.index === index}
+              aria-controls={`settings-nav-${index}`}
               onClick={() => handleSubmenuToggle(index)}
               className={`menu-item group ${
                 openSubmenu?.type === "settings" && openSubmenu?.index === index
@@ -259,7 +266,8 @@ const AppSidebar: React.FC = () => {
           ) : typeof nav.path === "function" ? (
             <button
               type="button"
-              onClick={nav.path}
+              aria-label={nav.name}
+              onClick={() => { if (isMobileOpen) toggleMobileSidebar(); if (typeof nav.path === "function") nav.path(); }}
               className={`menu-item group ${
                 isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
               }`}
@@ -300,6 +308,8 @@ const AppSidebar: React.FC = () => {
           ) : null}
           {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
             <div
+              id={`settings-nav-${index}`}
+              inert={openSubmenu?.index !== index}
               ref={(el) => {
                 subMenuRefs.current[`settings-${index}`] = el;
               }}
@@ -316,6 +326,8 @@ const AppSidebar: React.FC = () => {
                   <li key={subItem.name}>
                     <Link
                       to={subItem.path}
+                      onClick={() => { if (isMobileOpen) toggleMobileSidebar(); }}
+                      aria-current={isActive(subItem.path) ? "page" : undefined}
                       className={`menu-dropdown-item ${
                         isActive(subItem.path)
                           ? "menu-dropdown-item-active"
@@ -359,7 +371,7 @@ const AppSidebar: React.FC = () => {
   );
 
   return (
-    <aside
+    <aside id="app-navigation" aria-label="Settings navigation" inert={isMobile && !isMobileOpen}
       className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
         ${
           isExpanded || isMobileOpen

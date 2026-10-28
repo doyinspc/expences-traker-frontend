@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import React, { useState } from 'react';
-import { API_PATH_SETTING, axiosConfig, axiosConfig1, MAIN_TOKEN } from '../actions/common';
+import { useState } from 'react';
+import { API_PATH_SETTING, axiosConfig, axiosConfig1, tokenHelpers } from '../actions/common';
 import axios from 'axios';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 // ============================================
 // CONSTANT: Get tenant DB from sessionStorage or env
@@ -55,13 +55,11 @@ const showToast = (message, type = 'success', title = '') => {
 };
 
 const loadApi = async (table, queryType, mainParam, param, narration) => {
-    if (param && param.hasOwnProperty('cat')) {
-        delete param['cat'];
-    }
+    const { cat: ignoredCat, ...readParams } = param || {};
 
     try {
         // Build the data object WITHOUT tenant_db in the JSON string
-        const dataObj = { ...mainParam, ...param };
+        const dataObj = { ...mainParam, ...readParams };
         
         const params = {
             data: JSON.stringify(dataObj),  // Only stringify the data object
@@ -69,13 +67,15 @@ const loadApi = async (table, queryType, mainParam, param, narration) => {
             table: table,
             narration: narration,
             timestamp: new Date().getTime(),
-            token: MAIN_TOKEN,
             tenant_db: getTenantDb(),  // tenant_db as a separate parameter, NOT stringified
         };
         
         //console.log('Request params:', params);  // Debug log
         
-        const response = await axios.get(API_PATH_SETTING, { params }, axiosConfig);
+        const response = await axios.get(API_PATH_SETTING, { ...axiosConfig, params });
+        if (response.data?.status === 'error' || response.data?.success === false) {
+            throw new Error(response.data.message || 'The request failed.');
+        }
         return response.data;
     } catch (error) {
         console.error('loadApi Error:', error);
@@ -89,27 +89,26 @@ const updateApi = async (table, queryType, mainParam, param, narration) => {
         formData.append('table', table);
         formData.append('tenant_db', getTenantDb());  // tenant_db as form data
         
-        if (param.hasOwnProperty('cat')) {
-            formData.append('cat', param['cat']);
-            delete param['cat'];
-        } else {
-            formData.append('cat', "insert");
-        }
+        const { cat = queryType || 'insert', ...values } = param || {};
+        formData.append('cat', cat);
 
         // Append main parameters
-        Object.keys(mainParam).forEach((key) => formData.append(key, mainParam[key]));
+        Object.keys(mainParam || {}).forEach((key) => formData.append(key, mainParam[key]));
 
         // Handle parameters and specifically check for the binary file
-        Object.keys(param).forEach((key) => {
-            if (key === 'file' && param[key]) {
+        Object.keys(values).forEach((key) => {
+            if (key === 'file' && values[key]) {
                 // Append the raw File/Blob object directly
-                formData.append('file', param[key]);
+                formData.append('file', values[key]);
             } else {
-                formData.append(key, param[key]);
+                formData.append(key, values[key]);
             }
         });
     
         const response = await axios.post(API_PATH_SETTING, formData, axiosConfig1);
+        if (response.data?.status === 'error' || response.data?.success === false) {
+            throw new Error(response.data.message || 'The request failed.');
+        }
         return response.data;
     } catch (error) {
         console.error('updateApi Error:', error);
@@ -120,10 +119,12 @@ const updateApi = async (table, queryType, mainParam, param, narration) => {
 export default function useTanstackQuery(props) {
     const queryClient = useQueryClient();
 
-    const { table, queryType, uniqueKey, mainParam, narration, onSuccess, onError, refetchInterval, enabled } = props;
+    const { table, queryType, uniqueKey, mainParam, narration, onSuccess, onError, refetchInterval, enabled, autoLoad = true } = props;
 
     const [param, setParam] = useState({});
-    const [isEnabled, setIsEnabled] = useState(enabled);
+    const [isEnabled, setIsEnabled] = useState(enabled ?? autoLoad);
+
+    const queryKey = [table, uniqueKey, getTenantDb(), tokenHelpers.getToken(), queryType, mainParam || {}, param || {}];
 
     // Holds the last single row (set by getOne or loadUpdate)
     const [row, setRow] = useState(null);
@@ -137,7 +138,7 @@ export default function useTanstackQuery(props) {
         error: queryError,
         status,
     } = useQuery({
-        queryKey: [table, uniqueKey],
+        queryKey,
         queryFn: async () => loadApi(table, queryType, mainParam, param, narration),
         refetchInterval: refetchInterval && refetchInterval > 0 ? refetchInterval : 1000 * 60 * 10,
         onError: (error) => {
@@ -152,7 +153,7 @@ export default function useTanstackQuery(props) {
     const {
         mutateAsync,
         isSuccess,
-        isLoading: isLoadingUpdate,
+        isPending: isLoadingUpdate,
         isError,
         error,
     } = useMutation({
@@ -183,7 +184,7 @@ export default function useTanstackQuery(props) {
                 setRow((prev) => (prev && String(prev.id) === String(id) ? null : prev));
             } else {
                 // fallback: keep whatever is already in cache as `row`
-                const cached = queryClient.getQueryData([table, uniqueKey]);
+                const cached = queryClient.getQueryData(queryKey);
                 const payload = cached?.data ?? cached;
                 if (Array.isArray(payload) && id) {
                     const match = payload.find((r) => String(r.id) === String(id)) ?? null;
@@ -194,44 +195,24 @@ export default function useTanstackQuery(props) {
             // ============================================
             // UNCHANGED: cache update (insert / update / delete)
             // ============================================
-            if (cat && data) {
-                queryClient.setQueryData([table, uniqueKey], (oldData) => {
-                    let currentData = Array.isArray(oldData) ? oldData : [];
-
-                    if (cat.includes('insert') && responseData && responseData.id) {
-                        if (currentData.some(row => row.id == id)) {
-                            currentData = currentData.map(row =>
-                                row.id === responseData.id ? responseData : row
-                            );
-                            return currentData;
-                        } else {
-                            return [...currentData, responseData];
-                        }
-                    } else if (cat.includes('update') && responseData && responseData.id) {
-                        console.log('updated cache');
-                        return currentData.map((row) =>
-                            row.id === responseData.id ? responseData : row
-                        );
-                    } else if (cat.includes('delete') && id) {
-                        return currentData.filter((row) => row.id !== id);
-                    }
-                    return currentData;
-                });
-            }
-
-            queryClient.invalidateQueries({ queryKey: [table, uniqueKey] });
+            queryClient.invalidateQueries({ queryKey: [table] });
+            if (table === 'approvalcenter' || table === 'requisitions') queryClient.invalidateQueries({ queryKey: ['controlcenter'] });
 
             // Success toast with react-hot-toast
             const action = cat.includes('insert') && id == null ? 'Created' : cat.includes('update') ? 'Updated' : cat.includes('delete') || act == 3 ? 'Deleted' : 'Processed';
             showToast(`Data ${action.toLowerCase()} successfully!`, 'success', `${action} ✓`);
             
+            if (Number(responseDatas?.notifications?.failed) > 0) {
+                toast('Saved, but an email notification could not be delivered. Please contact your administrator.', { icon: '⚠️', duration: 7000 });
+            }
+
             if (onSuccess) {
                 onSuccess();
             }
         },
         onError: (error) => {
             // Error toast with react-hot-toast
-            showToast('Failed to update data. Please try again.', 'error', 'Error ✕');
+            showToast(error.response?.data?.message || error.message || 'Failed to update data. Please try again.', 'error', 'Error ✕');
             
             if (onError) {
                 onError(error);
@@ -245,8 +226,7 @@ export default function useTanstackQuery(props) {
         setParam({});
     };
 
-    const loadQuery = (newParam) => {
-        killQuery();
+    const loadQuery = (newParam = {}) => {
         setParam(newParam);
         setIsEnabled(true);
     };
@@ -288,7 +268,7 @@ export default function useTanstackQuery(props) {
     // ============================================
     const getOne = (id) => {
         // Prefer live cache, fall back to the hook's `data`
-        const cached = queryClient.getQueryData([table, uniqueKey]) ?? data;
+        const cached = queryClient.getQueryData(queryKey) ?? data;
 
         let match = null;
 
@@ -310,11 +290,12 @@ export default function useTanstackQuery(props) {
         data,
         isLoading,
         isLoadingUpdate,
+        isProcessing: isLoadingUpdate,
         isSuccess,
         isError,
         isFetching,
         isPending,
-        error: queryError,
+        error: queryError || error,
         status,
         killQuery,
         loadQuery,

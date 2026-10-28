@@ -48,14 +48,14 @@ const ExpenseDetails = ({ items = [] }) => {
             placeholder="Search items..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-1 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
         <div className="flex space-x-2">
           <button
             onClick={() => setFilterType('all')}
             className={`px-3 py-1 text-sm rounded-md transition-colors ${
-              filterType === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              filterType === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 dark:text-gray-300 hover:bg-gray-300'
             }`}
           >
             All
@@ -63,7 +63,7 @@ const ExpenseDetails = ({ items = [] }) => {
           <button
             onClick={() => setFilterType('opex')}
             className={`px-3 py-1 text-sm rounded-md transition-colors ${
-              filterType === 'opex' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              filterType === 'opex' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 dark:text-gray-300 hover:bg-gray-300'
             }`}
           >
             OPEX
@@ -71,13 +71,13 @@ const ExpenseDetails = ({ items = [] }) => {
           <button
             onClick={() => setFilterType('capex')}
             className={`px-3 py-1 text-sm rounded-md transition-colors ${
-              filterType === 'capex' ? 'bg-orange-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              filterType === 'capex' ? 'bg-orange-600 text-white' : 'bg-gray-200 text-gray-700 dark:text-gray-300 hover:bg-gray-300'
             }`}
           >
             CAPEX
           </button>
         </div>
-        <span className="text-sm text-gray-500 self-center">
+        <span className="text-sm text-gray-500 dark:text-gray-400 self-center">
           {filteredItems.length} items
         </span>
       </div>
@@ -85,34 +85,34 @@ const ExpenseDetails = ({ items = [] }) => {
       {/* Details Table */}
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-100">
+          <thead className="bg-gray-100 dark:bg-gray-950">
             <tr>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doc Type</th>
-              <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price</th>
-              <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-              <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-              <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Item</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Account</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Doc Type</th>
+              <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Unit Price</th>
+              <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total</th>
+              <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
+              <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
             {filteredItems.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-3 py-4 text-center text-sm text-gray-500">
+                <td colSpan="7" className="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                   No items found
                 </td>
               </tr>
             ) : (
               filteredItems.map((item, index) => (
-                <tr key={item.id || index} className="hover:bg-gray-50">
-                  <td className="px-3 py-2 text-sm text-gray-900">{item.item_name || 'N/A'}</td>
-                  <td className="px-3 py-2 text-sm text-gray-600">{item.account_name || 'N/A'}</td>
-                  <td className="px-3 py-2 text-sm text-gray-600">{item.document_type || 'N/A'}</td>
-                  <td className="px-3 py-2 text-sm text-gray-600 text-right">
+                <tr key={item.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <td className="px-3 py-2 text-sm text-gray-900 dark:text-gray-100">{item.item_name || 'N/A'}</td>
+                  <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400">{item.account_name || 'N/A'}</td>
+                  <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400">{item.document_type || 'N/A'}</td>
+                  <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 text-right">
                     {formatCurrency(item.unit_amount || 0)}
                   </td>
-                  <td className="px-3 py-2 text-sm font-medium text-gray-900 text-right">
+                  <td className="px-3 py-2 text-sm font-medium text-gray-900 dark:text-gray-100 text-right">
                     {formatCurrency(item.total_amount || 0)}
                   </td>
                   <td className="px-3 py-2 text-center">
@@ -122,7 +122,7 @@ const ExpenseDetails = ({ items = [] }) => {
                       {item.type === 0 ? 'OPEX' : 'CAPEX'}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-sm text-gray-600 text-center">
+                  <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 text-center">
                     {formatDate(item.resolved_at)}
                   </td>
                 </tr>

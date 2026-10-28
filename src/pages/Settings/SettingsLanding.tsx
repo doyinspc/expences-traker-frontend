@@ -1,7 +1,7 @@
 // src/pages/settings/SettingsLanding.tsx
 
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link } from 'react-router';
 import {
   Users,
   Banknote,
@@ -228,10 +228,10 @@ export const settingsConfig: SettingGroup[] = [
       },
       {
         id: 7,
-        name: 'Accounts/Banks',
+        name: 'Chart of Accounts',
         path: '/setting/page/7',
         icon: <Building size={20} />,
-        description: 'Manage bank accounts and financial institutions',
+        description: 'Maintain the account classifications used by request items and financial reports',
         detailedDescription: 'Configure and manage bank accounts, financial institutions, and payment methods. Set up account details, routing information, and banking preferences for seamless financial operations.',
         features: [
           'Add and manage bank accounts',
@@ -667,163 +667,13 @@ export const settingsConfig: SettingGroup[] = [
 // ============================================
 // SETTINGS LANDING PAGE COMPONENT
 // ============================================
+export const availableSettings = settingsConfig.map(group => ({ ...group, items: group.items.filter(item => !['/setting/taxes','/setting/audit','/setting/chart-of-accounts'].includes(item.path)) }));
 const SettingsLanding: React.FC = () => {
-  return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Enhanced Header with Stats */}
-      <div className="mb-8 pb-6 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-              <Settings size={32} className="text-primary-600 dark:text-primary-400" />
-              Settings
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Configure and manage all system settings, user preferences, and reference data.
-            </p>
-          </div>
-          <div className="flex items-center gap-4 mt-4 md:mt-0 text-sm">
-            <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
-              <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
-              <span className="text-gray-700 dark:text-gray-300">
-                <span className="font-medium text-green-600 dark:text-green-400">
-                  {settingsConfig.reduce((acc, g) => acc + g.items.filter(i => i.isNew).length, 0)}
-                </span> New
-              </span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-              <span className="inline-block w-2 h-2 rounded-full bg-purple-500"></span>
-              <span className="text-gray-700 dark:text-gray-300">
-                <span className="font-medium text-purple-600 dark:text-purple-400">
-                  {settingsConfig.reduce((acc, g) => acc + g.items.filter(i => i.isPro).length, 0)}
-                </span> Pro
-              </span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <span className="text-gray-700 dark:text-gray-300">
-                <span className="font-medium text-blue-600 dark:text-blue-400">
-                  {settingsConfig.reduce((acc, g) => acc + g.items.length, 0)}
-                </span> Total
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Settings Groups */}
-      <div className="space-y-12">
-        {settingsConfig.map((group) => (
-          <div key={group.id}>
-            {/* Group Header with Enhanced Info */}
-            <div className="flex items-start gap-4 mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
-              <div className="p-2 bg-primary-100 dark:bg-primary-900/20 rounded-lg text-primary-600 dark:text-primary-400">
-                {group.icon}
-              </div>
-              <div className="flex-1">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  {group.name}
-                </h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {group.description}
-                </p>
-              </div>
-              <span className="text-xs text-gray-500 dark:text-gray-400 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full">
-                {group.items.length} items
-              </span>
-            </div>
-
-            {/* Enhanced Settings Items Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {group.items.map((item) => (
-                <Link
-                  key={item.id}
-                  to={item.path}
-                  className="group block bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
-                >
-                  <div className="p-5">
-                    <div className="flex items-start gap-3 mb-2">
-                      <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-gray-600 dark:text-gray-400 group-hover:bg-primary-100 dark:group-hover:bg-primary-900/20 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                        {item.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                            {item.name}
-                          </h3>
-                          {item.isNew && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 animate-pulse">
-                              New
-                            </span>
-                          )}
-                          {item.isPro && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
-                              Pro
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Enhanced Description */}
-                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mt-1">
-                      {item.description}
-                    </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                      {item.detailedDescription}
-                    </p>
-
-                    {/* Quick Stats */}
-                    <div className="flex items-center gap-3 mt-3 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 pt-3">
-                      {item.setupTime && (
-                        <span className="flex items-center gap-1">
-                          <span className="inline-block w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500"></span>
-                          Setup: {item.setupTime}
-                        </span>
-                      )}
-                      {item.usage && (
-                        <span className="flex items-center gap-1">
-                          <span className="inline-block w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500"></span>
-                          {item.usage}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Action Link */}
-                    <div className="flex items-center mt-2 text-xs text-primary-600 dark:text-primary-400 group-hover:font-medium">
-                      Configure <ChevronRight size={14} className="ml-1 group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Enhanced Footer with Quick Actions */}
-      <div className="mt-12 pt-6 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {settingsConfig.reduce((acc, group) => acc + group.items.length, 0)} settings available across {settingsConfig.length} categories
-          </p>
-          <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-            <span className="flex items-center gap-1">
-              <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
-              {settingsConfig.reduce((acc, g) => acc + g.items.filter(i => i.isNew).length, 0)} new features
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block w-2 h-2 rounded-full bg-purple-500"></span>
-              {settingsConfig.reduce((acc, g) => acc + g.items.filter(i => i.isPro).length, 0)} pro features
-            </span>
-            <span className="text-gray-300 dark:text-gray-600">|</span>
-            <span className="text-gray-500 dark:text-gray-400">
-              Last updated: {new Date().toLocaleDateString()}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  const [search,setSearch]=useState('');
+  const groups=availableSettings.map(group=>({...group,items:group.items.filter(item=>(item.name+' '+item.description).toLowerCase().includes(search.trim().toLowerCase()))})).filter(group=>group.items.length);
+  return <div className="space-y-6"><div className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Settings</h1><p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Manage people, workflow rules and the reference data used across Prokure.</p></div><label className="w-full sm:w-72"><span className="sr-only">Search settings</span><input type="search" value={search} onChange={event=>setSearch(event.target.value)} placeholder="Search settings…" className="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"/></label></div>
+  {groups.map(group=><section key={group.id}><h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-gray-200">{group.name}</h2><div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">{group.items.map(item=><Link key={item.id} to={item.path} className="group flex min-h-24 items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 hover:border-brand-400 focus-visible:outline-2 focus-visible:outline-brand-500 dark:border-gray-800 dark:bg-gray-900"><span className="shrink-0 rounded-lg bg-gray-50 p-2 text-brand-600 dark:bg-gray-800 dark:text-brand-300" aria-hidden="true">{item.icon}</span><div className="min-w-0 flex-1"><h3 className="text-sm font-semibold text-gray-900 dark:text-white">{item.name}</h3><p className="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">{item.description}</p></div><ChevronRight size={16} className="shrink-0 text-gray-400" aria-hidden="true"/></Link>)}</div></section>)}
+  {!groups.length&&<div className="rounded-xl border border-gray-200 p-8 text-center dark:border-gray-800"><h2 className="font-semibold text-gray-900 dark:text-white">No matching settings</h2><button type="button" onClick={()=>setSearch('')} className="mt-3 min-h-11 text-sm text-brand-600 underline dark:text-brand-300">Clear search</button></div>}
+  </div>;
 };
-
 export default SettingsLanding;

@@ -9,22 +9,23 @@ import TextArea from '../../components/form/input/TextArea';
 import ToggleSwitch from '../../components/form/form-elements/ToggleSwitch';
 import DatePicker from '../../components/form/date-picker';
 import PhoneInput from '../../components/form/group-input/PhoneInput';
-import FileUpload from '../../components/form/Select'; // Assuming this is correct in your setup
+import { fieldGuidance, validateFieldValue } from '../../utils/functions/formGuidance';
 import { getFormFields } from '../../config/tableMapping';
 
 // ==================== TYPES ====================
 
-export type FieldType = 
-  | 'text' 
-  | 'email' 
-  | 'number' 
-  | 'textarea' 
-  | 'select' 
-  | 'toggle' 
-  | 'date' 
-  | 'datetime' 
-  | 'phone' 
-  | 'file' 
+export type FieldType =
+  | 'text'
+  | 'email'
+  | 'password'
+  | 'number'
+  | 'textarea'
+  | 'select'
+  | 'toggle'
+  | 'date'
+  | 'datetime'
+  | 'phone'
+  | 'file'
   | 'json';
 
 export interface FieldOption {
@@ -87,14 +88,14 @@ export const getSelectOptions = (
   }
 
   const options = optionData[optionKey];
-  
+
   if (!options || !Array.isArray(options)) {
     return [];
   }
 
   return options.filter((opt): opt is FieldOption => {
-    return opt && 
-      typeof opt === 'object' && 
+    return opt &&
+      typeof opt === 'object' &&
       (opt.value !== undefined && opt.value !== null) &&
       typeof opt.label === 'string';
   });
@@ -117,11 +118,13 @@ export const getCountryOptions = (): FieldOption[] => {
   ];
 };
 
+const EMPTY_INITIAL_DATA: Record<string, any> = {};
+
 // ==================== COMPONENT ====================
 
 const DynamicForm: React.FC<DynamicFormProps> = ({
   tableName,
-  initialData = {},
+  initialData = EMPTY_INITIAL_DATA,
   onSave,
   onCancel,
   loading = false,
@@ -140,8 +143,12 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
-  
-  const fields = useMemo(() => getFormFields(tableName), [tableName]);
+
+  const fields = useMemo(() => {
+    const configured = getFormFields(tableName);
+    if (!configured) return configured;
+    return Object.fromEntries(Object.entries(configured).map(([name, field]) => [name, { ...field, hidden: field.hidden || (tableName === "users" && name === "password" && Boolean(initialData.id)), description: field.description || fieldGuidance[name] }]));
+  }, [tableName, initialData.id]);
 
   // Get visible fields (not hidden and showInForm !== false)
   const visibleFields = useMemo(() => {
@@ -171,12 +178,12 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
       const initial: Record<string, any> = {};
       Object.entries(fields).forEach(([fieldName, field]) => {
         // Check if we have initialData for this field
-        const hasInitialData = initialData[fieldName] !== undefined && 
-                               initialData[fieldName] !== null && 
+        const hasInitialData = initialData[fieldName] !== undefined &&
+                               initialData[fieldName] !== null &&
                                initialData[fieldName] !== '';
-        
+
         let defaultValue: any = null;
-        
+
         if (hasInitialData) {
           // Use the initialData value
           defaultValue = initialData[fieldName];
@@ -193,7 +200,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
           // Other fields default to empty string or the field default
           defaultValue = field.default !== undefined ? field.default : '';
         }
-        
+
         initial[fieldName] = defaultValue;
       });
       setFormData(initial);
@@ -215,7 +222,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
 
           // If exactly 1 option exists and the field hasn't been set yet
           if (
-            options.length === 1 && 
+            options.length === 1 &&
             (currentValue === null || currentValue === undefined || currentValue === '')
           ) {
             updates[fieldName] = options[0].value;
@@ -234,7 +241,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ): void => {
     const { name, value, type } = e.target;
-    
+
     if (!name) return;
 
     // Clear error for this field
@@ -288,42 +295,9 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
     const newErrors: Record<string, string> = {};
     let isValid = true;
 
-    // Only validate visible fields (not hidden)
     visibleFields.forEach(([fieldName, field]) => {
-      if (field.required) {
-        const value = formData[fieldName];
-        
-        if (field.type === 'toggle') {
-          if (value === null || value === undefined) {
-            newErrors[fieldName] = `${field.label} is required`;
-            isValid = false;
-          }
-        } else if (field.type === 'select') {
-          if (value === null || value === undefined || value === '') {
-            newErrors[fieldName] = `Please select a ${field.label}`;
-            isValid = false;
-          }
-        } else if (field.type === 'date' || field.type === 'datetime') {
-          if (value === null || value === undefined || value === '') {
-            newErrors[fieldName] = `Please select a ${field.label}`;
-            isValid = false;
-          }
-        } else if (field.type === 'file') {
-          if (value === null || value === undefined || value === '') {
-            newErrors[fieldName] = `Please upload a ${field.label}`;
-            isValid = false;
-          }
-        } else {
-          if (value === '' || value === null || value === undefined) {
-            newErrors[fieldName] = `${field.label} is required`;
-            isValid = false;
-          }
-          if (field.type === 'number' && value !== '' && isNaN(parseFloat(value))) {
-            newErrors[fieldName] = `${field.label} must be a valid number`;
-            isValid = false;
-          }
-        }
-      }
+      const message = validateFieldValue(field, formData[fieldName]);
+      if (message) { newErrors[fieldName] = message; isValid = false; }
     });
 
     return { isValid, errors: newErrors };
@@ -332,19 +306,21 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
   // Handle submit
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
-    
+
     // Clear previous messages
     setSubmitError(null);
     setSubmitSuccess(false);
-    
+
     // Validate form (only visible fields)
     const validation = validateForm();
     if (!validation.isValid) {
       setErrors(validation.errors);
       // Scroll to first error
-      const firstError = document.querySelector('[class*="border-red-500"]');
+      const firstName = Object.keys(validation.errors)[0];
+      const firstError = document.getElementById(`field-group-${tableName}-${firstName}`);
       if (firstError) {
         firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        firstError.focus();
       }
       return;
     }
@@ -398,7 +374,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
   // Handle select change
   const handleSelectChange = (fieldName: string, eOrValue: any): void => {
     let newValue: string | number | null = null;
-    
+
     if (eOrValue === undefined || eOrValue === null) {
       newValue = null;
     } else if (eOrValue && typeof eOrValue === 'object' && eOrValue.target) {
@@ -434,9 +410,8 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
         newValue = null;
       }
     }
-    
-    console.log(`[DynamicForm] Select "${fieldName}" changed to:`, newValue);
-    
+
+
     if (errors[fieldName]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -444,7 +419,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
         return newErrors;
       });
     }
-    
+
     setFormData((prev) => ({
       ...prev,
       [fieldName]: newValue,
@@ -461,26 +436,26 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
     isDisabled: boolean
   ): React.ReactNode => {
     const { label, placeholder, options: optionKey, description, required } = field;
-    
+
     const selectOptions = getSelectOptions(optionKey || '', optionData);
-    
+
     // Value should be null by default
     let selectedValue = null;
-    
+
     // Check if we have a valid value (not null, undefined, or empty)
     if (value !== null && value !== undefined && value !== '') {
       // Convert to string for comparison
       const stringValue = String(value);
-      
+
       // Check if the value exists in options
       const valueExists = selectOptions.some(opt => String(opt.value) === stringValue);
-      
+
       // Only use the value if it exists in options and is valid
       if (valueExists) {
         selectedValue = value;
       }
     }
-    
+
     // If still null and we have a default from field config
     if (selectedValue === null && field.default !== undefined && field.default !== null) {
       const defaultString = String(field.default);
@@ -493,24 +468,27 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
     return (
       <div key={fieldName}>
         <Label required={required} htmlFor={fieldId}>
-          {label}
+          {label}{required && <span className="ml-1 text-red-500" aria-hidden="true">*</span>}
         </Label>
         <Select
           id={fieldId}
           name={fieldName}
+          required={required}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${fieldId}-error` : description ? `${fieldId}-description` : undefined}
           placeholder={placeholder || `Select ${label}`}
           options={selectOptions}
-          // Defaulting to '' to make sure the native select remains controlled 
-          value={selectedValue ?? ''} 
+          // Defaulting to '' to make sure the native select remains controlled
+          value={selectedValue ?? ''}
           disabled={isDisabled}
           className={`dark:bg-dark-900 ${error ? 'border-red-500' : ''}`}
           onChange={(eOrValue) => handleSelectChange(fieldName, eOrValue)}
         />
         {description && (
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
+          <p id={`${fieldId}-description`} className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
         )}
         {error && (
-          <p className="mt-1 text-sm text-red-500">{error}</p>
+          <p id={`${fieldId}-error`} className="mt-1 text-sm text-red-500">{error}</p>
         )}
       </div>
     );
@@ -580,11 +558,14 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               {required && <span className="text-red-500 ml-1">*</span>}
             </Label>
             <TextArea
+              error={Boolean(error)}
+              required={required}
+              aria-describedby={error ? `${fieldId}-error` : description ? `${fieldId}-description` : undefined}
               id={fieldId}
               name={fieldName}
               placeholder={placeholder || ''}
               rows={4}
-              value={value || ''}
+              value={value ?? ''}
               disabled={isDisabled}
               className={error ? 'border-red-500' : ''}
               onChange={(e: any) => {
@@ -596,9 +577,9 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               }}
             />
             {description && (
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
+              <p id={`${fieldId}-description`} className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
             )}
-            {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+            {error && <p id={`${fieldId}-error`} className="mt-1 text-sm text-red-500">{error}</p>}
           </div>
         );
 
@@ -614,13 +595,13 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
             } else {
               dateValue = null;
             }
-          } 
+          }
           // If it's a string, format it correctly
           else if (typeof value === 'string') {
             // Check for ISO Strings ('2024-03-25T15:30:00.000Z')
             if (value.includes('T')) {
               dateValue = value.split('T')[0];
-            } 
+            }
             // Check for SQL Datetime Strings ('2024-03-25 15:30:00')
             else if (value.includes(' ')) {
               dateValue = value.split(' ')[0];
@@ -640,6 +621,9 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               {required && <span className="text-red-500 ml-1">*</span>}
             </Label>
             <DatePicker
+              required={required}
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? `${fieldId}-error` : description ? `${fieldId}-description` : undefined}
               id={fieldId}
               name={fieldName}
               placeholder={placeholder || `Select ${label}`}
@@ -652,9 +636,9 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               }}
             />
             {description && (
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
+              <p id={`${fieldId}-description`} className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
             )}
-            {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+            {error && <p id={`${fieldId}-error`} className="mt-1 text-sm text-red-500">{error}</p>}
           </div>
         );
 
@@ -671,15 +655,15 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               placeholder={placeholder || ''}
               selectPosition="start"
               countries={countryOptions || getCountryOptions()}
-              value={value || ''}
+              value={value ?? ''}
               disabled={isDisabled}
               className={error ? 'border-red-500' : ''}
               onChange={(phoneNumber: string) => handleCustomChange(fieldName, phoneNumber)}
             />
             {description && (
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
+              <p id={`${fieldId}-description`} className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
             )}
-            {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+            {error && <p id={`${fieldId}-error`} className="mt-1 text-sm text-red-500">{error}</p>}
           </div>
         );
 
@@ -690,27 +674,22 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               {label}
               {required && <span className="text-red-500 ml-1">*</span>}
             </Label>
-            <FileUpload
-              id={fieldId}
-              name={fieldName}
-              accept={accept || ''}
-              value={value || ''}
-              disabled={isDisabled}
-              className={error ? 'border-red-500' : ''}
-              onChange={(file: File | File[]) => handleCustomChange(fieldName, file)}
-            />
+            <input type="file" id={fieldId} name={fieldName} accept={accept || undefined} disabled={isDisabled}
+              aria-invalid={Boolean(error)} onChange={(event) => handleCustomChange(fieldName, event.target.files?.[0] || null)}
+              className="block w-full rounded-lg border border-gray-300 p-3 text-sm dark:border-gray-700" />
             {description && (
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
+              <p id={`${fieldId}-description`} className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
             )}
-            {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+            {error && <p id={`${fieldId}-error`} className="mt-1 text-sm text-red-500">{error}</p>}
           </div>
         );
 
       case 'number':
       case 'email':
+      case 'password':
       case 'text':
       default: {
-        const inputType = type === 'number' ? 'number' : type === 'email' ? 'email' : 'text';
+        const inputType = type === 'number' ? 'number' : type === 'email' ? 'email' : type === 'password' ? 'password' : 'text';
         const hasIcon = icon ? true : false;
         return (
           <div key={fieldName}>
@@ -723,8 +702,11 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 id={fieldId}
                 name={fieldName}
                 type={inputType}
-                placeholder={placeholder || ''}
-                value={value || ''}
+                placeholder={placeholder || `Enter ${label.toLowerCase()}`}
+                aria-invalid={Boolean(error)}
+                aria-required={required}
+                aria-describedby={error ? `${fieldId}-error` : description ? `${fieldId}-description` : undefined}
+                value={value ?? ''}
                 disabled={isDisabled}
                 className={`${hasIcon ? 'pl-[62px]' : ''} ${error ? 'border-red-500' : ''}`}
                 onChange={handleChange}
@@ -749,9 +731,9 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               )}
             </div>
             {description && (
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
+              <p id={`${fieldId}-description`} className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
             )}
-            {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+            {error && <p id={`${fieldId}-error`} className="mt-1 text-sm text-red-500">{error}</p>}
           </div>
         );
       }
@@ -762,8 +744,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
     return (
       <ComponentCard title="Error">
         <div className="p-4 text-red-500">
-          <p>No fields found for table: <strong>{tableName}</strong></p>
-          <p className="text-sm mt-2">Please check that the table exists in tableMapping configuration.</p>
+          <p>This form is currently unavailable. Please contact your administrator.</p>
         </div>
       </ComponentCard>
     );
@@ -782,18 +763,20 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
     );
   }
 
-  const formTitle = title || 
+  const formTitle = title ||
     tableName.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()) + ' Form';
 
   const isProcessing = loading || isSubmitting;
 
   return (
-    <form onSubmit={handleSubmit} onReset={handleReset} className={className}>
+    <form noValidate aria-busy={loading || isSubmitting} onSubmit={handleSubmit} onReset={handleReset} className={className}>
       <ComponentCard title={formTitle}>
         <div className="space-y-6">
+          <p className="text-sm leading-6 text-gray-500 dark:text-gray-400">Fields marked <span className="font-semibold text-red-500">*</span> are required.{["requisitions", "purchaseorders", "skus", "budgets"].includes(tableName) && <span className="mt-1 block">Check the location, people and amounts. Save your draft, then use the document’s submit action when it is ready for approval.</span>}</p>
+          {Object.keys(errors).length > 0 && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-200"><p className="font-medium">Please review {Object.keys(errors).length} field{Object.keys(errors).length === 1 ? '' : 's'} before saving.</p><ul className="mt-2 list-inside list-disc">{Object.entries(errors).map(([name, message]) => <li key={name}><a href={`#field-group-${tableName}-${name}`} className="underline">{message}</a></li>)}</ul></div>}
           {/* Success Message */}
           {submitSuccess && (
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg dark:bg-green-900/20 dark:border-green-800">
+            <div role="status" className="p-4 bg-green-50 border border-green-200 rounded-lg dark:bg-green-900/20 dark:border-green-800">
               <p className="text-sm text-green-700 dark:text-green-400">
                 ✅ {submitLabel} successful!
               </p>
@@ -802,7 +785,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
 
           {/* Error Message */}
           {submitError && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:border-red-800">
+            <div role="alert" className="p-4 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:border-red-800">
               <p className="text-sm text-red-700 dark:text-red-400">
                 ❌ {submitError}
               </p>
@@ -810,13 +793,13 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
           )}
 
           {/* Form Fields - Only render visible fields */}
-          {visibleFieldsList.map(([fieldName, field]) => renderField(fieldName, field))}
+          {visibleFieldsList.map(([fieldName, field]) => <div key={fieldName} id={`field-group-${tableName}-${fieldName}`} tabIndex={-1} className="scroll-mt-24">{renderField(fieldName, field)}</div>)}
 
           <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
             <button
               type="submit"
               disabled={isProcessing}
-              className={`px-4 py-2 text-white bg-brand-500 rounded-lg hover:bg-brand-600 transition-colors ${
+              className={`min-h-11 px-4 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 text-white bg-brand-500 rounded-lg hover:bg-brand-600 transition-colors ${
                 isProcessing ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
@@ -827,7 +810,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               <button
                 type="reset"
                 disabled={isProcessing}
-                className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+                className="min-h-11 px-4 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
               >
                 {resetLabel}
               </button>
@@ -838,7 +821,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
                 type="button"
                 onClick={onCancel}
                 disabled={isProcessing}
-                className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+                className="min-h-11 px-4 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
               >
                 {cancelLabel}
               </button>

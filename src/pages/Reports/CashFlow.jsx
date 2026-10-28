@@ -1,3 +1,4 @@
+import { buildReportCsv } from '../../utils/functions/reportExport';
 ﻿// components/CashFlowAnalysis/CashFlowAnalysis.js
 import React, { useState, useEffect, useMemo } from 'react';
 import CashFlowFilters from './CashFlowFilters';
@@ -21,12 +22,14 @@ const CashFlowAnalysis = () => {
   const { 
     data: cashFlowData, 
     loadQuery: loadCashFlowData,
+    error: reportError,
     isLoading: isCashFlowLoading
   } = useReduxApiData({
     table: 'requisitionitems',
     uniqueKey: 'cash_flow_analysis',
     queryType: 'getCashFlowAnalysis',
     mainParam: filters,
+    autoLoad: false,
     narration: 'get cash flow analysis data'
   });
 
@@ -89,7 +92,7 @@ const CashFlowAnalysis = () => {
     setSelectedAccountFilter(filterData.account_id || '');
     
     // Load cash flow data with new filters
-    await loadCashFlowData();
+    loadCashFlowData(newFilters);
   };
 
   const handleAccountFilterChange = (accountId) => {
@@ -111,16 +114,13 @@ const CashFlowAnalysis = () => {
           item.account_name || 'N/A',
           item.category_name || 'N/A',
           item.document_type || 'N/A',
-          item.category_id === 0 ? (item.total_amount || 0) : '-',
-          item.category_id === 1 ? (item.credit_amount || 0) : '-',
-          item.category_id === 0 ? 'Debit' : 'Credit'
+          Number(item.category_id) === 0 ? (item.total_amount || 0) : '-',
+          Number(item.category_id) === 1 ? (item.credit_amount || 0) : '-',
+          Number(item.category_id) === 0 ? 'Debit' : 'Credit'
         ];
       }).filter(row => row !== null);
       
-      const csv = [
-        headers.join(','),
-        ...rows.map(row => row.join(','))
-      ].join('\n');
+      const csv = buildReportCsv(headers, rows);
       
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
@@ -148,14 +148,16 @@ const CashFlowAnalysis = () => {
   }, [selectedAccountFilter, uniqueAccounts]);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 md:p-8">
+    <div className="min-w-0">
       <div className="max-w-7xl mx-auto space-y-6">
+        {step===2&&currentFilters&&<p className="text-xs font-medium text-gray-500 dark:text-gray-400">Reporting dates: {currentFilters.start_date} to {currentFilters.end_date}</p>}
+        {reportError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"><p>{reportError.response?.data?.message || reportError.message || "The report could not be loaded."}</p><button type="button" onClick={() => loadCashFlowData(filters)} className="mt-2 min-h-11 underline">Try again</button></div>}
         {/* Header */}
-        <div className="flex justify-between items-center bg-white rounded-lg shadow p-4">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Cash Flow Analysis
+        <div className="flex flex-wrap gap-3 justify-between items-center bg-white dark:bg-gray-900 rounded-lg shadow p-4">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            Cash Movement Analysis
           </h1>
-          <div className="flex items-center space-x-2 text-sm text-gray-500">
+          <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
             <span className={`px-3 py-1 rounded-full ${step === 1 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
               Step 1: Filters
             </span>
@@ -172,6 +174,7 @@ const CashFlowAnalysis = () => {
         {step === 1 && (
           <CashFlowFilters
             onApplyFilters={handleApplyFilters}
+            initialFilters={currentFilters}
             isLoading={isCashFlowLoading}
           />
         )}
@@ -179,10 +182,10 @@ const CashFlowAnalysis = () => {
         {/* Step 2: Results */}
         {step === 2 && (
           <div className="space-y-4">
-            <div className="flex justify-between items-center bg-white rounded-lg shadow p-4">
+            <div className="flex flex-wrap gap-3 justify-between items-center bg-white dark:bg-gray-900 rounded-lg shadow p-4">
               <button
                 onClick={handleBack}
-                className="inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors"
+                className="inline-flex items-center text-blue-600 dark:text-blue-300 hover:text-blue-800 transition-colors"
               >
                 <svg className="h-5 w-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -191,11 +194,11 @@ const CashFlowAnalysis = () => {
               </button>
               <div className="flex items-center space-x-4">
                 {selectedAccountName && (
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
                     Account: {selectedAccountName}
                   </span>
                 )}
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-gray-500 dark:text-gray-400">
                   {analysisData?.length || 0} items found
                 </span>
               </div>
@@ -203,12 +206,12 @@ const CashFlowAnalysis = () => {
             
             {/* Account Filter Dropdown (populated from data) */}
             {uniqueAccounts.length > 0 && (
-              <div className="bg-white rounded-lg shadow p-4">
+              <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4">
                 <div className="flex items-center gap-4">
-                  <label className="text-sm font-medium text-gray-700">
+                  <label htmlFor="analysis-account" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Filter by Account:
                   </label>
-                  <select
+                  <select id="analysis-account"
                     value={selectedAccountFilter}
                     onChange={(e) => {
                       const value = e.target.value;
@@ -223,9 +226,9 @@ const CashFlowAnalysis = () => {
                         ...currentFilters,
                         account_id: value || null
                       });
-                      loadCashFlowData();
+                      loadCashFlowData(newFilters);
                     }}
-                    className="px-3 py-1.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-900"
                   >
                     <option value="">All Accounts</option>
                     {uniqueAccounts.map((account) => (

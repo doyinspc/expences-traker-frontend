@@ -1,0 +1,8 @@
+import useCompanyPeriod from '../../hooks/useCompanyPeriod';
+import { fiscalYearRange, reportPeriod } from '../../utils/functions/reportPeriods';
+export default function AccountingPeriodPicker({value='custom',onSelect,allowAllTime=false,disabled=false,label='Reporting period'}) {
+  const company=useCompanyPeriod();
+  const fiscal=fiscalYearRange(company.data?.fiscal_year_start);
+  const options=[['30days','Last 30 days'],['60days','Last 60 days'],['3months','Last 3 months'],['6months','Last 6 months'],['12months','Last 12 months'],['fy',fiscal?`Accounting year · ${fiscal.label}`:'Accounting year · set in Company Profile'],['fytd','Accounting year to date'],['previous_fy','Previous accounting year'],...(allowAllTime?[['all','All time']]:[]),['custom','Custom dates']];
+  return <div><label className="block text-xs font-medium text-gray-600 dark:text-gray-300">{label}<select value={value} disabled={disabled} onChange={event=>{const selected=event.target.value;if(selected==='custom')onSelect(null,selected);else onSelect(reportPeriod(selected,company.data?.fiscal_year_start),selected);}} className="mt-1.5 min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">{options.map(([key,text])=><option key={key} value={key} disabled={['fy','fytd','previous_fy'].includes(key)&&!fiscal}>{text}</option>)}</select></label>{company.error&&<p role="alert" className="mt-1 text-xs text-red-600 dark:text-red-300">Company accounting-year settings could not be loaded.</p>}</div>;
+}

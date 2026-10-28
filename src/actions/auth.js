@@ -6,7 +6,7 @@ import { AUTH_TYPES, LOGIN_TYPES, USER_TYPES } from '../types/auth';
 const sessionStorageHelper = {
     set: (key, value) => {
         try {
-            sessionStorage.setItem(key, JSON.stringify(value));
+            sessionStorage.setItem(key, (['token', 'jwt', 'tenantDb', 'userType'].includes(key) ? String(value ?? '') : JSON.stringify(value)));
         } catch (e) {
             console.error('Session storage set error:', e);
         }
@@ -14,7 +14,8 @@ const sessionStorageHelper = {
     get: (key) => {
         try {
             const item = sessionStorage.getItem(key);
-            return item ? JSON.parse(item) : null;
+            if (!item || item === 'null' || item === 'undefined') return null;
+            try { return JSON.parse(item); } catch { return item; }
         } catch (e) {
             console.error('Session storage get error:', e);
             return null;
@@ -191,7 +192,7 @@ export const adminLogin = (formData) => {
                 };
 
                 sessionStorage.setItem('token', userData.token);
-                sessionStorage.setItem('jwt', userData.jwt);
+                sessionStorageHelper.set('jwt', userData.jwt);
                 sessionStorageHelper.set('user', userData.user);
                 sessionStorageHelper.set('userType', USER_TYPES.ADMIN);
                 sessionStorageHelper.set('accountId', userData.accountId);
@@ -243,7 +244,7 @@ export const tenantLogin = (formData) => {
 
                 // Save to session storage
                 sessionStorage.setItem('token', userData.token);
-                sessionStorage.setItem('jwt', userData.jwt);
+                sessionStorageHelper.set('jwt', userData.jwt);
                 sessionStorageHelper.set('user', userData.user);
                 sessionStorage.setItem('tenantDb', userData.tenantDb);
                 sessionStorageHelper.set('userType', USER_TYPES.TENANT);
@@ -326,6 +327,9 @@ export const logoutUser = () => {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                        'X-Tenant-DB': sessionStorageHelper.get('tenantDb') || import.meta.env.VITE_APP_TENANT_DB || 'expences1',
+                        'X-User-Type': userType || 'tenant',
                     },
                     body: JSON.stringify({
                         table: 'login',
@@ -389,6 +393,9 @@ export const refreshToken = () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                        'X-Tenant-DB': sessionStorageHelper.get('tenantDb') || import.meta.env.VITE_APP_TENANT_DB || 'expences1',
+                        'X-User-Type': userType || 'tenant',
                 },
                 body: JSON.stringify({
                     table: 'login',

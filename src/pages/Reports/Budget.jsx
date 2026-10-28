@@ -1,4 +1,5 @@
 // components/BudgetAnalysis/BudgetAnalysis.js
+import { buildReportCsv } from '../../utils/functions/reportExport';
 import React, { useState, useEffect, useMemo } from 'react';
 import BudgetFilters from './BudgetFilters';
 import BudgetSummary from './BudgetSummary';
@@ -28,12 +29,14 @@ const BudgetAnalysis = () => {
   const { 
     data: budgetAnalysis, 
     loadQuery: loadBudgetAnalysis,
+    error: reportError,
     isLoading: isAnalysisLoading
   } = useReduxApiData({
     table: 'requisitionitems',
     uniqueKey: 'budget_analysis',
     queryType: 'getBudgetCategoryItemAnalysis',
-    mainParam: { budget_id: selectedBudget },
+    mainParam: {},
+    autoLoad: false,
     narration: 'get budget analysis data'
   });
 
@@ -57,7 +60,7 @@ const BudgetAnalysis = () => {
   const handleBudgetSelect = async (budgetId) => {
     setSelectedBudget(budgetId);
     setCurrentFilters({ budget_id: budgetId });
-    await loadBudgetAnalysis();
+    await loadBudgetAnalysis({budget_id:budgetId});
   };
 
   const handleExportCSV = () => {
@@ -77,10 +80,7 @@ const BudgetAnalysis = () => {
         ];
       }).filter(row => row !== null);
 
-      const csv = [
-        headers.join(','),
-        ...rows.map(row => row.join(','))
-      ].join('\n');
+      const csv = buildReportCsv(headers,rows);
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
@@ -107,7 +107,7 @@ const BudgetAnalysis = () => {
     id: budget.id,
     name: budget.budget_name || `Budget ${budget.id}`,
     amount: budget.total_amount,
-    period: budget.period
+    period: budget.start_date && budget.end_date ? `${budget.start_date} to ${budget.end_date}` : budget.period
   })) || [];
 
   // Get selected budget name
@@ -118,14 +118,15 @@ const BudgetAnalysis = () => {
   }, [selectedBudget, budgetOptions]);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 md:p-8">
+    <div className="min-w-0">
       <div className="max-w-7xl mx-auto space-y-6">
+        {reportError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"><p>{reportError.response?.data?.message || reportError.message || "The report could not be loaded."}</p><button type="button" onClick={() => loadBudgetAnalysis({budget_id:selectedBudget})} className="mt-2 min-h-11 underline">Try again</button></div>}
         {/* Header */}
-        <div className="flex justify-between items-center bg-white rounded-lg shadow p-4">
-          <h1 className="text-2xl font-bold text-gray-900">
+        <div className="flex flex-wrap gap-3 justify-between items-center bg-white dark:bg-gray-900 rounded-lg shadow p-4">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             Budget vs Actual Analysis
           </h1>
-          <div className="flex items-center space-x-2 text-sm text-gray-500">
+          <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
             <span className={`px-3 py-1 rounded-full ${step === 1 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
               Step 1: Select Budget
             </span>
@@ -150,11 +151,11 @@ const BudgetAnalysis = () => {
         {/* Step 2: Results */}
         {step === 2 && (
           <div className="space-y-4">
-            <div className="flex justify-between items-center bg-white rounded-lg shadow p-4 flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 justify-between items-center bg-white dark:bg-gray-900 rounded-lg shadow p-4 flex-wrap gap-3">
               <div className="flex items-center gap-4">
                 <button
                   onClick={handleBack}
-                  className="inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors"
+                  className="inline-flex items-center text-blue-600 dark:text-blue-300 hover:text-blue-800 transition-colors"
                 >
                   <svg className="h-5 w-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -162,20 +163,20 @@ const BudgetAnalysis = () => {
                   Back to Budgets
                 </button>
                 {selectedBudgetName && (
-                  <span className="text-sm font-medium text-gray-700">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Budget: {selectedBudgetName}
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-3">
                 {/* View Toggle */}
-                <div className="flex rounded-md shadow-sm border border-gray-200">
+                <div className="flex rounded-md shadow-sm border border-gray-200 dark:border-gray-800">
                   <button
                     onClick={() => setViewMode('summary')}
                     className={`px-3 py-1.5 text-sm font-medium rounded-l-md transition-colors ${
                       viewMode === 'summary' 
                         ? 'bg-blue-600 text-white' 
-                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                        : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                     }`}
                   >
                     Summary
@@ -185,7 +186,7 @@ const BudgetAnalysis = () => {
                     className={`px-3 py-1.5 text-sm font-medium rounded-r-md transition-colors ${
                       viewMode === 'details' 
                         ? 'bg-blue-600 text-white' 
-                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                        : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                     }`}
                   >
                     Details

@@ -6,6 +6,7 @@ import DynamicForm from "../../components/ui/DynamicForm";
 import useTanstackQuery from "../../hooks/useTanstackQuery";
 import { isArrayWithValue } from "../../actions/common";
 import CompanyFileUpload from "./CompanyPhoto";
+import { fiscalYearRange } from "../../utils/functions/reportPeriods";
 
 const CompanyProfile: React.FC = () => {
   const [page, setPage] = useState<number>(0);
@@ -35,19 +36,12 @@ const CompanyProfile: React.FC = () => {
   // Check if company exists (has an ID) to determine Edit vs. Add mode
   const isEdit = Boolean(company?.id);
 
-  const handleSave = (formData: Record<string, any>) => {
-    if (isEdit) {
-      loadUpdate(formData);
-    } else {
-      // Calls loadAdd (or loadSave) if it's a new company
-      if (loadAdd) {
-        loadAdd(formData);
-      } else {
-        loadUpdate({ ...formData, mode: "add" });
-      }
-    }
-    setPage(0); // Return to view mode after save
+  const handleSave = async (formData: Record<string, any>) => {
+    await loadUpdate(formData);
+    await loadQuery();
+    setPage(0);
   };
+  const accountingYear=fiscalYearRange(company?.fiscal_year_start);
   const fetchCompany = () =>{
 
   }
@@ -68,6 +62,7 @@ const CompanyProfile: React.FC = () => {
     <>
       <PageBreadcrumb pageTitle="Company Profile" />
       <div className="space-y-6">
+        <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200"><p className="font-semibold">{accountingYear ? `${accountingYear.label}: ${accountingYear.start_date} to ${accountingYear.end_date}` : "Set the accounting year in company details"}</p><p className="mt-1 leading-6">The start month and day define each annual reporting period. Budget approval, budget closure and accounting-period locking are separate operations.</p></div>
         <ComponentCard title="Company Profile">
           <div className="p-4">
             {page === 0 ? (

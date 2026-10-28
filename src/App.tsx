@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router";
 import { lazy, Suspense } from "react";
 
 // Layouts – keep static (they are shared and not too heavy)
@@ -171,6 +171,7 @@ export default function App() {
           <Route path="/setting" element={<AppLayoutSetting />}>
             <Route index path="/setting/" element={<SettingLanding />} />
             <Route index path="/setting/company-profile" element={<SettingCompany />} />
+            <Route path="/setting/chart-of-accounts" element={<Navigate replace to="/setting/page/7" />} />
             <Route path="/setting/page/:grp" element={<SettingPage />} />
             <Route path="/setting/page/:grp/:page_id" element={<SettingSubPage />} />
             <Route path="/setting/user" element={<UserDirectory />} />

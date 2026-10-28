@@ -133,7 +133,7 @@ const AddItemsModal: React.FC<AddItemsModalProps> = ({
         table: "requisitionitems",
         uniqueKey: 'requisitionitemLoader',
         queryType: 'gets',
-        mainParam: { requisition_id: selectedRequisition || null, approved:0},
+        mainParam: { requisition_id: selectedRequisition || null, approved:1, resolved:0},
         narration: 'get requisition items',
         autoLoad: false,
     });
@@ -313,7 +313,7 @@ const AddItemsModal: React.FC<AddItemsModalProps> = ({
                                     const hasPO = item?.purchaseorder_id && Number(item.purchaseorder_id) > 0;
                                     const isInCurrentPO = item?.purchaseorder_id && Number(item.purchaseorder_id) === purchaseOrderId;
                                     const isProcessing = adding === item?.id;
-                                    const isApproved = item?.approved_by && item?.approved_by !== 0;
+                                    const isApproved = Number(item?.approved) === 1;
                                     const currencyCode = requisitionCurrency || 'NGN';
                                     const itemName = item?.item_name || item?.item_id || 'N/A';
                                     const categoryName = item?.category_name || 'N/A';

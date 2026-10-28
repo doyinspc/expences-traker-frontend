@@ -1,3 +1,4 @@
+import { authSelection } from '../utils/functions/workflowPresentation';
 // src/reducers/auth.js
 
 import { AUTH_TYPES, USER_TYPES } from '../types/auth';
@@ -84,7 +85,7 @@ const baseInitialState = {
     accountId: null,
     userType: USER_TYPES.GUEST,
     isAuthenticated: false,
-    isAdmin:true,
+    isAdmin:false,
     location_id: 0,
     locations: [],
     location: {},
@@ -100,7 +101,7 @@ const baseInitialState = {
 };
 
 const persistedState = loadPersistedState();
-const initialState = persistedState ? { ...baseInitialState, ...persistedState } : baseInitialState;
+const initialState = persistedState ? { ...baseInitialState, ...persistedState, ...authSelection(persistedState.user, persistedState.location_id, persistedState.role_id) } : baseInitialState;
 
 export default function auth(state = initialState, action) {
     switch (action.type) {
@@ -125,6 +126,7 @@ export default function auth(state = initialState, action) {
                 error: null,
                 remember: action.payload.remember || false,
             };
+            if (newState.userType === USER_TYPES.TENANT) Object.assign(newState, authSelection(newState.user, newState.location_id, newState.role_id));
             saveAuthToStorage(newState);
             return newState;
         }
@@ -150,7 +152,7 @@ export default function auth(state = initialState, action) {
             let default_role  = action?.payload.user?.role_id || 0;
             let default_location_details = action?.payload.user?.locations.find(rw =>rw.id == default_location)
             let default_role_details = action?.payload.user?.roles.find(rw =>rw.id == default_role)
-            const isAdminLogin = true;// parseInt(default_location_details?.is_active) === 1 ? true : false;
+            const isAdminLogin = Number(default_location_details?.is_admin ?? default_location_details?.is_active) === 1;
             const newState = {
                 ...state,
                 user: action.payload.user,
@@ -187,7 +189,7 @@ export default function auth(state = initialState, action) {
         case AUTH_TYPES.SWITCH_LOCATION_SUCCESS:
             let df = action?.payload
             let new_role = state.roles.find(rw=>rw.location_id == action?.payload.id) || {}
-            const isAdmin = true;// parseInt(action?.payload?.is_active) === 1 ? true : false;
+            const isAdmin = Number(action?.payload?.is_admin ?? action?.payload?.is_active) === 1;
             let updateState = {
                 ...state,
                 location: action?.payload,
@@ -197,6 +199,7 @@ export default function auth(state = initialState, action) {
                 role_id:new_role?.id || 0,
                 error: null,
             };
+            Object.assign(updateState, authSelection(state.user, action.payload?.id, new_role.id));
             saveAuthToStorage(updateState);
             return updateState;
          case AUTH_TYPES.SWITCH_ROLE_SUCCESS:
@@ -207,6 +210,7 @@ export default function auth(state = initialState, action) {
                 role_id: action?.payload.id,
                 error: null,
             };
+            Object.assign(updateRoleState, authSelection(state.user, state.location_id, action.payload?.id));
             saveAuthToStorage(updateRoleState);
             return updateRoleState;
         // ==================== REGISTER ====================

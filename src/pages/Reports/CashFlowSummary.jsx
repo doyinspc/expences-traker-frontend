@@ -21,13 +21,13 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
       const totalDebit = data.reduce((sum, item) => {
         if (!item) return sum;
         const amount = parseFloat(item.total_amount);
-        return sum + (item.category_id === 0 && !isNaN(amount) ? amount : 0);
+        return sum + (Number(item.category_id) === 0 && !isNaN(amount) ? amount : 0);
       }, 0);
 
       const totalCredit = data.reduce((sum, item) => {
         if (!item) return sum;
         const amount = parseFloat(item.credit_amount);
-        return sum + (item.category_id === 1 && !isNaN(amount) ? amount : 0);
+        return sum + (Number(item.category_id) === 1 && !isNaN(amount) ? amount : 0);
       }, 0);
 
       const netCashFlow = totalDebit - totalCredit;
@@ -35,7 +35,7 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
       // Group by date - with null safety
       const groupedByDate = data.reduce((acc, item) => {
         if (!item) return acc;
-        
+
         let dateKey = 'Unknown';
         try {
           if (item.resolved_date) {
@@ -44,7 +44,7 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
         } catch (e) {
           dateKey = 'Unknown';
         }
-        
+
         if (!acc[dateKey]) {
           acc[dateKey] = {
             date: dateKey,
@@ -54,20 +54,20 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
             count: 0
           };
         }
-        
+
         // Add amounts with null safety
-        if (item.category_id === 0) {
+        if (Number(item.category_id) === 0) {
           const amount = parseFloat(item.total_amount);
           if (!isNaN(amount)) {
             acc[dateKey].debit += amount;
           }
-        } else if (item.category_id === 1) {
+        } else if (Number(item.category_id) === 1) {
           const amount = parseFloat(item.credit_amount);
           if (!isNaN(amount)) {
             acc[dateKey].credit += amount;
           }
         }
-        
+
         acc[dateKey].items.push(item);
         acc[dateKey].count += 1;
         return acc;
@@ -201,13 +201,13 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
   // Defensive guard for loading
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow p-8 text-center">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-8 text-center">
         <div className="flex justify-center items-center">
-          <svg className="animate-spin h-12 w-12 text-blue-600" viewBox="0 0 24 24">
+          <svg className="animate-spin h-12 w-12 text-blue-600 dark:text-blue-300" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
-          <span className="ml-3 text-gray-600">Loading cash flow data...</span>
+          <span className="ml-3 text-gray-600 dark:text-gray-400">Loading cash flow data...</span>
         </div>
       </div>
     );
@@ -216,30 +216,30 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
   // Defensive guard for no data
   if (!summary || (!summary.groupedByDate?.length && !summary.flatData?.length)) {
     return (
-      <div className="bg-white rounded-lg shadow p-8 text-center">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-8 text-center">
         <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
-        <h3 className="mt-2 text-sm font-medium text-gray-900">No cash flow data available</h3>
-        <p className="mt-1 text-sm text-gray-500">Select a date range to generate cash flow analysis.</p>
+        <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No cash flow data available</h3>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Select a date range to generate cash flow analysis.</p>
       </div>
     );
   }
 
   // Main render
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
+    <div className="bg-white dark:bg-gray-900 rounded-lg shadow overflow-hidden">
       {/* Summary Header */}
-      <div className="p-6 border-b border-gray-200">
+      <div className="p-6 border-b border-gray-200 dark:border-gray-800">
         <div className="flex justify-between items-center flex-wrap gap-3">
-          <h2 className="text-xl font-bold text-gray-800">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">
             Cash Flow Summary
           </h2>
           <div className="flex items-center gap-3">
             {/* View Toggle Button */}
             <button
               onClick={toggleViewMode}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md text-sm font-medium transition-colors border border-blue-200"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 text-blue-700 rounded-md text-sm font-medium transition-colors border border-blue-200"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {viewMode === 'grouped' ? (
@@ -250,7 +250,7 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
               </svg>
               {viewMode === 'grouped' ? 'Show Flat List' : 'Group by Date'}
             </button>
-            
+
             <button
               onClick={onExport}
               className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
@@ -259,19 +259,19 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
             </button>
           </div>
         </div>
-        
+
         {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-          <div className="bg-green-50 rounded-lg p-3">
-            <p className="text-sm text-green-600">Total Debit (Inflow)</p>
+          <div className="bg-green-50 dark:bg-green-950/30 rounded-lg p-3">
+            <p className="text-sm text-green-600 dark:text-green-300">Total Debit (Inflow)</p>
             <p className="text-lg font-bold text-green-800">{formatCurrency(summary.totalDebit)}</p>
           </div>
-          <div className="bg-red-50 rounded-lg p-3">
-            <p className="text-sm text-red-600">Total Credit (Outflow)</p>
+          <div className="bg-red-50 dark:bg-red-950/30 rounded-lg p-3">
+            <p className="text-sm text-red-600 dark:text-red-300">Total Credit (Outflow)</p>
             <p className="text-lg font-bold text-red-800">{formatCurrency(summary.totalCredit)}</p>
           </div>
-          <div className={`rounded-lg p-3 ${summary.netCashFlow >= 0 ? 'bg-blue-50' : 'bg-orange-50'}`}>
-            <p className={`text-sm ${summary.netCashFlow >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+          <div className={`rounded-lg p-3 ${summary.netCashFlow >= 0 ? 'bg-blue-50 dark:bg-blue-950/30' : 'bg-orange-50 dark:bg-orange-950/30'}`}>
+            <p className={`text-sm ${summary.netCashFlow >= 0 ? 'text-blue-600 dark:text-blue-300' : 'text-orange-600 dark:text-orange-300'}`}>
               Net Cash Flow
             </p>
             <p className={`text-lg font-bold ${summary.netCashFlow >= 0 ? 'text-blue-800' : 'text-orange-800'}`}>
@@ -279,9 +279,9 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
             </p>
           </div>
         </div>
-        
+
         {/* View mode indicator */}
-        <div className="mt-3 text-sm text-gray-500">
+        <div className="mt-3 text-sm text-gray-500 dark:text-gray-400">
           Viewing: <span className="font-medium">{viewMode === 'grouped' ? 'Grouped by Date' : 'Flat List (All Items)'}</span>
           <span className="ml-2 text-gray-400">|</span>
           <span className="ml-2">{summary.transactionCount} items total</span>
@@ -293,33 +293,33 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
         // GROUPED VIEW - Grouped by Date
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
                 <th className="w-10 px-4 py-3"></th>
-                <th 
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('date')}
+                <th
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  tabIndex={0} aria-sort={sortConfig.key==='date'?(sortConfig.direction==='asc'?'ascending':'descending'):'none'} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSort('date');}}} onClick={() => handleSort('date')}
                 >
                   Date {sortConfig.key === 'date' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                 </th>
-                <th 
-                  className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('count')}
+                <th
+                  className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  tabIndex={0} aria-sort={sortConfig.key==='count'?(sortConfig.direction==='asc'?'ascending':'descending'):'none'} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSort('count');}}} onClick={() => handleSort('count')}
                 >
                   Items {sortConfig.key === 'count' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-green-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-green-600 dark:text-green-300 uppercase tracking-wider">
                   Debit (Inflow)
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-red-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-red-600 dark:text-red-300 uppercase tracking-wider">
                   Credit (Outflow)
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
               {sortedGroupedData.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-4 py-3 text-center text-sm text-gray-500">
+                  <td colSpan="5" className="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">
                     No data available
                   </td>
                 </tr>
@@ -328,22 +328,22 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
                   if (!group) return null;
                   return (
                     <React.Fragment key={group.date || 'unknown'}>
-                      <tr 
-                        className="hover:bg-gray-50 cursor-pointer transition-colors"
+                      <tr
+                        className="hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
                         onClick={() => toggleRow(group.date)}
                       >
                         <td className="px-4 py-3 text-center">
-                          <svg 
+                          <button type="button" aria-label={`View cash movements on ${group.date}`} aria-expanded={Boolean(expandedRows[group.date])} onClick={event=>{event.stopPropagation();toggleRow(group.date);}} className="inline-flex size-11 items-center justify-center rounded-lg focus-visible:outline-2 focus-visible:outline-brand-500"><svg
                             className={`h-5 w-5 text-gray-400 transform transition-transform ${expandedRows[group.date] ? 'rotate-90' : ''}`}
                             fill="none" stroke="currentColor" viewBox="0 0 24 24"
                           >
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
+                          </svg></button>
                         </td>
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
                           {formatDate(group.date)}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 text-right">
                           {group.count || 0}
                         </td>
                         <td className="px-4 py-3 text-sm font-semibold text-green-700 text-right">
@@ -353,11 +353,11 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
                           {formatCurrency(group.credit || 0)}
                         </td>
                       </tr>
-                      
+
                       {/* Expanded Details Row */}
                       {expandedRows[group.date] && group.items && group.items.length > 0 && (
                         <tr>
-                          <td colSpan="5" className="px-4 py-3 bg-gray-50">
+                          <td colSpan="5" className="px-4 py-3 bg-gray-50 dark:bg-gray-800">
                             <CashFlowDetails items={group.items} />
                           </td>
                         </tr>
@@ -373,66 +373,66 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
         // FLAT VIEW - All items as a flat list
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
                 <th className="w-10 px-4 py-3"></th>
-                <th 
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('resolved_date')}
+                <th
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  tabIndex={0} aria-sort={sortConfig.key==='resolved_date'?(sortConfig.direction==='asc'?'ascending':'descending'):'none'} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSort('resolved_date');}}} onClick={() => handleSort('resolved_date')}
                 >
                   Date {sortConfig.key === 'resolved_date' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                 </th>
-                <th 
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('item_name')}
+                <th
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  tabIndex={0} aria-sort={sortConfig.key==='item_name'?(sortConfig.direction==='asc'?'ascending':'descending'):'none'} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSort('item_name');}}} onClick={() => handleSort('item_name')}
                 >
                   Item {sortConfig.key === 'item_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                 </th>
-                <th 
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('account_name')}
+                <th
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  tabIndex={0} aria-sort={sortConfig.key==='account_name'?(sortConfig.direction==='asc'?'ascending':'descending'):'none'} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSort('account_name');}}} onClick={() => handleSort('account_name')}
                 >
                   Account {sortConfig.key === 'account_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                 </th>
-                <th 
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('category_name')}
+                <th
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  tabIndex={0} aria-sort={sortConfig.key==='category_name'?(sortConfig.direction==='asc'?'ascending':'descending'):'none'} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSort('category_name');}}} onClick={() => handleSort('category_name')}
                 >
                   Category {sortConfig.key === 'category_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-green-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-green-600 dark:text-green-300 uppercase tracking-wider">
                   Debit
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-red-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-red-600 dark:text-red-300 uppercase tracking-wider">
                   Credit
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Type
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
               {sortedFlatData.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-4 py-3 text-center text-sm text-gray-500">
+                  <td colSpan="8" className="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">
                     No data available
                   </td>
                 </tr>
               ) : (
                 sortedFlatData.map((item, index) => {
                   if (!item) return null;
-                  const isDebit = item.category_id === 0;
+                  const isDebit = Number(item.category_id) === 0;
                   const rowKey = item.id || `item-${index}`;
-                  
+
                   return (
                     <React.Fragment key={rowKey}>
-                      <tr className="hover:bg-gray-50">
+                      <tr className="hover:bg-gray-50 dark:hover:bg-gray-800">
                         <td className="px-4 py-3 text-center">
                           <button
-                            onClick={() => toggleRow(rowKey)}
+                            type="button" aria-label={`View ${item.item_name || "item"} details`} aria-expanded={Boolean(expandedRows[rowKey])} onClick={() => toggleRow(rowKey)}
                             className="text-gray-400 hover:text-gray-600"
                           >
-                            <svg 
+                            <svg
                               className={`h-5 w-5 transform transition-transform ${expandedRows[rowKey] ? 'rotate-90' : ''}`}
                               fill="none" stroke="currentColor" viewBox="0 0 24 24"
                             >
@@ -440,16 +440,16 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
                             </svg>
                           </button>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-900">
+                        <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
                           {formatDateTime(item.resolved_date)}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-900">
+                        <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
                           {item.item_name || 'N/A'}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
+                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                           {item.account_name || 'N/A'}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
+                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                           {item.category_name || 'N/A'}
                         </td>
                         <td className="px-4 py-3 text-sm font-semibold text-green-700 text-right">
@@ -466,49 +466,49 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
                           </span>
                         </td>
                       </tr>
-                      
+
                       {/* Expanded Details Row - Shows full item details */}
                       {expandedRows[rowKey] && (
                         <tr>
-                          <td colSpan="8" className="px-4 py-3 bg-gray-50">
+                          <td colSpan="8" className="px-4 py-3 bg-gray-50 dark:bg-gray-800">
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                               <div>
-                                <span className="font-medium text-gray-500">Item:</span>
-                                <span className="ml-2 text-gray-900">{item.item_name || 'N/A'}</span>
+                                <span className="font-medium text-gray-500 dark:text-gray-400">Item:</span>
+                                <span className="ml-2 text-gray-900 dark:text-gray-100">{item.item_name || 'N/A'}</span>
                               </div>
                               <div>
-                                <span className="font-medium text-gray-500">Account:</span>
-                                <span className="ml-2 text-gray-900">{item.account_name || 'N/A'}</span>
+                                <span className="font-medium text-gray-500 dark:text-gray-400">Account:</span>
+                                <span className="ml-2 text-gray-900 dark:text-gray-100">{item.account_name || 'N/A'}</span>
                               </div>
                               <div>
-                                <span className="font-medium text-gray-500">Category:</span>
-                                <span className="ml-2 text-gray-900">{item.category_name || 'N/A'}</span>
+                                <span className="font-medium text-gray-500 dark:text-gray-400">Category:</span>
+                                <span className="ml-2 text-gray-900 dark:text-gray-100">{item.category_name || 'N/A'}</span>
                               </div>
                               <div>
-                                <span className="font-medium text-gray-500">Document Type:</span>
-                                <span className="ml-2 text-gray-900">{item.document_type || 'N/A'}</span>
+                                <span className="font-medium text-gray-500 dark:text-gray-400">Document Type:</span>
+                                <span className="ml-2 text-gray-900 dark:text-gray-100">{item.document_type || 'N/A'}</span>
                               </div>
                               <div>
-                                <span className="font-medium text-gray-500">Debit Amount:</span>
+                                <span className="font-medium text-gray-500 dark:text-gray-400">Debit Amount:</span>
                                 <span className="ml-2 text-green-700 font-semibold">
                                   {isDebit ? formatCurrency(item.total_amount) : '-'}
                                 </span>
                               </div>
                               <div>
-                                <span className="font-medium text-gray-500">Credit Amount:</span>
+                                <span className="font-medium text-gray-500 dark:text-gray-400">Credit Amount:</span>
                                 <span className="ml-2 text-red-700 font-semibold">
                                   {!isDebit ? formatCurrency(item.credit_amount) : '-'}
                                 </span>
                               </div>
                               <div>
-                                <span className="font-medium text-gray-500">Type:</span>
+                                <span className="font-medium text-gray-500 dark:text-gray-400">Type:</span>
                                 <span className={`ml-2 font-semibold ${isDebit ? 'text-green-700' : 'text-red-700'}`}>
                                   {isDebit ? 'Debit (Inflow)' : 'Credit (Outflow)'}
                                 </span>
                               </div>
                               <div>
-                                <span className="font-medium text-gray-500">Resolved:</span>
-                                <span className="ml-2 text-gray-900">{formatDateTime(item.resolved_date)}</span>
+                                <span className="font-medium text-gray-500 dark:text-gray-400">Resolved:</span>
+                                <span className="ml-2 text-gray-900 dark:text-gray-100">{formatDateTime(item.resolved_date)}</span>
                               </div>
                             </div>
                           </td>

@@ -137,16 +137,16 @@ const BudgetSummary = ({ data = [], viewMode = 'summary', isLoading = false, bud
 
   const getStatusColor = (percentage) => {
     const num = parseFloat(percentage);
-    if (isNaN(num)) return 'text-gray-600';
-    if (num >= 100) return 'text-red-600';
-    if (num >= 80) return 'text-orange-600';
-    if (num >= 50) return 'text-yellow-600';
-    return 'text-green-600';
+    if (isNaN(num)) return 'text-gray-600 dark:text-gray-400';
+    if (num >= 100) return 'text-red-600 dark:text-red-300';
+    if (num >= 80) return 'text-orange-600 dark:text-orange-300';
+    if (num >= 50) return 'text-yellow-600 dark:text-yellow-300';
+    return 'text-green-600 dark:text-green-300';
   };
 
   const getStatusBadge = (percentage) => {
     const num = parseFloat(percentage);
-    if (isNaN(num)) return { color: 'bg-gray-100 text-gray-800', label: 'N/A' };
+    if (isNaN(num)) return { color: 'bg-gray-100 dark:bg-gray-950 text-gray-800 dark:text-gray-200', label: 'N/A' };
     if (num >= 100) return { color: 'bg-red-100 text-red-800', label: 'Exceeded' };
     if (num >= 80) return { color: 'bg-orange-100 text-orange-800', label: 'Near Limit' };
     if (num >= 50) return { color: 'bg-yellow-100 text-yellow-800', label: 'In Progress' };
@@ -155,13 +155,13 @@ const BudgetSummary = ({ data = [], viewMode = 'summary', isLoading = false, bud
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow p-8 text-center">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-8 text-center">
         <div className="flex justify-center items-center">
-          <svg className="animate-spin h-12 w-12 text-blue-600" viewBox="0 0 24 24">
+          <svg className="animate-spin h-12 w-12 text-blue-600 dark:text-blue-300" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
-          <span className="ml-3 text-gray-600">Loading budget data...</span>
+          <span className="ml-3 text-gray-600 dark:text-gray-400">Loading budget data...</span>
         </div>
       </div>
     );
@@ -169,31 +169,31 @@ const BudgetSummary = ({ data = [], viewMode = 'summary', isLoading = false, bud
 
   if (!summary || summary.allItems.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-8 text-center">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-8 text-center">
         <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
-        <h3 className="mt-2 text-sm font-medium text-gray-900">No budget data available</h3>
-        <p className="mt-1 text-sm text-gray-500">No items found for this budget.</p>
+        <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No budget data available</h3>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">No items found for this budget.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
+    <div className="bg-white dark:bg-gray-900 rounded-lg shadow overflow-hidden">
       {/* Summary Cards */}
-      <div className="p-6 border-b border-gray-200">
+      <div className="p-6 border-b border-gray-200 dark:border-gray-800">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-blue-50 rounded-lg p-4">
-            <p className="text-sm text-blue-600">Total Budgeted</p>
+          <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-4">
+            <p className="text-sm text-blue-600 dark:text-blue-300">Total Budgeted</p>
             <p className="text-xl font-bold text-blue-800">{formatCurrency(summary.totalBudgeted)}</p>
           </div>
-          <div className="bg-purple-50 rounded-lg p-4">
-            <p className="text-sm text-purple-600">Total Spent</p>
+          <div className="bg-purple-50 dark:bg-purple-950/30 rounded-lg p-4">
+            <p className="text-sm text-purple-600 dark:text-purple-300">Total Spent</p>
             <p className="text-xl font-bold text-purple-800">{formatCurrency(summary.totalSpent)}</p>
           </div>
-          <div className={`rounded-lg p-4 ${summary.totalVariance >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
-            <p className={`text-sm ${summary.totalVariance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <div className={`rounded-lg p-4 ${summary.totalVariance >= 0 ? 'bg-green-50 dark:bg-green-950/30' : 'bg-red-50 dark:bg-red-950/30'}`}>
+            <p className={`text-sm ${summary.totalVariance >= 0 ? 'text-green-600 dark:text-green-300' : 'text-red-600 dark:text-red-300'}`}>
               Variance
             </p>
             <p className={`text-xl font-bold ${summary.totalVariance >= 0 ? 'text-green-800' : 'text-red-800'}`}>
@@ -210,12 +210,12 @@ const BudgetSummary = ({ data = [], viewMode = 'summary', isLoading = false, bud
       </div>
 
       {/* Filter Bar */}
-      <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-wrap items-center gap-3">
-        <label className="text-sm font-medium text-gray-700">Filter by Category:</label>
-        <select
+      <div className="p-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800 flex flex-wrap items-center gap-3">
+        <label htmlFor="budget-report-category" className="text-sm font-medium text-gray-700 dark:text-gray-300">Filter by Category:</label>
+        <select id="budget-report-category"
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value)}
-          className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+          className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
         >
           <option value="">All Categories</option>
           {categories.map(cat => (
@@ -225,12 +225,12 @@ const BudgetSummary = ({ data = [], viewMode = 'summary', isLoading = false, bud
         {filterCategory && (
           <button
             onClick={() => setFilterCategory('')}
-            className="text-sm text-red-600 hover:text-red-800"
+            className="text-sm text-red-600 dark:text-red-300 hover:text-red-800"
           >
             Clear
           </button>
         )}
-        <span className="text-sm text-gray-500 ml-auto">
+        <span className="text-sm text-gray-500 dark:text-gray-400 ml-auto">
           {filteredData.length} items
         </span>
       </div>
@@ -238,40 +238,40 @@ const BudgetSummary = ({ data = [], viewMode = 'summary', isLoading = false, bud
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
               {viewMode === 'summary' ? (
                 // Summary View - Grouped by Category
                 <>
                   <th className="w-10 px-4 py-3"></th>
                   <th 
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort('category_name')}
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    tabIndex={0} aria-sort={sortConfig.key==='category_name'?(sortConfig.direction==='asc'?'ascending':'descending'):'none'} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSort('category_name');}}} onClick={() => handleSort('category_name')}
                   >
                     Category {sortConfig.key === 'category_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                   </th>
                   <th 
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort('item_name')}
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    tabIndex={0} aria-sort={sortConfig.key==='item_name'?(sortConfig.direction==='asc'?'ascending':'descending'):'none'} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSort('item_name');}}} onClick={() => handleSort('item_name')}
                   >
                     Item {sortConfig.key === 'item_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-blue-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort('budgeted_amount')}
+                  <th className="px-4 py-3 text-right text-xs font-medium text-blue-600 dark:text-blue-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    tabIndex={0} aria-sort={sortConfig.key==='budgeted_amount'?(sortConfig.direction==='asc'?'ascending':'descending'):'none'} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSort('budgeted_amount');}}} onClick={() => handleSort('budgeted_amount')}
                   >
                     Budgeted {sortConfig.key === 'budgeted_amount' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-purple-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort('amount_spent')}
+                  <th className="px-4 py-3 text-right text-xs font-medium text-purple-600 dark:text-purple-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    tabIndex={0} aria-sort={sortConfig.key==='amount_spent'?(sortConfig.direction==='asc'?'ascending':'descending'):'none'} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSort('amount_spent');}}} onClick={() => handleSort('amount_spent')}
                   >
                     Spent {sortConfig.key === 'amount_spent' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort('variance')}
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    tabIndex={0} aria-sort={sortConfig.key==='variance'?(sortConfig.direction==='asc'?'ascending':'descending'):'none'} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSort('variance');}}} onClick={() => handleSort('variance')}
                   >
                     Variance {sortConfig.key === 'variance' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Status
                   </th>
                 </>
@@ -280,48 +280,48 @@ const BudgetSummary = ({ data = [], viewMode = 'summary', isLoading = false, bud
                 <>
                   <th className="w-10 px-4 py-3"></th>
                   <th 
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort('category_name')}
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    tabIndex={0} aria-sort={sortConfig.key==='category_name'?(sortConfig.direction==='asc'?'ascending':'descending'):'none'} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSort('category_name');}}} onClick={() => handleSort('category_name')}
                   >
                     Category {sortConfig.key === 'category_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                   </th>
                   <th 
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort('item_name')}
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    tabIndex={0} aria-sort={sortConfig.key==='item_name'?(sortConfig.direction==='asc'?'ascending':'descending'):'none'} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSort('item_name');}}} onClick={() => handleSort('item_name')}
                   >
                     Item {sortConfig.key === 'item_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-blue-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort('budgeted_amount')}
+                  <th className="px-4 py-3 text-right text-xs font-medium text-blue-600 dark:text-blue-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    tabIndex={0} aria-sort={sortConfig.key==='budgeted_amount'?(sortConfig.direction==='asc'?'ascending':'descending'):'none'} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSort('budgeted_amount');}}} onClick={() => handleSort('budgeted_amount')}
                   >
                     Budgeted {sortConfig.key === 'budgeted_amount' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-purple-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort('amount_spent')}
+                  <th className="px-4 py-3 text-right text-xs font-medium text-purple-600 dark:text-purple-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    tabIndex={0} aria-sort={sortConfig.key==='amount_spent'?(sortConfig.direction==='asc'?'ascending':'descending'):'none'} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSort('amount_spent');}}} onClick={() => handleSort('amount_spent')}
                   >
                     Spent {sortConfig.key === 'amount_spent' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort('variance')}
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    tabIndex={0} aria-sort={sortConfig.key==='variance'?(sortConfig.direction==='asc'?'ascending':'descending'):'none'} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSort('variance');}}} onClick={() => handleSort('variance')}
                   >
                     Variance {sortConfig.key === 'variance' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort('percentage_spent')}
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    tabIndex={0} aria-sort={sortConfig.key==='percentage_spent'?(sortConfig.direction==='asc'?'ascending':'descending'):'none'} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSort('percentage_spent');}}} onClick={() => handleSort('percentage_spent')}
                   >
                     Usage {sortConfig.key === 'percentage_spent' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Status
                   </th>
                 </>
               )}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
             {filteredData.length === 0 ? (
               <tr>
-                <td colSpan={viewMode === 'summary' ? 7 : 8} className="px-4 py-3 text-center text-sm text-gray-500">
+                <td colSpan={viewMode === 'summary' ? 7 : 8} className="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">
                   No items found
                 </td>
               </tr>
@@ -335,10 +335,10 @@ const BudgetSummary = ({ data = [], viewMode = 'summary', isLoading = false, bud
 
                 return (
                   <React.Fragment key={rowKey}>
-                    <tr className="hover:bg-gray-50 transition-colors">
+                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                       <td className="px-4 py-3 text-center">
                         <button
-                          onClick={() => toggleRow(rowKey)}
+                          type="button" aria-label={`View ${item.item_name || "item"} details`} aria-expanded={Boolean(expandedRows[rowKey])} onClick={() => toggleRow(rowKey)}
                           className="text-gray-400 hover:text-gray-600"
                         >
                           <svg 
@@ -349,10 +349,10 @@ const BudgetSummary = ({ data = [], viewMode = 'summary', isLoading = false, bud
                           </svg>
                         </button>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
                         {item.category_name || 'N/A'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
                         {item.item_name || 'N/A'}
                       </td>
                       <td className="px-4 py-3 text-sm font-medium text-blue-700 text-right">
@@ -379,38 +379,38 @@ const BudgetSummary = ({ data = [], viewMode = 'summary', isLoading = false, bud
                     {/* Expanded Details */}
                     {isExpanded && (
                       <tr>
-                        <td colSpan={viewMode === 'summary' ? 7 : 8} className="px-4 py-3 bg-gray-50">
+                        <td colSpan={viewMode === 'summary' ? 7 : 8} className="px-4 py-3 bg-gray-50 dark:bg-gray-800">
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                             <div>
-                              <span className="font-medium text-gray-500">Category:</span>
-                              <span className="ml-2 text-gray-900">{item.category_name || 'N/A'}</span>
+                              <span className="font-medium text-gray-500 dark:text-gray-400">Category:</span>
+                              <span className="ml-2 text-gray-900 dark:text-gray-100">{item.category_name || 'N/A'}</span>
                             </div>
                             <div>
-                              <span className="font-medium text-gray-500">Item:</span>
-                              <span className="ml-2 text-gray-900">{item.item_name || 'N/A'}</span>
+                              <span className="font-medium text-gray-500 dark:text-gray-400">Item:</span>
+                              <span className="ml-2 text-gray-900 dark:text-gray-100">{item.item_name || 'N/A'}</span>
                             </div>
                             <div>
-                              <span className="font-medium text-gray-500">Budgeted:</span>
+                              <span className="font-medium text-gray-500 dark:text-gray-400">Budgeted:</span>
                               <span className="ml-2 text-blue-700 font-semibold">{formatCurrency(item.budgeted_amount)}</span>
                             </div>
                             <div>
-                              <span className="font-medium text-gray-500">Spent:</span>
+                              <span className="font-medium text-gray-500 dark:text-gray-400">Spent:</span>
                               <span className="ml-2 text-purple-700 font-semibold">{formatCurrency(item.amount_spent)}</span>
                             </div>
                             <div>
-                              <span className="font-medium text-gray-500">Variance:</span>
+                              <span className="font-medium text-gray-500 dark:text-gray-400">Variance:</span>
                               <span className={`ml-2 font-semibold ${parseFloat(item.variance) >= 0 ? 'text-green-700' : 'text-red-700'}`}>
                                 {formatCurrency(item.variance)}
                               </span>
                             </div>
                             <div>
-                              <span className="font-medium text-gray-500">Usage:</span>
+                              <span className="font-medium text-gray-500 dark:text-gray-400">Usage:</span>
                               <span className={`ml-2 font-semibold ${getStatusColor(percentage)}`}>
                                 {formatPercentage(percentage)}
                               </span>
                             </div>
                             <div>
-                              <span className="font-medium text-gray-500">Status:</span>
+                              <span className="font-medium text-gray-500 dark:text-gray-400">Status:</span>
                               <span className={`ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
                                 {status.label}
                               </span>
@@ -428,7 +428,7 @@ const BudgetSummary = ({ data = [], viewMode = 'summary', isLoading = false, bud
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-200 bg-gray-50 text-sm text-gray-500">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800 text-sm text-gray-500 dark:text-gray-400">
         Showing {filteredData.length} of {summary.allItems.length} items
         {filterCategory && ` (filtered by: ${filterCategory})`}
       </div>

@@ -4,16 +4,16 @@ import React, { useState } from 'react';
 const BudgetFilters = ({ budgets = [], onSelectBudget, isLoading = false }) => {
   const [selectedBudgetId, setSelectedBudgetId] = useState('');
   const [error, setError] = useState('');
-  console.log(budgets)
+
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     if (!selectedBudgetId) {
       setError('Please select a budget');
       return;
     }
-    
+
     setError('');
     onSelectBudget(selectedBudgetId);
   };
@@ -30,27 +30,27 @@ const BudgetFilters = ({ budgets = [], onSelectBudget, isLoading = false }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-bold text-gray-800 mb-4">
+    <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
+      <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-4">
         Select Budget for Analysis
       </h2>
-      
+
       <form onSubmit={handleSubmit}>
         {/* Budget Selection */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="analysis-budget" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Choose a Budget
           </label>
-          
+
           <div className="relative">
-            <select
+            <select id="analysis-budget"
               value={selectedBudgetId}
               onChange={(e) => {
                 setSelectedBudgetId(e.target.value);
                 setError('');
               }}
-              className={`w-full px-4 py-3 border rounded-md focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white ${
-                error ? 'border-red-500 bg-red-50' : 'border-gray-300'
+              className={`w-full px-4 py-3 border rounded-md focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white dark:bg-gray-900 ${
+                error ? 'border-red-500 bg-red-50 dark:bg-red-950/30' : 'border-gray-300 dark:border-gray-700'
               }`}
               disabled={isLoading}
             >
@@ -67,22 +67,22 @@ const BudgetFilters = ({ budgets = [], onSelectBudget, isLoading = false }) => {
               </svg>
             </div>
           </div>
-          
+
           {error && (
-            <p className="mt-2 text-sm text-red-600">{error}</p>
+            <p className="mt-2 text-sm text-red-600 dark:text-red-300">{error}</p>
           )}
-          
+
           {budgets.length === 0 && !isLoading && (
-            <p className="mt-2 text-sm text-gray-500">No budgets available. Please create a budget first.</p>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">No budgets available. Please create a budget first.</p>
           )}
         </div>
 
         {/* Info Box */}
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
+        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 rounded-md">
           <h3 className="text-sm font-semibold text-blue-800 mb-2">About this analysis:</h3>
           <ul className="text-sm text-blue-700 space-y-1">
             <li>• Shows budgeted amounts vs actual spending</li>
-            <li>• Includes requisitions (Type 3) and purchase orders (Type 2)</li>
+            <li>• Includes completed cash advances and procurement charged to this budget</li>
             <li>• Variance = Budgeted - Spent (Positive = Under budget)</li>
             <li>• Percentage spent shows how much of the budget has been used</li>
           </ul>

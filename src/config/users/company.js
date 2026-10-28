@@ -199,9 +199,10 @@ const company = {
       analyzable: false,
     },
     fiscal_year_start: {
-      label: 'Fiscal Year Start',
+      label: 'Accounting Year Start',
       type: 'date',
-      description: 'Start date of the financial year (e.g., Jan 1)',
+      required: true,
+      description: 'Choose the start of an accounting year. Its month and day repeat annually; reports use this setting. This does not close budgets or lock historical transactions.',
       showInTable: false,
       showInForm: true,
       tableWidth: '120px',

@@ -19,6 +19,7 @@ import {
 
 import { useSidebar } from "../context/SidebarContext";
 import { SERVER_URL } from "../actions/common";
+import { hasNavigationAccess } from "../utils/functions/workflowUx";
 
 const { logout } = authActions;
 
@@ -177,7 +178,7 @@ const navItems: NavItem[] = [
       },
       {
         id: 402,
-        name: "All Approvals",
+        name: "Approval Centre",
         path: "/procurement/controls",
         parent_path_number: 4,
         child_path_number: 2,
@@ -193,14 +194,14 @@ const navItems: NavItem[] = [
     subItems: [
       {
         id: 501,
-        name: "Expense vs Income",
+        name: "Expense Analysis",
         path: "/reports/expense-report",
         parent_path_number: 5,
         child_path_number: 1,
       },
       {
         id: 502,
-        name: "Cash Flow",
+        name: "Cash Movements",
         path: "/reports/cash-flow",
         parent_path_number: 5,
         child_path_number: 2,
@@ -295,11 +296,7 @@ const AppSidebar: React.FC = () => {
       }
 
       // Check if user has access to this specific path
-      return current_location.some(
-        (rw: any) =>
-          Number(rw.parent_path_number) === parentPathNumber &&
-          Number(rw.child_path_number) === childPathNumber
-      );
+      return hasNavigationAccess(current_location, location_id, parentPathNumber, childPathNumber);
     };
 
     // Filter nav items based on access (Dashboard is ALWAYS included)
@@ -314,7 +311,7 @@ const AppSidebar: React.FC = () => {
       // Check if user has access to this parent
       const hasParentAccess = hasAccess(rw.parent_path_number, 0);
 
-      if (hasParentAccess) {
+      if (hasParentAccess || rw.subItems?.some(subItem => hasAccess(subItem.parent_path_number, subItem.child_path_number))) {
         // Filter sub-items based on child access
         const filteredSubItems = rw.subItems?.filter((subItem) => {
           return hasAccess(subItem.parent_path_number, subItem.child_path_number);
@@ -352,9 +349,15 @@ const AppSidebar: React.FC = () => {
       navItems1: filteredNavItems,
       othersItems1: filteredOthersItems,
     };
-  }, [current_location, isAdmin]);
+  }, [current_location, isAdmin, location_id]);
 
-  const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
+  const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleMobileSidebar, isMobile } = useSidebar();
+  useEffect(() => {
+    if (!isMobileOpen) return;
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") { toggleMobileSidebar(); document.getElementById("navigation-toggle")?.focus(); } };
+    document.addEventListener("keydown", escape);
+    return () => document.removeEventListener("keydown", escape);
+  }, [isMobileOpen, toggleMobileSidebar]);
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -368,7 +371,7 @@ const AppSidebar: React.FC = () => {
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const isActive = useCallback(
-    (path: string) => location.pathname === path,
+    (path: string) => location.pathname === path || (path !== "/" && location.pathname.startsWith(`${path}/`)),
     [location.pathname]
   );
 
@@ -439,6 +442,7 @@ const AppSidebar: React.FC = () => {
   // ============================================
   const handleItemClick = useCallback(
     (nav: NavItem) => {
+      if (isMobileOpen) toggleMobileSidebar();
       if (nav.path === "/logout") {
         handleLogout();
         return;
@@ -447,7 +451,7 @@ const AppSidebar: React.FC = () => {
         navigate(nav.path);
       }
     },
-    [handleLogout, navigate]
+    [handleLogout, navigate, isMobileOpen, toggleMobileSidebar]
   );
 
   // ============================================
@@ -459,6 +463,10 @@ const AppSidebar: React.FC = () => {
         <li key={nav.id || nav.name}>
           {nav.subItems ? (
             <button
+              type="button"
+              aria-label={nav.name}
+              aria-expanded={openSubmenu?.type === menuType && openSubmenu?.index === index}
+              aria-controls={`nav-${menuType}-${nav.id}`}
               onClick={() => handleSubmenuToggle(index, menuType)}
               className={`menu-item group ${
                 openSubmenu?.type === menuType && openSubmenu?.index === index
@@ -496,9 +504,12 @@ const AppSidebar: React.FC = () => {
               )}
             </button>
           ) : (
-            <div
+            <button
+              type="button"
+              aria-label={nav.name}
+              aria-current={isActive(nav.path || "") ? "page" : undefined}
               onClick={() => handleItemClick(nav)}
-              className={`menu-item group cursor-pointer ${
+              className={`menu-item group w-full text-left cursor-pointer ${
                 isActive(nav.path || "") ? "menu-item-active" : "menu-item-inactive"
               }`}
             >
@@ -514,10 +525,12 @@ const AppSidebar: React.FC = () => {
               {(isExpanded || isHovered || isMobileOpen) && (
                 <span className="menu-item-text">{nav.name}</span>
               )}
-            </div>
+            </button>
           )}
           {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
             <div
+              id={`nav-${menuType}-${nav.id}`}
+              inert={!(openSubmenu?.type === menuType && openSubmenu?.index === index)}
               ref={(el) => {
                 subMenuRefs.current[`${menuType}-${index}`] = el;
               }}
@@ -534,6 +547,8 @@ const AppSidebar: React.FC = () => {
                   <li key={subItem.id || subItem.name}>
                     <Link
                       to={subItem.path}
+                      onClick={() => { if (isMobileOpen) toggleMobileSidebar(); }}
+                      aria-current={isActive(subItem.path) ? "page" : undefined}
                       className={`menu-dropdown-item ${
                         isActive(subItem.path)
                           ? "menu-dropdown-item-active"
@@ -594,7 +609,7 @@ const AppSidebar: React.FC = () => {
   // MAIN RENDER
   // ============================================
   return (
-    <aside
+    <aside id="app-navigation" aria-label="Main navigation" inert={isMobile && !isMobileOpen}
       className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
         ${
           isExpanded || isMobileOpen

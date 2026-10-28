@@ -5,7 +5,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 export const API_PATHS = import.meta.env.VITE_API_URL;
 export const API_PATH_SETTING = import.meta.env.VITE_API_URL;
 export const SERVER_PATHS = import.meta.env.VITE_API_URL;
-export const SERVER_URL = import.meta.env.VITE_API_FOLDER;
+export const SERVER_URL = import.meta.env.VITE_API_FOLDER ? import.meta.env.VITE_API_FOLDER.replace(/\/?$/, '/') : '';
 export const WEBPAGE = import.meta.env.VITE_REACT_APP_WEBPAGE;
 
 export const PICS = import.meta.env.VITE_REACT_APP_PHOTO;
@@ -26,7 +26,11 @@ const getToken = () => {
     try {
         const token = sessionStorage.getItem('token');
         const jwt = sessionStorage.getItem('jwt');
-        return jwt || token || '';
+        const normalize = (value) => {
+            if (!value || value === 'null' || value === 'undefined') return '';
+            try { return JSON.parse(value) || ''; } catch { return value; }
+        };
+        return normalize(token);
     } catch (error) {
         console.error('Error getting token from sessionStorage:', error);
         return '';
@@ -36,7 +40,7 @@ const getToken = () => {
 // Get user type from sessionStorage
 const getUserType = () => {
     try {
-        return sessionStorage.getItem('userType') || 'tenant';
+        const value = sessionStorage.getItem('userType'); try { return JSON.parse(value) || 'tenant'; } catch { return value || 'tenant'; }
     } catch (error) {
         console.error('Error getting userType from sessionStorage:', error);
         return 'tenant';
@@ -46,7 +50,7 @@ const getUserType = () => {
 // Get tenant DB from sessionStorage
 const getTenantDb = () => {
     try {
-        return sessionStorage.getItem('tenantDb') || import.meta.env.VITE_APP_TENANT_DB || 'stresert_expences1';
+        const value = sessionStorage.getItem('tenantDb'); try { return JSON.parse(value) || import.meta.env.VITE_APP_TENANT_DB || 'expences1'; } catch { return value || import.meta.env.VITE_APP_TENANT_DB || 'expences1'; }
     } catch (error) {
         console.error('Error getting tenantDb from sessionStorage:', error);
         return import.meta.env.VITE_APP_TENANT_DB || 'expences1';
@@ -59,7 +63,7 @@ const getTenantDb = () => {
 export const axiosConfig = {
     headers: {
         "Content-Type": "application/json;charset=UTF-8",
-        "Access-Control-Allow-Origin": "*",
+
     }
 };
 
@@ -124,6 +128,13 @@ Object.defineProperty(axiosConfig1.headers, 'X-User-Type', {
     configurable: true
 });
 
+
+// Context headers select a view; the backend checks them against the signed-in user.
+const selectedContext = () => { try { return JSON.parse(localStorage.getItem('app_auth_state') || '{}'); } catch { return {}; } };
+for (const config of [axiosConfig, axiosConfig1]) {
+    Object.defineProperty(config.headers, 'X-Location-ID', { enumerable: true, get: () => String(selectedContext().location_id || 0) });
+    Object.defineProperty(config.headers, 'X-Role-ID', { enumerable: true, get: () => String(selectedContext().role_id || 0) });
+}
 
 // MAIN_TOKEN (backward compatibility)
 export const MAIN_TOKEN = getToken();

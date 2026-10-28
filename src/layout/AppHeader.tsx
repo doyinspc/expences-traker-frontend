@@ -12,7 +12,7 @@ import { SERVER_URL } from "../actions/common";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
-  const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
+  const { isMobileOpen, isMobile, isExpanded, toggleSidebar, toggleMobileSidebar } = useSidebar();
 
   // Get location, role, and user from Redux
   const { location, role, user } = useSelector((state: any) => state.auth);
@@ -74,9 +74,12 @@ const AppHeader: React.FC = () => {
         <div className="flex items-center justify-between w-full gap-2 px-3 py-3 border-b border-gray-200 dark:border-gray-800 sm:gap-4 lg:justify-normal lg:border-b-0 lg:px-0 lg:py-4">
           {/* Sidebar Toggle Button */}
           <button
-            className="items-center justify-center w-10 h-10 text-gray-500 border-gray-200 rounded-lg z-99999 dark:border-gray-800 lg:flex dark:text-gray-400 lg:h-11 lg:w-11 lg:border"
+            className="flex shrink-0 items-center justify-center w-11 h-11 text-gray-500 border-gray-200 rounded-lg z-99999 dark:border-gray-800 lg:flex dark:text-gray-400 lg:h-11 lg:w-11 lg:border"
             onClick={handleToggle}
+            id="navigation-toggle"
             aria-label="Toggle Sidebar"
+            aria-controls="app-navigation"
+            aria-expanded={isMobile ? isMobileOpen : isExpanded}
           >
             {isMobileOpen ? (
               <svg
@@ -112,7 +115,7 @@ const AppHeader: React.FC = () => {
           </button>
 
           {/* Circular Logo Container */}
-          <Link to="/" className="flex-shrink-0">
+          <Link to="/" aria-label={`${companyName} home`} className="flex-shrink-0">
             <div className={logoContainerClass}>
               {showCompanyLogo ? (
                 <img
@@ -128,11 +131,11 @@ const AppHeader: React.FC = () => {
           </Link>
 
           {/* Location & Role Display - Shows on md and above */}
-          <div className="hidden md:flex items-center gap-2 lg:gap-3 flex-1 justify-center md:justify-start lg:mx-4">
+          <div className="hidden min-w-0 md:flex items-center gap-2 lg:gap-3 flex-1 justify-center md:justify-start lg:mx-4">
             {/* Location Badge */}
             <div className="flex items-center gap-1.5 lg:gap-2 px-2 lg:px-3 py-1 lg:py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
               <Building className="w-3 h-3 lg:w-4 lg:h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-              <span className="text-[10px] sm:text-xs lg:text-sm font-medium text-blue-700 dark:text-blue-300 whitespace-nowrap">
+              <span className="text-[10px] sm:text-xs lg:text-sm font-medium text-blue-700 dark:text-blue-300 max-w-52 truncate whitespace-nowrap">
                 {locationName}
               </span>
             </div>
@@ -143,33 +146,24 @@ const AppHeader: React.FC = () => {
             {/* Role Badge */}
             <div className="flex items-center gap-1.5 lg:gap-2 px-2 lg:px-3 py-1 lg:py-1.5 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">
               <Shield className="w-3 h-3 lg:w-4 lg:h-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
-              <span className="text-[10px] sm:text-xs lg:text-sm font-medium text-purple-700 dark:text-purple-300 whitespace-nowrap">
+              <span className="text-[10px] sm:text-xs lg:text-sm font-medium text-purple-700 dark:text-purple-300 max-w-52 truncate whitespace-nowrap">
                 {roleName}
               </span>
             </div>
           </div>
 
-          {/* Mobile Location & Role - Shows on small screens below md */}
-          <div className="flex md:hidden items-center gap-1.5 flex-1 justify-center mx-2">
-            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-              <Building className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-              <span className="text-[8px] font-medium text-blue-700 dark:text-blue-300 whitespace-nowrap max-w-[50px] truncate">
-                {locationName}
-              </span>
-            </div>
-            <span className="text-gray-300 dark:text-gray-600 text-[8px]">•</span>
-            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">
-              <Shield className="w-2.5 h-2.5 text-purple-600 dark:text-purple-400 flex-shrink-0" />
-              <span className="text-[8px] font-medium text-purple-700 dark:text-purple-300 whitespace-nowrap max-w-[50px] truncate">
-                {roleName}
-              </span>
-            </div>
+          <div className="min-w-0 flex-1 px-1 md:hidden" aria-label="Working location and role">
+            <p className="truncate text-sm font-semibold text-gray-800 dark:text-gray-100" title={locationName}>{locationName}</p>
+            <p className="truncate text-xs text-gray-500 dark:text-gray-400" title={roleName}>{roleName}</p>
           </div>
 
           {/* Mobile Menu Button */}
           <button
             onClick={toggleApplicationMenu}
-            className="flex items-center justify-center w-10 h-10 text-gray-700 rounded-lg z-99999 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:hidden"
+            aria-label="Account and appearance"
+            aria-expanded={isApplicationMenuOpen}
+            aria-controls="account-menu"
+            className="flex items-center justify-center shrink-0 w-11 h-11 text-gray-700 rounded-lg z-99999 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:hidden"
           >
             <svg
               width="24"
@@ -189,7 +183,7 @@ const AppHeader: React.FC = () => {
         </div>
 
         {/* Right Section - Notifications & User */}
-        <div
+        <div id="account-menu"
           className={`${
             isApplicationMenuOpen ? "flex" : "hidden"
           } items-center justify-between w-full gap-4 px-5 py-4 lg:flex shadow-theme-md lg:justify-end lg:px-0 lg:shadow-none`}
