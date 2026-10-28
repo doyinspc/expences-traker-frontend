@@ -1,3 +1,4 @@
+import EmailDeliveryStatus from './EmailDeliveryStatus';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
@@ -69,6 +70,7 @@ export default function UserManagementControls({ users = [] }) {
         })} className="min-h-11 rounded-lg bg-brand-600 px-4 text-sm text-white disabled:opacity-50">{busy ? 'Sending…' : 'Send reset links'}</button><button type="button" disabled={busy} onClick={() => setPreview(null)} className="min-h-11 px-3 text-sm text-gray-600 dark:text-gray-300">Cancel</button></div>
       </div>}
     </div>
+    <EmailDeliveryStatus />
     {error && <p role="alert" className="mt-3 text-sm text-red-700 dark:text-red-300">{error}</p>}
     {message && <p role="status" className="mt-3 text-sm text-green-700 dark:text-green-300">{message}</p>}
   </details>;
