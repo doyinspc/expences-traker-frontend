@@ -14,7 +14,7 @@ const users = {
         defaultMetric: 'count',
         chartTypes: ['bar', 'pie', 'table'],
         availableMetrics: ['count', 'active_count', 'inactive_count'],
-        availableDimensions: ['department_id', 'is_active', 'created_at', 'employment_type'],
+        availableDimensions: ['department_id', 'location_id', 'role_id', 'is_active', 'employment_type', 'created_at'],
     },
     fields: {
         // ==================== IDENTITY ====================

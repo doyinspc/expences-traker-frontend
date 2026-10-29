@@ -1,3 +1,6 @@
+import SelectedResetInvitations from './SelectedResetInvitations.jsx';
+import { useSelector } from 'react-redux';
+import { ArrowRight, Mail } from 'lucide-react';
 import UserManagementControls from './UserManagementControls';
 import useManagementAccess from '../../hooks/useManagementAccess';
 ﻿// src/pages/Procurement/Requisitions.tsx
@@ -48,6 +51,11 @@ type TabType = 'table' | 'analysis';
 const Users: React.FC = () => {
     const nav = useNavigate();
     const { data: management } = useManagementAccess();
+    const workspace = useSelector((state: any) => state.authReducer || state.auth || {});
+    const scopeKey = `${workspace.location_id || 0}:${workspace.role_id || 0}:${Boolean(management?.is_super_admin)}`;
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    useEffect(() => { setSelectedIds([]); }, [scopeKey]);
+    const clearSelection = useCallback(() => setSelectedIds([]), []);
     // const userx = useSelector((state: any) => state.userReducer);
     
 
@@ -150,7 +158,7 @@ const Users: React.FC = () => {
     }, [loadUpdate]);
 
     const onNext = useCallback((row: any): void => {
-        nav(`/teams/requisition/${row.id}`);
+        nav(`/setting/user/${row.id}/activity`);
     }, [nav]);
 
     const onView = useCallback((row: any): void => {
@@ -297,11 +305,16 @@ const Users: React.FC = () => {
 
     // ==================== COLUMNS ====================
     const columns = useMemo(() => {
-        return columnBuilder(
-            { table_action: TableAction, table_data: tableData },
-            { onNext, onView, onActivate, onEdit, onDelete }
-        );
-    }, [tableData, onNext, onView, onActivate, onEdit, onDelete]);
+        const actions = (props: any) => <div className="flex items-center gap-1">
+          <TableAction {...props} showNext={false} />
+          <button type="button" onClick={() => onNext(props.row)} title="Staff activity" aria-label={`View activity for ${props.row.employee_id || props.row.id}`} className="rounded-lg p-2 text-brand-600 dark:text-brand-300"><ArrowRight size={18} /></button>
+          {management?.can_send_reset_invitations && <button type="button" onClick={() => setSelectedIds([Number(props.row.id)])} title="Select for reset email" aria-label={`Select ${props.row.employee_id || props.row.id} for reset email`} className="rounded-lg p-2 text-gray-600 dark:text-gray-300"><Mail size={18} /></button>}
+        </div>;
+        const result = columnBuilder({ table_action: actions, table_data: tableData }, { onNext, onView, onActivate, onEdit, onDelete });
+        if(management?.can_send_reset_invitations)result.unshift({ id: 'reset_selection', header: 'Reset email', enableSorting: false,
+          cell: ({row}: any) => <input type="checkbox" aria-label={`Select ${row.original.employee_id || row.original.id} for password reset`} checked={selectedIds.includes(Number(row.original.id))} onChange={event => setSelectedIds(ids => event.target.checked ? [...ids, Number(row.original.id)] : ids.filter(id => id !== Number(row.original.id)))} /> });
+        return result;
+    }, [tableData, onNext, onView, onActivate, onEdit, onDelete, management?.can_send_reset_invitations, selectedIds]);
 
     // ==================== RENDER ====================
     return (
@@ -309,6 +322,8 @@ const Users: React.FC = () => {
             <PageBreadcrumb pageTitle={displayName} />
             <p className="mb-3 text-sm text-gray-500 dark:text-gray-400">{management?.is_super_admin ? 'Company-wide directory · All locations' : 'Users assigned to your selected location'}</p>
             <UserManagementControls users={Array.isArray(data) ? data : (data?.data || [])} />
+            {management?.can_send_reset_invitations && page === 0 && <SelectedResetInvitations key={scopeKey} scopeKey={scopeKey} users={Array.isArray(data) ? data : (data?.data || [])} selectedIds={selectedIds} onClear={clearSelection} />}
+            <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">The forward arrow opens staff activity. The envelope selects one person for a reset email; use the checkboxes for several people, then review the recipients above.</p>
             {usersError && <div role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"><p className="font-semibold">Users could not be loaded</p><p className="mt-1">{usersError.response?.data?.message || usersError.message || 'Please try again.'}</p><button type="button" onClick={handleReload} className="mt-2 min-h-11 underline">Retry loading users</button></div>}
             
             {/* Header */}
@@ -421,6 +436,8 @@ const Users: React.FC = () => {
                                             reload={handleReload}
                                             home={() => nav('/')}
                                             rows={filteredRows}
+                                            searchTerm={searchTerm}
+                                            onSearchChange={(value: string) => setSearchTerm(value)}
                                             columns={columns}
                                             pageSize={PAGE_SIZE}
                                             cV={columnVisibility}
@@ -463,14 +480,7 @@ const Users: React.FC = () => {
                             ):null}
                         </>
                     ) : (
-                        <Loader
-                            overlay
-                            backdropColor="dark"
-                            color="text-white"
-                            variant="spinner"
-                            text="Processing ..."
-                            textClassName="text-white/90"
-                        />
+                        <Loader scope="panel" variant="skeleton" text={`Loading ${displayName.toLowerCase()}…`} />
                     )}
                 </div>
             </div>

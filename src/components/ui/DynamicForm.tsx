@@ -1,3 +1,5 @@
+import { ColourSwatch } from './SettingColour.jsx';
+import { settingColour } from '../../utils/functions/settingColours';
 // src/components/forms/DynamicForm.tsx
 
 import React, { useState, useEffect, useMemo, ChangeEvent, FormEvent } from 'react';
@@ -523,6 +525,13 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
     const isDisabled = disabled || loading || isSubmitting;
 
     switch (type) {
+      case 'color':
+        return <div key={fieldName}><Label required={required} htmlFor={fieldId}>{label}</Label>
+          <div className="mt-1 flex flex-wrap items-center gap-3"><input type="color" aria-label={`Choose ${label}`} disabled={isDisabled} value={settingColour(value) || '#64748b'} onChange={event => handleCustomChange(fieldName, event.target.value)} className="h-11 w-14 cursor-pointer rounded border border-gray-300 bg-transparent p-1 dark:border-gray-700"/>
+          <input id={fieldId} name={fieldName} type="text" required={required} disabled={isDisabled} value={value || ''} placeholder="#4A90D9" onChange={handleChange} aria-invalid={Boolean(error)} aria-describedby={`${fieldId}-description${error ? ` ${fieldId}-error` : ''}`} className="h-11 w-36 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"/><ColourSwatch value={value}/></div>
+          <p id={`${fieldId}-description`} className="mt-1 text-sm text-gray-500 dark:text-gray-400">Choose a colour or enter a hex code. Labels stay visible; colour does not change workflow decisions.</p>
+          {error && <p id={`${fieldId}-error`} className="mt-1 text-sm text-red-500">{error}</p>}</div>;
+
       case 'toggle':
         return (
           <div key={fieldName} className="flex flex-col gap-1">

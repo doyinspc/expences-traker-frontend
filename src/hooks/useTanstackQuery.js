@@ -126,7 +126,8 @@ export default function useTanstackQuery(props) {
     const [isEnabled, setIsEnabled] = useState(enabled ?? autoLoad);
 
     const selected = useSelector(state => state.auth || {});
-    const queryScope = ['commons', 'company', 'locations'].includes(table) ? 'company' : [selected.location_id || 0, selected.role_id || 0];
+    const localSettings = table === 'commons' && ([30, 31, 51].includes(Number(mainParam?.grp)) || ['room', 'roomitems', 'service', 'serviceitems'].includes(uniqueKey));
+    const queryScope = ['commons', 'company', 'locations'].includes(table) && !localSettings ? 'company' : [selected.location_id || 0, selected.role_id || 0];
     const queryKey = [table, queryScope, uniqueKey, getTenantDb(), tokenHelpers.getToken(), queryType, mainParam || {}, param || {}];
 
     // Holds the last single row (set by getOne or loadUpdate)

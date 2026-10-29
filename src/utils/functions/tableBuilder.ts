@@ -1,3 +1,4 @@
+import { ColourSwatch } from '../../components/ui/SettingColour.jsx';
 // src/utils/tableBuilder.ts
 
 import { getFormFields, getTableMapping } from '../../config/tableMapping';
@@ -22,7 +23,7 @@ export interface TableColumn {
     description?: string;
     width?: string | number;
     align?: 'left' | 'center' | 'right';
-    format?: (value: any) => string;
+    format?: (value: any) => React.ReactNode;
 }
 
 export interface FilterConfig {
@@ -159,7 +160,7 @@ export const buildTableDataFromMapping = (tableName: string): TableColumn[] => {
             description: field.description || '',
             width: width,
             align: field.tableAlign || 'left',
-            format: field.tableFormat || undefined,
+            format: field.type === 'color' ? (value: any) => React.createElement(ColourSwatch, {value}) : field.tableFormat || undefined,
         });
     });
 

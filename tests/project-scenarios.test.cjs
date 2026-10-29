@@ -11,7 +11,7 @@ function load(relative, mocks = {}) {
   const source = fs.readFileSync(path.join(root, relative), 'utf8');
   const code = transformSync(source, { loader: /tsx$/.test(relative) ? 'tsx' : /jsx$/.test(relative) ? 'jsx' : 'ts', format: 'cjs' }).code;
   const module = { exports: {} };
-  vm.runInNewContext(code, { module, exports: module.exports, require: id => id in mocks ? mocks[id] : require(require.resolve(id, { paths: [root] })), console });
+  vm.runInNewContext(code, { module, exports: module.exports, require: id => id in mocks ? mocks[id] : id.startsWith('.') ? load(path.relative(root, path.resolve(path.dirname(path.join(root, relative)), id + (path.extname(id) ? '' : '.js'))), mocks) : require(require.resolve(id, { paths: [root] })), console });
   return module.exports;
 }
 const { validateFieldValue } = load('src/utils/functions/formGuidance.ts');

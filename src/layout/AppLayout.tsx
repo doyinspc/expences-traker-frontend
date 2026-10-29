@@ -1,3 +1,5 @@
+import BirthdayGreeting from '../components/common/BirthdayGreeting.jsx';
+import {useLocation} from 'react-router';
 import { SidebarProvider, useSidebar } from "../context/SidebarContext";
 import { Outlet } from "react-router";
 import AppHeader from "./AppHeader";
@@ -5,6 +7,7 @@ import Backdrop from "./Backdrop";
 import AppSidebar from "./AppSidebar";
 
 const LayoutContent: React.FC = () => {
+  const {pathname}=useLocation();
   const { isExpanded, isHovered, isMobileOpen, isMobile } = useSidebar();
 
   return (
@@ -21,6 +24,7 @@ const LayoutContent: React.FC = () => {
       >
         <AppHeader />
         <main inert={isMobile && isMobileOpen} id="main-content" tabIndex={-1} className="min-w-0 p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+          {['/','/welcome','/dashboard','/home'].includes(pathname)&&<BirthdayGreeting />}
           <Outlet />
         </main>
       </div>

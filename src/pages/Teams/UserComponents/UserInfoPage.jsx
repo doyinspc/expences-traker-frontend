@@ -28,7 +28,7 @@ export default function UserInfoPage(props) {
       <div className="flex justify-between items-center border-b border-gray-200 mb-6">
         
         {/* Tab Navigation */}
-        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+        <nav className="-mb-px flex min-w-0 flex-1 gap-5 overflow-x-auto" aria-label="Tabs">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.name;
@@ -99,7 +99,6 @@ export default function UserInfoPage(props) {
               <UserPasswordPage
                 UserData={userData}
                 onClose={onClose}
-                onSave={onSave}
                 onUpdatePassword={handleUpdatePassword}
                 onForceReset={handleForceReset}
                 isLoading={isLoading}

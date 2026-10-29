@@ -1,3 +1,4 @@
+import Loader from './components/ui/Loader';
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router";
 import { lazy, Suspense } from "react";
 
@@ -76,6 +77,7 @@ const Capex = lazy(() => import("./pages/Reports/Capex"));
 const BudgetGraph = lazy(() => import("./pages/Reports/Budget.jsx"));
 
 // Teams & Permissions
+const UserActivityPage = lazy(() => import("./pages/Teams/UserActivityPage"));
 const UserDirectory = lazy(() => import("./pages/Teams/UserDirectory"));
 const RolesAccess = lazy(() => import("./pages/Teams/RolesAccess"));
 const Departments = lazy(() => import("./pages/Teams/Departments"));
@@ -95,7 +97,7 @@ const ServicePage = lazy(() => import("./pages/Settings/Services.tsx"));
 const ServiceItemsPage = lazy(() => import("./pages/Settings/ServiceItems.tsx"));
 
 // Optional: a global loading fallback component
-const PageLoader = () => <div className="loading-spinner">Loading...</div>;
+const PageLoader = () => <Loader scope="page" size="full" text="Loading Prokure…" />;
 
 export default function App() {
   return (
@@ -176,6 +178,7 @@ export default function App() {
             <Route path="/setting/page/:grp" element={<SettingPage />} />
             <Route path="/setting/page/:grp/:page_id" element={<SettingSubPage />} />
             <Route path="/setting/user" element={<UserDirectory />} />
+            <Route path="/setting/user/:userId/activity" element={<UserActivityPage />} />
             <Route path="/setting/workflow" element={<WorkFlowPage />} />
             <Route path="/setting/workflow/:page_id" element={<WorkFlowStepsPage />} />
             <Route path="/setting/expense" element={<ExpensePage />} />

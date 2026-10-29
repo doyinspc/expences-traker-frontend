@@ -5,8 +5,9 @@ import { API_PATH_SETTING, axiosConfig, tokenHelpers } from '../actions/common';
 
 export default function useManagementAccess() {
   const auth = useSelector(state => state.auth || {});
+  const workspace = useSelector(state => state.authReducer || state.auth || {});
   return useQuery({
-    queryKey: ['management-capabilities', tokenHelpers.getTenantDb(), tokenHelpers.getToken()],
+    queryKey: ['management-capabilities', tokenHelpers.getTenantDb(), tokenHelpers.getToken(), workspace.location_id, workspace.role_id],
     enabled: Boolean(auth.isAuthenticated && tokenHelpers.getToken()),
     staleTime: 30000,
     queryFn: async () => {

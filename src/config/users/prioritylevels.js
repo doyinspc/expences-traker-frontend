@@ -78,7 +78,6 @@ const prioritylevels = {
             description: 'Color for UI display',
             showInTable: true,
             tableWidth: '80px',
-            tableFormat: (value) => `<span style="color:${value}">●</span> ${value}`,
             filterable: false,
             analyzable: false,
         },

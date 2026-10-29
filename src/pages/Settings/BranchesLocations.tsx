@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { columnBuilder } from '../../actions/common';
@@ -339,6 +339,8 @@ const Locations: React.FC = () => {
                                             reload={handleReload}
                                             home={() => nav('/')}
                                             rows={filteredRows}
+                                            searchTerm={searchTerm}
+                                            onSearchChange={(value: string) => setSearchTerm(value)}
                                             columns={columns}
                                             pageSize={PAGE_SIZE}
                                             cV={columnVisibility}
@@ -366,14 +368,7 @@ const Locations: React.FC = () => {
                             )}
                         </>
                     ) : (
-                        <Loader
-                            overlay
-                            backdropColor="dark"
-                            color="text-white"
-                            variant="spinner"
-                            text="Processing ..."
-                            textClassName="text-white/90"
-                        />
+                        <Loader scope="panel" variant="skeleton" text={`Loading ${displayName.toLowerCase()}…`} />
                     )}
                 </div>
             </div>

@@ -50,7 +50,7 @@ const navItems: NavItem[] = [
     id: 1,
     name: "Dashboard",
     icon: <LayoutGrid size={24} strokeWidth={1.5} />,
-    path: "/",
+    path: "/dashboard",
     parent_path_number: 1,
     child_path_number: 0,
   },

@@ -94,7 +94,7 @@ const roomitems = {
             filterType: 'text',
             analyzable: false,
         },
-    id_active: {
+    is_active: {
             label: 'Active',
             hidden: true,
             type: 'toggle',

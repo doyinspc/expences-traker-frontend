@@ -400,6 +400,8 @@ const Budgets: React.FC = () => {
                                             reload={handleReload}
                                             home={() => nav('/')}
                                             rows={filteredRows}
+                                            searchTerm={searchTerm}
+                                            onSearchChange={(value: string) => setSearchTerm(value)}
                                             columns={columns}
                                             pageSize={PAGE_SIZE}
                                             cV={columnVisibility}
@@ -444,14 +446,7 @@ const Budgets: React.FC = () => {
                             ):null}
                         </>
                     ) : (
-                        <Loader
-                            overlay
-                            backdropColor="dark"
-                            color="text-white"
-                            variant="spinner"
-                            text="Processing ..."
-                            textClassName="text-white/90"
-                        />
+                        <Loader scope="panel" variant="skeleton" text={`Loading ${displayName.toLowerCase()}…`} />
                     )}
                 </div>
             </div>

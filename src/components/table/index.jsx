@@ -20,6 +20,9 @@ function Index(props) {
   const [sorting, setsorting] = useState([]);
   const [rowSelection, setrowSelection] = useState({});
   const [globalFilter, setglobalFilter] = useState('');
+  const externalSearch = typeof props.onSearchChange === 'function';
+  const searchValue = externalSearch ? String(props.searchTerm || '') : globalFilter;
+  const updateSearch = value => externalSearch ? props.onSearchChange(value) : setglobalFilter(value);
   const [columnOrder, setcolumnOrder] = useState([]);
   const [columnVisibility, setcolumnVisibility] = useState({ ...cV });
 
@@ -33,7 +36,7 @@ function Index(props) {
     sortDescFirst: false,
     state: {
       sorting,
-      globalFilter,
+      globalFilter: externalSearch ? '' : globalFilter,
       columnOrder,
       columnVisibility,
       rowSelection,
@@ -120,8 +123,8 @@ function Index(props) {
           </div>
           <div className="w-full sm:w-auto" >
             <TableSearch
-              globalFilter={globalFilter}
-              setGlobalFilter={(e) => setglobalFilter(e)}
+              globalFilter={searchValue}
+              setGlobalFilter={updateSearch}
             />
           </div>
         </div>
@@ -133,6 +136,8 @@ function Index(props) {
             <TableBody
               table={table}
               data={data}
+              searchTerm={searchValue}
+              onClearSearch={() => updateSearch('')}
             />
           </table>
         </div>

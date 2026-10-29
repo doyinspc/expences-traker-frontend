@@ -1,3 +1,4 @@
+import { colourText, settingColour } from '../../utils/functions/settingColours';
 // src/components/Approval/StepsSidebar.jsx
 
 import React, { useState } from 'react';
@@ -280,7 +281,7 @@ const StepsSidebar = ({
                                                 {statusName && statusName !== 'Unknown' && (
                                                     <span 
                                                         className="inline-flex items-center px-1.5 py-0.5 rounded text-white text-[10px]"
-                                                        style={{ backgroundColor: statusColor }}
+                                                        style={{ backgroundColor: settingColour(statusColor) || '#64748b', color: colourText(statusColor) }}
                                                     >
                                                         {statusName}
                                                     </span>
@@ -330,7 +331,7 @@ const StepsSidebar = ({
                                                     <span className="text-gray-500 dark:text-gray-400 font-medium">Status:</span>
                                                     <span 
                                                         className="inline-flex items-center px-2 py-0.5 rounded text-white text-[10px]"
-                                                        style={{ backgroundColor: statusColor }}
+                                                        style={{ backgroundColor: settingColour(statusColor) || '#64748b', color: colourText(statusColor) }}
                                                     >
                                                         {statusName}
                                                     </span>

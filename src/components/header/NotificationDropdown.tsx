@@ -1,3 +1,5 @@
+import TeamUpdatesPanel from './TeamUpdatesPanel.jsx';
+import useTeamUpdates from '../../hooks/useTeamUpdates';
 import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useQuery } from '@tanstack/react-query';
@@ -15,6 +17,7 @@ interface NotificationAuth {
   isAuthenticated?: boolean;
 }
 export default function NotificationDropdown() {
+  useTeamUpdates();
   const [isOpen, setIsOpen] = useState(false);
   const { user, role_id, location_id, isAuthenticated } = useSelector((state: { authReducer?: NotificationAuth }) => state.authReducer || {});
   const tenant = tokenHelpers.getTenantDb();
@@ -41,7 +44,7 @@ export default function NotificationDropdown() {
         <Bell size={20} />
         {notifications.length > 0 && <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-brand-500 px-1 text-xs leading-5 text-white">{notifications.length > 99 ? '99+' : notifications.length}</span>}
       </button>
-      <Dropdown isOpen={isOpen} onClose={() => setIsOpen(false)} className="absolute right-0 mt-3 w-[min(360px,calc(100vw-32px))] rounded-xl border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-800 dark:bg-gray-900">
+      <Dropdown isOpen={isOpen} onClose={() => setIsOpen(false)} className="absolute right-0 mt-3 max-h-[calc(100dvh-110px)] overflow-y-auto w-[min(360px,calc(100vw-32px))] rounded-xl border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-800 dark:bg-gray-900">
         <div id="approval-notifications">
           <div className="mb-3 flex items-center justify-between"><h2 className="font-semibold text-gray-900 dark:text-white">Your notifications</h2><button type="button" aria-label="Close notifications" onClick={() => setIsOpen(false)}><X size={18} /></button></div>
           <p className="mb-3 text-xs text-gray-500">Pending approvals for your selected location and role.</p>
@@ -52,7 +55,8 @@ export default function NotificationDropdown() {
               : notifications.length === 0 ? <p className="py-6 text-sm text-gray-500">You’re up to date. No approvals are waiting for your action.</p>
               : <ul className="divide-y divide-gray-100 dark:divide-gray-800">{notifications.map((item) => <li key={item.id}><Link to={item.path} onClick={() => setIsOpen(false)} className="block rounded-lg px-2 py-3 hover:bg-gray-50 dark:hover:bg-gray-800"><span className="block text-sm font-medium text-gray-900 dark:text-white">{item.title}</span><span className="mt-1 block text-xs text-gray-500">{item.description}</span></Link></li>)}</ul>}
           </div>
-          <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 text-sm dark:border-gray-800"><Link to="/procurement/approvals" onClick={() => setIsOpen(false)} className="font-medium text-brand-600">View approval centre</Link><button type="button" disabled={!hasContext || isFetching} onClick={() => refetch()} aria-label="Refresh notifications" className="p-1 disabled:opacity-40"><RefreshCw size={16} className={isFetching ? 'animate-spin' : ''} /></button></div>
+          <TeamUpdatesPanel />
+          <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 text-sm dark:border-gray-800"><Link to="/procurement/approvals" onClick={() => setIsOpen(false)} className="font-medium text-brand-600">View My Approvals</Link><button type="button" disabled={!hasContext || isFetching} onClick={() => refetch()} aria-label="Refresh notifications" className="p-1 disabled:opacity-40"><RefreshCw size={16} className={isFetching ? 'animate-spin' : ''} /></button></div>
         </div>
       </Dropdown>
     </div>

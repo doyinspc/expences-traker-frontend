@@ -1,8 +1,8 @@
-﻿// src/pages/Procurement/Requisitions.tsx
+// src/pages/Procurement/Requisitions.tsx
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { columnBuilder } from '../../actions/common.js';
 import PageBreadcrumb from "../../components/common/PageBreadCrumb.js";
 import Tables from '../../components/table/index.jsx';
@@ -46,6 +46,8 @@ type TabType = 'table' | 'analysis';
 // ==================== COMPONENT ====================
 const ExpensItems: React.FC = () => {
     const nav = useNavigate();
+    const {page_id} = useParams();
+    const workspace = useSelector((state: any) => state.authReducer || {});
     // const userx = useSelector((state: any) => state.userReducer);
     
 
@@ -63,13 +65,12 @@ const ExpensItems: React.FC = () => {
     const {grp} = tableMapping || {}
 
     const titleHeaders = getTitleRow(1)
-    const {id:parent_id, name:parent_name} = titleHeaders || {};
-    const initialData = {parent_id}
+    const parent_id = Number(page_id);
+    const parent_name = Number(titleHeaders?.id) === parent_id ? titleHeaders?.name : `Service group ${parent_id}`;
+    const initialData = useMemo(() => ({parent_id, grp}), [parent_id, grp]);
     
 
-    if(!titleHeaders || Object.keys(titleHeaders).length === 0){
-        nav(-1)
-    }
+
 
     // ==================== STATE ====================
     const [page, setPage] = useState<number>(0);
@@ -84,11 +85,11 @@ const ExpensItems: React.FC = () => {
     const [analysisMetric, setAnalysisMetric] = useState<string>('');
 
     // ==================== API HOOKS ====================
-    const { data, loadQuery, loadUpdate, deleteData, isLoading } = useReduxApiData({
-        table: TABLE_NAME,
-        pth: TABLE_PATH,
+    const { data, loadQuery, loadUpdate, isLoading, error: settingsError } = useReduxApiData({
+        table: 'commons',
+        uniqueKey: TABLE_PATH,
         queryType: 'gets',
-        mainParam: {parent_id},
+        mainParam: initialData,
         narration: 'get all service items',
     });
     
@@ -106,26 +107,11 @@ const ExpensItems: React.FC = () => {
         setPage(1);
     }, []);
 
-    const onDelete = useCallback((row: any): void => {
-        Swal.fire({
-            title: 'Are you sure?',
-            text: "You won't be able to revert this!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, delete it!'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                deleteData({ id: row.id, cat: 'delete' }, row.id);
-                Swal.fire(
-                    'Deleted!',
-                    'Your record has been deleted.',
-                    'success'
-                );
-            }
-        });
-    }, []);
+    const onDelete = useCallback(async (row: any) => {
+        const choice = await Swal.fire({title: 'Delete this record?', text: 'Only delete records that are no longer needed and have no linked work.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete record'});
+        if(!choice.isConfirmed)return;
+        try { await loadUpdate({id: row.id, cat: 'insert', act: 3}); } catch { /* The hook shows the server refusal. */ }
+    }, [loadUpdate]);
 
     const onActivate = useCallback((row: any): void => {
         const { id, is_active } = row;
@@ -152,7 +138,8 @@ const ExpensItems: React.FC = () => {
 
     const handleReload = useCallback((): void => {
         loadQuery(initialData);
-    }, []);
+        setPage(0);
+    }, [workspace.location_id, parent_id]);
 
     const handleFilterChange = useCallback((filterName: string, value: any): void => {
         setFilters(prev => ({ ...prev, [filterName]: value }));
@@ -180,7 +167,8 @@ const ExpensItems: React.FC = () => {
     }, []);
     const reload = useCallback((): void => {
         loadQuery(initialData);
-    }, []);
+        setPage(0);
+    }, [workspace.location_id, parent_id]);
     const addData = useCallback((): void => {
         onAdd()
     }, []);
@@ -217,7 +205,8 @@ const ExpensItems: React.FC = () => {
     // ==================== EFFECTS ====================
     useEffect(() => {
         loadQuery(initialData);
-    }, []);
+        setPage(0);
+    }, [workspace.location_id, parent_id]);
 
     useEffect(() => {
         if (analysisConfig) {
@@ -238,6 +227,8 @@ const ExpensItems: React.FC = () => {
     return (
         <>
             <PageBreadcrumb pageTitle={displayName + `: ${parent_name || '-'}`} />
+            {settingsError && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-200">{settingsError.response?.data?.message || settingsError.message || "Settings could not be loaded. Check your selected location and access."}</p>}
+            <p className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200">Items and prices belong to {parent_name} at the selected location ({workspace?.location?.name || workspace.location_id || 'not selected'}). Editing keeps the original group and location.</p>
             
             {/* Header */}
             <div className="flex items-center justify-end gap-2 mb-4">
@@ -349,6 +340,8 @@ const ExpensItems: React.FC = () => {
                                             reload={handleReload}
                                             home={() => nav('/')}
                                             rows={filteredRows}
+                                            searchTerm={searchTerm}
+                                            onSearchChange={(value: string) => setSearchTerm(value)}
                                             columns={columns}
                                             pageSize={PAGE_SIZE}
                                             cV={columnVisibility}
@@ -376,14 +369,7 @@ const ExpensItems: React.FC = () => {
                             )}
                         </>
                     ) : (
-                        <Loader
-                            overlay
-                            backdropColor="dark"
-                            color="text-white"
-                            variant="spinner"
-                            text="Processing ..."
-                            textClassName="text-white/90"
-                        />
+                        <Loader scope="panel" variant="skeleton" text={`Loading ${displayName.toLowerCase()}…`} />
                     )}
                 </div>
             </div>
