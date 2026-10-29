@@ -19,6 +19,7 @@ const NotFound = lazy(() => import("./pages/OtherPage/NotFound"));
 // Dashboard
 const Home = lazy(() => import("./pages/Dashboard/Home"));
 const Dashboard = lazy(() => import("./pages/Dashboard/Dashboard.tsx"));
+const DashboardOverview = lazy(() => import("./components/common/DashboardOverview"));
 const Welcome = lazy(() => import("./pages/Dashboard/Location"));
 const Profile = lazy(() => import("./pages/Teams/UserComponents/UserInfoPagePrivate.jsx"));
 
@@ -108,7 +109,7 @@ export default function App() {
           {/* Dashboard Layout */}
           <Route path="/" element={<AppLayout />}>
             <Route index path="/welcome" element={<Home />} />
-            <Route index path="/" element={<Welcome />} />
+            <Route index path="/" element={<div className="space-y-6"><Welcome /><DashboardOverview /></div>} />
             <Route index path="/dashboard" element={<Dashboard />} />
             <Route index path="/profile" element={<Profile />} />
 

@@ -1,3 +1,4 @@
+import { workflowGuide, workflowStage } from '../../utils/functions/workflowGuide';
 import { colourText, settingColour } from '../../utils/functions/settingColours';
 // src/components/Approval/StepsSidebar.jsx
 
@@ -96,9 +97,12 @@ const StepsSidebar = ({
     rejectionReasonsData = [],
     escalationReasonsData = [],
     activeStep = null,
-    isWorkflowCompleted = false
+    isWorkflowCompleted = false,
+    workflow = null
 }) => {
     const [expandedSteps, setExpandedSteps] = useState({});
+    const guide = workflowGuide(workflow || { steps, current_step_id: activeStep?.id, is_active: isWorkflowCompleted ? 0 : 1, is_completed: isWorkflowCompleted ? 1 : 0 });
+    steps = guide.steps;
 
     const toggleStepExpand = (stepId) => {
         setExpandedSteps(prev => ({
@@ -120,7 +124,7 @@ const StepsSidebar = ({
     const totalCount = steps.length;
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sticky top-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
             <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
                 <Clock className="w-4 h-4" />
                 Workflow Progress
@@ -129,6 +133,19 @@ const StepsSidebar = ({
                 </span>
             </h4>
             
+            <div className="mb-5 space-y-3" aria-label="Where this request is now">
+                <div className={`rounded-xl border p-3 ${guide.escalated ? 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100' : guide.closed ? 'border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200' : 'border-blue-300 bg-blue-50 text-blue-950 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-100'}`}>
+                    <p className="text-xs font-semibold uppercase tracking-wide">{guide.closed ? 'Workflow closed' : guide.escalated ? 'With escalation reviewer' : 'With now'}</p>
+                    <p className="mt-1 text-sm font-semibold">{guide.closed ? guide.state : guide.current?.role_name || 'Current role not recorded'}</p>
+                    {!guide.closed && <p className="mt-1 text-xs leading-5">{guide.current?.step_name || 'Current stage not recorded'}{guide.current && Number(guide.current.role_id) === Number(role_id) ? ' · Your selected role' : ''}</p>}
+                </div>
+                {!guide.closed && <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 text-violet-950 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-100">
+                    <p className="text-xs font-semibold uppercase tracking-wide">{guide.escalated ? 'After escalation review' : 'Next after approval'}</p>
+                    <p className="mt-1 text-sm font-semibold">{guide.escalated ? 'Returns to the original approver' : guide.next?.role_name || (guide.current ? 'Final approval completes this workflow' : 'Awaiting workflow assignment')}</p>
+                    <p className="mt-1 text-xs leading-5">{guide.escalated ? 'The original step must still be approved before the next normal stage starts.' : guide.next?.step_name || (guide.current ? 'Then follow the document’s fulfilment process.' : 'No next role has been assumed.')}</p>
+                </div>}
+                <p className="text-[11px] leading-5 text-gray-500 dark:text-gray-400">Green: completed · Blue: current · Violet: next · Amber: escalation · Grey: waiting</p>
+            </div>
             <div className="relative pl-4">
                 {/* Vertical line */}
                 <div className="absolute left-1.5 top-2 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700"></div>
@@ -148,27 +165,22 @@ const StepsSidebar = ({
                         // is_active = 1 → Completed/Approved
                         // is_active = 0 AND assigned_to_user_id > 0 → Assigned/Active
                         // is_active = 0 AND assigned_to_user_id = 0 → Waiting
-                        const isStepCompletedStatus = isActiveValue === 1;
-                        const isStepAssigned = assignedToUserId > 0;
-                        const isStepWaiting = isActiveValue === 0 && assignedToUserId === 0;
-                        
-                        // Check if this is the active step (assigned and not completed)
-                        const isStepActive = isStepAssigned && !isStepCompletedStatus;
-                        
-                        // Check if rejected (status_id = 226)
-                        const isStepRejected = rejectionReasonId > 0 || step.rejection_comments;
-                        
-                        // Check if escalated
-                        const isStepEscalated = !isEmpty(step.escalated_at);
-                        
+                        const stage = workflowStage(guide, step);
+                        const isStepCompletedStatus = stage === 'completed';
+                        const isStepAssigned = stage === 'current' || stage === 'escalated';
+                        const isStepWaiting = stage === 'waiting' || stage === 'next';
+                        const isStepActive = isStepAssigned;
+                        const isStepRejected = stage === 'rejected';
+                        const isStepEscalated = stage === 'escalated';
+
                         // Check if user's role matches
                         const isUserStep = stepRoleId === userRoleId;
                         
-                        const isExpanded = expandedSteps[step.id] || false;
+                        const isExpanded = expandedSteps[step.id] ?? false;
                         
                         // Get names from IDs
-                        const statusName = getStatusName(statusData, step.status_id);
-                        const statusColor = getStatusColor(statusData, step.status_id);
+                        const statusName = step.status_name || getStatusName(statusData, step.status_id);
+                        const statusColor = step.status_color || getStatusColor(statusData, step.status_id);
                         const rejectionReasonName = getReasonName(rejectionReasonsData, step.rejection_reason_id);
                         const escalationReasonName = getReasonName(escalationReasonsData, step.escalation_reason_id);
                         
@@ -198,9 +210,13 @@ const StepsSidebar = ({
                             bgColorClass = 'bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800';
                             statusLabel = 'Escalated';
                         } else if (isStepAssigned) {
-                            statusColorClass = 'bg-blue-500 animate-pulse';
+                            statusColorClass = 'bg-blue-500';
                             bgColorClass = 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800';
-                            statusLabel = 'Active';
+                            statusLabel = 'Current';
+                        } else if (stage === 'next') {
+                            statusColorClass = 'bg-violet-500';
+                            bgColorClass = 'bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800';
+                            statusLabel = 'Next';
                         } else {
                             statusColorClass = 'bg-gray-300 dark:bg-gray-600';
                             bgColorClass = 'bg-gray-50 dark:bg-gray-700/30 border border-gray-200 dark:border-gray-600';
@@ -208,14 +224,14 @@ const StepsSidebar = ({
                         }
                         
                         // Check if overdue
-                        const isOverdue = step.due_date && new Date(step.due_date) < new Date() && !isStepCompletedStatus;
+                        const isOverdue = isStepActive && !isEmpty(step.due_date) && new Date(step.due_date) < new Date();
                         
                         return (
-                            <div key={step.id || index} className="relative">
+                            <div key={step.id || index} className="relative" aria-current={isStepActive ? "step" : undefined}>
                                 {/* Step indicator */}
                                 <div className={`absolute -left-4 top-1 w-4 h-4 rounded-full flex items-center justify-center z-10 ${statusColorClass}`}>
                                     {isStepCompletedStatus && <CheckCircle className="w-3 h-3 text-white" />}
-                                    {isStepAssigned && !isStepCompletedStatus && <Loader2 className="w-3 h-3 text-white animate-spin" />}
+                                    {isStepAssigned && !isStepCompletedStatus && <Clock className="w-3 h-3 text-white" />}
                                     {isStepRejected && <XCircle className="w-3 h-3 text-white" />}
                                     {isStepEscalated && <ArrowUpCircle className="w-3 h-3 text-white" />}
                                     {isStepWaiting && <div className="w-2 h-2 bg-white rounded-full"></div>}
@@ -224,6 +240,11 @@ const StepsSidebar = ({
                                 {/* Step content */}
                                 <div 
                                     className={`ml-4 p-3 rounded-lg cursor-pointer transition-all ${bgColorClass}`}
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-expanded={isExpanded}
+                                    aria-label={`Step ${safeParseInt(step.step_serial_number) || index + 1}: ${step.step_name || 'Approval'} — ${statusLabel}`}
+                                    onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleStepExpand(step.id); } }}
                                     onClick={() => toggleStepExpand(step.id)}
                                 >
                                     <div className="flex items-start justify-between gap-2">
@@ -235,14 +256,14 @@ const StepsSidebar = ({
                                                 <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
                                                     {step.step_name || `Step ${index + 1}`}
                                                 </span>
-                                                {isUserStep && isStepAssigned && !isStepCompletedStatus && (
+                                                {isUserStep && isStepAssigned && !isStepCompletedStatus && (!workflow || workflow.permissions?.can_approve || workflow.permissions?.can_resolve) && (
                                                     <span className="text-[10px] bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 px-1.5 py-0.5 rounded-full animate-pulse">
                                                         Your Turn
                                                     </span>
                                                 )}
                                                 {isUserStep && isStepCompletedStatus && (
                                                     <span className="text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 px-1.5 py-0.5 rounded-full">
-                                                        You Completed
+                                                        Your role completed
                                                     </span>
                                                 )}
                                                 {isStepCompletedStatus && (
@@ -252,7 +273,7 @@ const StepsSidebar = ({
                                                 )}
                                                 {isStepAssigned && !isStepCompletedStatus && (
                                                     <span className="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-1.5 py-0.5 rounded-full animate-pulse">
-                                                        Active
+                                                        Current
                                                     </span>
                                                 )}
                                                 {isStepRejected && (
@@ -265,7 +286,8 @@ const StepsSidebar = ({
                                                         ⬆ Escalated
                                                     </span>
                                                 )}
-                                                {isStepWaiting && (
+                                                {stage === 'next' && <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-800 dark:bg-violet-900/50 dark:text-violet-200">Next</span>}
+                                                {stage === 'waiting' && (
                                                     <span className="text-[10px] bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 px-1.5 py-0.5 rounded-full">
                                                         Waiting
                                                     </span>
@@ -277,6 +299,8 @@ const StepsSidebar = ({
                                                 )}
                                             </div>
                                             
+                                            <p className="mt-1 text-xs font-semibold text-gray-700 dark:text-gray-200">{step.role_name || 'Role not recorded'}</p>
+                                            {isStepCompletedStatus && step.performed_by_name && <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">Approved by {step.performed_by_name}</p>}
                                             <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
                                                 {statusName && statusName !== 'Unknown' && (
                                                     <span 
@@ -298,7 +322,7 @@ const StepsSidebar = ({
                                                 {assignedToUserId > 0 && (
                                                     <span className="flex items-center gap-0.5">
                                                         <UserCheck className="w-3 h-3" />
-                                                        Assigned: User #{assignedToUserId}
+                                                        Current role: {step.role_name || 'Role not recorded'}
                                                     </span>
                                                 )}
                                             </div>
@@ -413,7 +437,7 @@ const StepsSidebar = ({
                                             {step.performed_by && safeParseInt(step.performed_by) > 0 && (
                                                 <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
                                                     <User className="w-3 h-3" />
-                                                    Performed by: User #{safeParseInt(step.performed_by_name)}
+                                                    Performed by: {step.performed_by_name || 'Recorded approver'}
                                                 </div>
                                             )}
                                             
@@ -421,7 +445,7 @@ const StepsSidebar = ({
                                             {assignedToUserId > 0 && (
                                                 <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
                                                     <UserCheck className="w-3 h-3" />
-                                                    Assigned to: User #{assignedToUserId}
+                                                    Current role: {step.role_name || 'Role not recorded'}
                                                 </div>
                                             )}
                                             
