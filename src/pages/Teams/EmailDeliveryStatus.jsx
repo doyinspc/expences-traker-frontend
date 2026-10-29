@@ -30,7 +30,7 @@ export default function EmailDeliveryStatus() {
       <p>Private reset and approval links stay with their recipient; administrative copies omit those links.</p>
       <div className="grid gap-2 sm:grid-cols-3">{[['Password resets',report.queues?.password_resets],['Workflow jobs',report.queues?.workflow_jobs],['Account notices',report.queues?.account_notifications]].map(([label,states])=>{const rows=Array.isArray(states)?states:Object.entries(states||{}).map(([state,count])=>({state,count}));return <div key={label} className="rounded-lg bg-gray-50 p-3 dark:bg-gray-950"><h3 className="font-medium">{label}</h3>{rows.length?rows.map(row=><p key={row.state}>{row.state==='sent'?'Accepted by mail server':row.state}: {row.count}</p>):<p>No recorded jobs</p>}</div>;})}</div>
     </div>}
-    {current&&<p role="status" className={`mt-3 text-sm ${current.accepted_by_mail_server?'text-green-700 dark:text-green-300':'text-red-700 dark:text-red-300'}`}>{current.accepted_by_mail_server?`Test accepted by the mail server for ${current.recipient}. Check that mailbox and Spam.`:reasons[current.failure_code]||'The test was not accepted. Check your backend email configuration.'}</p>}
+    {current&&<p role="status" className={`mt-3 text-sm ${current.accepted_by_mail_server?'text-green-700 dark:text-green-300':'text-red-700 dark:text-red-300'}`}>{current.accepted_by_mail_server?`Test accepted by the mail server for ${current.recipient}. Check that mailbox and Spam.`:current.failure_message||reasons[current.failure_code]||'The test was not accepted. Check your backend email configuration.'}</p>}
     {error&&<p role="alert" className="mt-3 text-sm text-red-700 dark:text-red-300">{error}</p>}
   </section>;
 }
