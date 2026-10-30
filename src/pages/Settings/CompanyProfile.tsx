@@ -22,12 +22,12 @@ const CompanyProfile: React.FC = () => {
     const handleUploadFile = async (formData: FormData) => {
         // POST to your backend endpoint
         formData.cat = "updateFile"
-        loadUpdate(formData)
+        return await loadUpdate(formData)
     };
 
     const handleRemoveFile = async (data: { id: number; photo: null; field: string }) => {
         data.cat = "removeFile"
-        loadUpdate(data)
+        return await loadUpdate(data)
     };
 
   // Extract company object safely
@@ -62,7 +62,7 @@ const CompanyProfile: React.FC = () => {
     <>
       <PageBreadcrumb pageTitle="Company Profile" />
       <div className="space-y-6">
-        <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200"><p className="font-semibold">{accountingYear ? `${accountingYear.label}: ${accountingYear.start_date} to ${accountingYear.end_date}` : "Set the accounting year in company details"}</p><p className="mt-1 leading-6">The start month and day define each annual reporting period. Budget approval, budget closure and accounting-period locking are separate operations.</p></div>
+        <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200"><p className="font-semibold">{accountingYear ? `${accountingYear.label}: ${accountingYear.start_date} to ${accountingYear.end_date}` : "Set the accounting year in company details"}</p><ol className="mt-2 list-inside list-decimal space-y-1 leading-6"><li>Choose Edit under Company Details below.</li><li>Find Accounting Year Start. For January–December, choose 1 January; for April–March, choose 1 April.</li><li>Save the company details. Later reporting years follow the same start month and day automatically.</li><li>In Procurement → Stock, select the year and confirm its opening stock, or carry forward the previous year’s closing stock.</li></ol><p className="mt-2 leading-6">Stock carry forward closes the previous stock year. It does not close budgets or lock other financial records. Once stock history exists, changing its accounting calendar requires a reviewed migration.</p></div>
         <ComponentCard title="Company Profile">
           <div className="p-4">
             {page === 0 ? (

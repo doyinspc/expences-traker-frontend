@@ -1,9 +1,10 @@
+import {formatReportMoney} from '../../utils/functions/incomeExpenseReport';
 // components/ExpenseAnalysis/ExpenseSummary.js
 import React, { useState, useMemo } from 'react';
 import ExpenseDetails from './ExpenseDetails';
 import { isArrayWithValue } from '../../actions/common';
 
-const ExpenseSummary = ({ data = [], onExport, isLoading = false }) => {
+const ExpenseSummary = ({ data = [], onExport, isLoading = false, currency = 'NGN', suppressTotals = false, emptyTitle = 'No data available', emptyMessage = 'Select locations and date range to generate analysis.' }) => {
   const [expandedRows, setExpandedRows] = useState({});
   const [sortConfig, setSortConfig] = useState({ key: 'total_amount', direction: 'desc' });
 
@@ -27,7 +28,7 @@ const ExpenseSummary = ({ data = [], onExport, isLoading = false }) => {
       acc[key].total_amount += parseFloat(item.total_amount) || 0;
       acc[key].items.push(item);
 
-      if (Number(item.type) === 0) acc[key].opex_count += 1;
+      if (item.type !== null && item.type !== undefined && item.type !== '' && Number(item.type) === 0) acc[key].opex_count += 1;
       if (Number(item.type) === 1) acc[key].capex_count += 1;
 
       return acc;
@@ -79,8 +80,8 @@ const ExpenseSummary = ({ data = [], onExport, isLoading = false }) => {
         <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
-        <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No data available</h3>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Select locations and date range to generate analysis.</p>
+        <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{emptyTitle}</h3>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{emptyMessage}</p>
       </div>
     );
   }
@@ -99,13 +100,7 @@ const ExpenseSummary = ({ data = [], onExport, isLoading = false }) => {
     }));
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 2
-    }).format(amount);
-  };
+  const formatCurrency = (amount) => suppressTotals ? '—' : formatReportMoney(amount,currency);
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-lg shadow overflow-hidden">
@@ -220,7 +215,7 @@ const ExpenseSummary = ({ data = [], onExport, isLoading = false }) => {
                 {expandedRows[category.category] && (
                   <tr>
                     <td colSpan="6" className="px-4 py-3 bg-gray-50 dark:bg-gray-800">
-                      <ExpenseDetails items={category.items} />
+                      <ExpenseDetails items={category.items} currency={currency} />
                     </td>
                   </tr>
                 )}

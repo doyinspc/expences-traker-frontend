@@ -31,6 +31,9 @@ export interface DocumentItem {
   category_name?: string;
   item_name?: string;
   quantity?: number;
+  procurement_quantity?: number;
+  stock_received_quantity?: number;
+  stock_issued_quantity?: number;
   unit_price?: number;
   total_price?: number;
   approval_status?: string;
@@ -39,6 +42,7 @@ export interface DocumentItem {
   description?: string;
   sku?: string;
   unit?: string;
+  unit_of_measure?: string;
   discount?: number;
   tax_amount?: number;
   created_at?: string;
@@ -646,7 +650,8 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                       )}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap text-xs text-right text-gray-900 dark:text-gray-100">
-                      {item.quantity || 0}
+                      {Number(documentTypeId)===2?(item.procurement_quantity??item.quantity??0):(item.quantity||0)} {item.unit_of_measure || item.unit || ''}
+                      {(Number(item.stock_received_quantity)>0||Number(item.stock_issued_quantity)>0)&&<span className="mt-1 block text-[10px] text-blue-600 dark:text-blue-300">Recorded: {item.stock_received_quantity||0} received · {item.stock_issued_quantity||0} issued</span>}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap text-xs text-right text-gray-900 dark:text-gray-100">
                       {formatCurrency(item.unit_price, currency)}
@@ -823,7 +828,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                             <div>
                               <p className="text-xs text-gray-500 dark:text-gray-400">Quantity / Unit</p>
                               <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                {item.quantity || 0} {item.unit ? item.unit : ''}
+                                {Number(documentTypeId)===2?(item.procurement_quantity??item.quantity??0):(item.quantity||0)} {item.unit_of_measure || item.unit || ''}
                               </p>
                             </div>
 

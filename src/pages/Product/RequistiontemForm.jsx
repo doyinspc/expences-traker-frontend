@@ -66,6 +66,8 @@ const RequisitionItemForm = ({
         let items = categories?.find(rw=>rw.id == formData?.category_id);
         return items?.children || [];
       }, [formData?.category_id, categories])
+      const selectedCatalogueItem=items.find(item=>String(item.id)===String(formData.item_id));
+      const selectedUnit=String(selectedCatalogueItem?selectedCatalogueItem.text_1||'':String(initialData?.item_id)===String(formData.item_id)?initialData?.unit_of_measure||'':'').trim();
 
     // ==================== FILTER ITEMS BY CATEGORY ====================
     useEffect(() => {
@@ -473,7 +475,7 @@ const RequisitionItemForm = ({
                 {/* Quantity */}
                 <div>
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Quantity
+                        Quantity {selectedUnit?`(${selectedUnit})`:''}
                     </label>
                     <input
                         type="number"
@@ -482,7 +484,7 @@ const RequisitionItemForm = ({
                         onChange={handleInputChange}
                         onBlur={handleBlur}
                         placeholder="0"
-                        min="0"
+                        min="1"
                         step="1"
                         disabled={isFormDisabled}
                         data-error={!!errors.quantity}
@@ -495,6 +497,7 @@ const RequisitionItemForm = ({
                     {errors.quantity && touched.quantity && (
                         <p className="mt-1 text-xs text-red-500">{errors.quantity}</p>
                     )}
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-300">{selectedUnit?`Enter whole quantities in ${selectedUnit}. Procurement and stock use this same item unit.`:'Set the item’s unit in Settings before receiving or issuing it as stock.'}</p>
                 </div>
 
                 {/* Unit Price */}

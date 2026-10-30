@@ -2,7 +2,8 @@ import { buildReportCsv } from '../../utils/functions/reportExport';
 // components/ExpenseAnalysis/ExpenseAnalysis.js
 import React, { useState, useEffect } from 'react';
 import ExpenseFilters from './ExpenseFilters';
-import ExpenseSummary from './ExpenseSummary';
+import ExpenseSummary from './IncomeExpenseBalance';
+import {incomeExpenseCsvRows} from '../../utils/functions/incomeExpenseReport';
 import useReduxApiData from '../../hooks/useTanstackQuery';
 
 const ExpenseAnalysis = () => {
@@ -73,22 +74,14 @@ const ExpenseAnalysis = () => {
     loadExpenseData(newFilters);
   };
 
-  const handleExportCSV = () => {
-    if (!analysisData.length) return;
+  const handleExportCSV = (exportData) => {
+    const selectedRows=Array.isArray(exportData)?exportData:analysisData;
+    if (!selectedRows.length) return;
     
     // Create CSV from data
-    const headers = ['Category', 'Item', 'Account', 'Document Type', 'Total Amount', 'Type', 'Date', 'Location'];
-    const rows = analysisData.map(item => [
-      item.category_name || 'N/A',
-      item.item_name || 'N/A',
-      item.account_name || 'N/A',
-      item.document_type || 'N/A',
-      item.total_amount || 0,
-      Number(item.type) === 0 ? 'OPEX' : 'CAPEX',
-      item.resolved_date ? new Date(item.resolved_date).toLocaleDateString() : 'N/A',
-      item.location_name || 'N/A'
-    ]);
-    
+    const headers = ['Category','Item','Account','Document Type','Total Amount','Type','Date','Location','Currency','Expense Amount','Income Amount','Net Contribution'];
+    const rows = incomeExpenseCsvRows(selectedRows);
+
     const csv = buildReportCsv(headers, rows);
     
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -123,7 +116,7 @@ const ExpenseAnalysis = () => {
         {/* Header */}
         <div className="flex flex-wrap gap-3 justify-between items-center bg-white dark:bg-gray-900 rounded-lg shadow p-4">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Expense Analysis
+            Income & Expense Analysis
           </h1>
           <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
             <span className={`px-3 py-1 rounded-full ${step === 1 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>

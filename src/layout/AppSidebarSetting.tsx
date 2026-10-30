@@ -207,12 +207,12 @@ const AppSidebar: React.FC = () => {
 
   // Circular logo container styles
   const logoContainerClass = `
-    flex items-center justify-center 
-    w-10 h-10 
-    rounded-full 
-    overflow-hidden 
-    bg-gray-100 dark:bg-gray-800 
-    border border-gray-200 dark:border-gray-700 
+    flex items-center justify-center
+    w-10 h-10
+    rounded-full
+    overflow-hidden
+    bg-gray-100 dark:bg-gray-800
+    border border-gray-200 dark:border-gray-700
     flex-shrink-0
     transition-all duration-300
   `;
@@ -372,7 +372,7 @@ const AppSidebar: React.FC = () => {
 
   return (
     <aside id="app-navigation" aria-label="Settings navigation" inert={isMobile && !isMobileOpen}
-      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
+      className={`fixed bottom-0 top-16 lg:top-0 min-h-0 flex flex-col px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 transition-all duration-300 ease-in-out z-50 border-r border-gray-200
         ${
           isExpanded || isMobileOpen
             ? "w-[290px]"
@@ -387,7 +387,7 @@ const AppSidebar: React.FC = () => {
     >
       {/* Logo Area with Company Logo and Short Name */}
       <div
-        className={`py-6 flex items-center gap-3 border-b border-gray-200 dark:border-gray-700 ${
+        className={`shrink-0 py-6 flex items-center gap-3 border-b border-gray-200 dark:border-gray-700 ${
           !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
         }`}
       >
@@ -423,7 +423,7 @@ const AppSidebar: React.FC = () => {
       </div>
 
       {/* Navigation */}
-      <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar flex-1 pt-4">
+      <div tabIndex={0} aria-label="Scrollable Settings menu" className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain touch-pan-y custom-scrollbar pt-4 pb-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">
         <nav className="mb-6">
           <div className="flex flex-col gap-4">
             <div>

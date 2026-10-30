@@ -202,7 +202,7 @@ const company = {
       label: 'Accounting Year Start',
       type: 'date',
       required: true,
-      description: 'Choose the start of an accounting year. Its month and day repeat annually; reports use this setting. This does not close budgets or lock historical transactions.',
+      description: 'For January–December, choose 1 January. For April–March, choose 1 April. Save the profile; the same month and day define later years automatically. Stock openings and year-end carry forward are confirmed separately in Stock.',
       showInTable: false,
       showInForm: true,
       tableWidth: '120px',

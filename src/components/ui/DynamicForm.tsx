@@ -12,7 +12,8 @@ import ToggleSwitch from '../../components/form/form-elements/ToggleSwitch';
 import DatePicker from '../../components/form/date-picker';
 import PhoneInput from '../../components/form/group-input/PhoneInput';
 import { fieldGuidance, validateFieldValue } from '../../utils/functions/formGuidance';
-import { getFormFields } from '../../config/tableMapping';
+import { getFormFields,getTableMapping } from '../../config/tableMapping';
+import {initialFormValues,formSubmitPayload,resetFormValues} from '../../utils/functions/formDefaults';
 
 // ==================== TYPES ====================
 
@@ -174,40 +175,12 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
     );
   }, [fields]);
 
-  // Initialize form data
+  // Equal context values must not reset typed input when the parent re-renders while saving.
+  const initialDataKey=JSON.stringify(initialData);
+  const tableGroup=getTableMapping(tableName)?.grp;
   useEffect(() => {
-    if (fields) {
-      const initial: Record<string, any> = {};
-      Object.entries(fields).forEach(([fieldName, field]) => {
-        // Check if we have initialData for this field
-        const hasInitialData = initialData[fieldName] !== undefined &&
-                               initialData[fieldName] !== null &&
-                               initialData[fieldName] !== '';
-
-        let defaultValue: any = null;
-
-        if (hasInitialData) {
-          // Use the initialData value
-          defaultValue = initialData[fieldName];
-        } else if (field.type === 'toggle') {
-          // Toggle defaults to false
-          defaultValue = field.default !== undefined ? field.default : false;
-        } else if (field.type === 'select') {
-          // Select defaults to empty string to keep component controlled
-          defaultValue = field.default !== undefined && field.default !== null ? field.default : '';
-        } else if (field.type === 'date' || field.type === 'datetime') {
-          // Date fields - use default or null
-          defaultValue = field.default !== undefined && field.default !== null ? field.default : null;
-        } else {
-          // Other fields default to empty string or the field default
-          defaultValue = field.default !== undefined ? field.default : '';
-        }
-
-        initial[fieldName] = defaultValue;
-      });
-      setFormData(initial);
-    }
-  }, [initialData, fields]);
+    if(fields)setFormData(initialFormValues(fields,JSON.parse(initialDataKey),tableGroup));
+  }, [initialDataKey,fields,tableGroup]);
 
   // Auto-select dropdowns that only have 1 option
   useEffect(() => {
@@ -332,14 +305,15 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
     try {
       if (onSave) {
         // Include ALL fields (including hidden) in submission
-        await onSave(formData);
+        const payload=formSubmitPayload(formData,initialData.id,fields);
+        await onSave(payload);
         setSubmitSuccess(true);
         // Reset success message after 3 seconds
         setTimeout(() => setSubmitSuccess(false), 3000);
       }
     } catch (error: any) {
       console.error('Form submission error:', error);
-      setSubmitError(error?.message || 'Failed to save. Please try again.');
+      setSubmitError(error?.response?.data?.message || error?.message || 'Failed to save. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -349,23 +323,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
   const handleReset = (e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
     if (fields) {
-      const resetData: Record<string, any> = {};
-      Object.entries(fields).forEach(([fieldName, field]) => {
-        if (field.hidden) {
-          // Keep hidden field values or reset to default
-          resetData[fieldName] = field.default !== undefined ? field.default : null;
-        } else if (field.showInForm === false) {
-          return;
-        } else if (field.type === 'toggle') {
-          resetData[fieldName] = field.default !== undefined ? field.default : false;
-        } else if (field.type === 'select') {
-          resetData[fieldName] = field.default !== undefined && field.default !== null ? field.default : '';
-        } else if (field.type === 'date' || field.type === 'datetime') {
-          resetData[fieldName] = field.default !== undefined && field.default !== null ? field.default : null;
-        } else {
-          resetData[fieldName] = field.default !== undefined ? field.default : '';
-        }
-      });
+      const resetData=resetFormValues(fields,initialData,tableGroup);
       setFormData(resetData);
       setErrors({});
       setSubmitError(null);

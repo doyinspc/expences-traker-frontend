@@ -1,3 +1,4 @@
+import {mutationBody} from '../utils/functions/mutationBody';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useSelector } from 'react-redux';
@@ -86,27 +87,8 @@ const loadApi = async (table, queryType, mainParam, param, narration) => {
 
 const updateApi = async (table, queryType, mainParam, param, narration) => {
     try {
-        const formData = new FormData();
-        formData.append('table', table);
-        formData.append('tenant_db', getTenantDb());  // tenant_db as form data
-        
-        const { cat = queryType || 'insert', ...values } = param || {};
-        formData.append('cat', cat);
-
-        // Append main parameters
-        Object.keys(mainParam || {}).forEach((key) => formData.append(key, mainParam[key]));
-
-        // Handle parameters and specifically check for the binary file
-        Object.keys(values).forEach((key) => {
-            if (key === 'file' && values[key]) {
-                // Append the raw File/Blob object directly
-                formData.append('file', values[key]);
-            } else {
-                formData.append(key, values[key]);
-            }
-        });
-    
-        const response = await axios.post(API_PATH_SETTING, formData, axiosConfig1);
+        const body=mutationBody(table,queryType,mainParam,param,getTenantDb());
+        const response = await axios.post(API_PATH_SETTING,body,body instanceof FormData?axiosConfig1:axiosConfig);
         if (response.data?.status === 'error' || response.data?.success === false) {
             throw new Error(response.data.message || 'The request failed.');
         }

@@ -1,7 +1,8 @@
+import {formatReportMoney,financialDocumentNames} from '../../utils/functions/incomeExpenseReport';
 // components/ExpenseAnalysis/ExpenseDetails.js
 import React, { useState, useMemo } from 'react';
 
-const ExpenseDetails = ({ items = [] }) => {
+const ExpenseDetails = ({ items = [], currency = 'NGN', income = false }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all'); // all, opex, capex
 
@@ -10,24 +11,18 @@ const ExpenseDetails = ({ items = [] }) => {
       const matchesSearch = 
         item.item_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.account_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.document_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        String(item.document_type_name || financialDocumentNames[Number(item.document_type)] || item.document_type || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.category_name?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesType = filterType === 'all' || 
-                         (filterType === 'opex' && item.type === 0) ||
-                         (filterType === 'capex' && item.type === 1);
+                         (filterType === 'opex' && item.type !== null && item.type !== undefined && item.type !== '' && Number(item.type) === 0) ||
+                         (filterType === 'capex' && Number(item.type) === 1);
       
       return matchesSearch && matchesType;
     });
   }, [items, searchTerm, filterType]);
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 2
-    }).format(amount);
-  };
+  const formatCurrency = (amount) => formatReportMoney(amount,currency);
 
   const formatDate = (date) => {
     if (!date) return 'N/A';
@@ -51,7 +46,7 @@ const ExpenseDetails = ({ items = [] }) => {
             className="w-full px-3 py-1 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
-        <div className="flex space-x-2">
+        {!income && <div className="flex space-x-2">
           <button
             onClick={() => setFilterType('all')}
             className={`px-3 py-1 text-sm rounded-md transition-colors ${
@@ -76,7 +71,7 @@ const ExpenseDetails = ({ items = [] }) => {
           >
             CAPEX
           </button>
-        </div>
+        </div>}
         <span className="text-sm text-gray-500 dark:text-gray-400 self-center">
           {filteredItems.length} items
         </span>
@@ -108,22 +103,22 @@ const ExpenseDetails = ({ items = [] }) => {
                 <tr key={item.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                   <td className="px-3 py-2 text-sm text-gray-900 dark:text-gray-100">{item.item_name || 'N/A'}</td>
                   <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400">{item.account_name || 'N/A'}</td>
-                  <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400">{item.document_type || 'N/A'}</td>
+                  <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400">{item.document_type_name || financialDocumentNames[Number(item.document_type)] || item.document_type || 'N/A'}</td>
                   <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 text-right">
                     {formatCurrency(item.unit_amount || 0)}
                   </td>
                   <td className="px-3 py-2 text-sm font-medium text-gray-900 dark:text-gray-100 text-right">
-                    {formatCurrency(item.total_amount || 0)}
+                    {formatCurrency(income ? (item.income_amount ?? item.credit_amount) : (item.expense_amount ?? item.total_amount))}
                   </td>
                   <td className="px-3 py-2 text-center">
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      item.type === 0 ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
+                      income ? 'bg-blue-100 text-blue-800' : Number(item.type) === 0 ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
                     }`}>
-                      {item.type === 0 ? 'OPEX' : 'CAPEX'}
+                      {income ? 'Income' : item.type !== null && item.type !== undefined && item.type !== '' && Number(item.type) === 0 ? 'OPEX' : Number(item.type) === 1 ? 'CAPEX' : 'Not classified'}
                     </span>
                   </td>
                   <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 text-center">
-                    {formatDate(item.resolved_at)}
+                    {formatDate(item.resolved_date || item.resolved_at)}
                   </td>
                 </tr>
               ))

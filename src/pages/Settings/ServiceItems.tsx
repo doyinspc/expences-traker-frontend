@@ -107,15 +107,18 @@ const ExpensItems: React.FC = () => {
         setPage(1);
     }, []);
 
-    const onDelete = useCallback(async (row: any) => {
-        const choice = await Swal.fire({title: 'Delete this record?', text: 'Only delete records that are no longer needed and have no linked work.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete record'});
-        if(!choice.isConfirmed)return;
-        try { await loadUpdate({id: row.id, cat: 'insert', act: 3}); } catch { /* The hook shows the server refusal. */ }
+    const onDelete = useCallback(async (record: any): Promise<void> => {
+        const result=await Swal.fire({title:'Delete this Settings record?',text:'Only unused records can be removed. Records linked to staff, documents or history must be retained.',icon:'warning',showCancelButton:true,confirmButtonText:'Delete unused record',cancelButtonText:'Keep record'});
+        if(!result.isConfirmed)return;
+        try {
+            await loadUpdate({id:record.id,cat:'insert',act:3});
+            await Swal.fire({title:'Deleted',text:'The unused Settings record was removed.',icon:'success'});
+        } catch { /* The existing notification shows the server refusal; no false success. */ }
     }, [loadUpdate]);
 
     const onActivate = useCallback((row: any): void => {
         const { id, is_active } = row;
-        loadUpdate({ id, cat: 'insert', is_active: is_active === 0 ? 1 : 0 });
+        void loadUpdate({ id, cat: 'insert', is_active: Number(is_active) === 1 ? 0 : 1 }).catch(()=>{});
     }, []);
 
     const onNext = useCallback((row: any): void => {
@@ -128,13 +131,15 @@ const ExpensItems: React.FC = () => {
         setPage(1);
     }, []);
 
-    const handleSave = useCallback((formData: any): void => {
-        loadUpdate(formData);
-    }, []);
+    const handleSave = useCallback(async (formData: any) => {
+        await loadUpdate(formData);
+        setPage(0);
+    }, [loadUpdate]);
 
-    const handleUpdate = useCallback((formData: any): void => {
-        loadUpdate(formData);
-    }, []);
+    const handleUpdate = useCallback(async (formData: any) => {
+        await loadUpdate(formData);
+        setPage(0);
+    }, [loadUpdate]);
 
     const handleReload = useCallback((): void => {
         loadQuery(initialData);

@@ -98,7 +98,7 @@ const Index: React.FC = () => {
     const [analysisMetric, setAnalysisMetric] = useState<string>('');
 
     // ==================== API HOOKS ====================
-    const { data, loadQuery, loadUpdate, deleteData, isLoading } = useReduxApiData({
+    const { data, loadQuery, loadUpdate, isLoading } = useReduxApiData({
         table: 'commons',
         pth: TABLE_PATH,
         queryType: 'gets',
@@ -119,30 +119,18 @@ const Index: React.FC = () => {
         setPage(1);
     }, []);
 
-    const onDelete = useCallback((selectedRow: TableRowData): void => {
-        Swal.fire({
-            title: 'Are you sure?',
-            text: "You won't be able to revert this!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, delete it!'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                loadUpdate({ id: selectedRow?.id, is_active:3, cat: 'insert' });
-                Swal.fire(
-                    'Deleted!',
-                    'Your record has been deleted.',
-                    'success'
-                );
-            }
-        });
-    }, [deleteData]);
+    const onDelete = useCallback(async (record: any): Promise<void> => {
+        const result=await Swal.fire({title:'Delete this Settings record?',text:'Only unused records can be removed. Records linked to staff, documents or history must be retained.',icon:'warning',showCancelButton:true,confirmButtonText:'Delete unused record',cancelButtonText:'Keep record'});
+        if(!result.isConfirmed)return;
+        try {
+            await loadUpdate({id:record.id,cat:'insert',act:3});
+            await Swal.fire({title:'Deleted',text:'The unused Settings record was removed.',icon:'success'});
+        } catch { /* The existing notification shows the server refusal; no false success. */ }
+    }, [loadUpdate]);
 
     const onActivate = useCallback((selectedRow: TableRowData): void => {
         const { id, is_active } = selectedRow;
-        loadUpdate({ id, cat: 'insert', updated_by_id:user_id, is_active: is_active === 0 ? 1 : 0 });
+        void loadUpdate({ id, cat: 'insert', updated_by_id:user_id, is_active: Number(is_active) === 1 ? 0 : 1 }).catch(()=>{});
     }, []);
 
     const onNext = useCallback((selectedRow: TableRowData): void => {
@@ -156,14 +144,16 @@ const Index: React.FC = () => {
         setPage(1);
     }, []);
 
-    const handleSave = useCallback((formData: Record<string, unknown>): void => {
+    const handleSave = useCallback(async (formData: Record<string, unknown>) => {
         formData.updated_by_id = user_id;
-        loadUpdate(formData);
+        await loadUpdate(formData);
+        setPage(0);
     }, [loadUpdate]);
 
-    const handleUpdate = useCallback((formData: Record<string, unknown>): void => {
+    const handleUpdate = useCallback(async (formData: Record<string, unknown>) => {
         formData.updated_by_id = user_id;
-        loadUpdate(formData);
+        await loadUpdate(formData);
+        setPage(0);
     }, [loadUpdate]);
 
     const handleReload = useCallback((): void => {

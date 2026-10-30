@@ -1,8 +1,10 @@
+import RoleCopyPanel from './RoleCopyPanel';
+import useManagementAccess from '../../../hooks/useManagementAccess';
 // src/pages/Procurement/Userroles.tsx
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from 'react-router-dom';
-import { columnBuilder } from '../../../actions/common.js';
+import { columnBuilder, tokenHelpers } from '../../../actions/common.js';
 import PageBreadcrumb from "../../../components/common/PageBreadCrumb.js";
 import ComponentCard from "../../../components/common/ComponentCard.js";
 import Tables from '../../../components/table/index.jsx';
@@ -12,8 +14,8 @@ import { FullSettingActionDeleteMinimal } from '../../../components/ui/TableActi
 import { InfoPanel } from '../../../components/ui/InfoPanel.js';
 import { BackIcon, AddIcon, ReloadIcon, InfoIcon } from '../../../components/ui/TableIcons.js';
 import useReduxApiData from "../../../hooks/useTanstackQuery.js";
-import { 
-    buildTableDataFromMapping, 
+import {
+    buildTableDataFromMapping,
     buildColumnVisibility,
     getTableAnalysisConfig,
     getAnalyzableFields,
@@ -60,7 +62,7 @@ interface LocationInterface {
     itemname1?: any ;
     itemname2?: any ;
     is_active?: any ;
-    
+
 }
 
 interface UserrolesProps {
@@ -77,13 +79,18 @@ const PAGE_SIZE = 500;
 // This is the grp value for roles, adjust as necessary
 
 // ==================== COMPONENT ====================
-const Userroles: React.FC<UserrolesProps> = ({ 
-    UserData = {}, 
+const Userroles: React.FC<UserrolesProps> = ({
+    UserData = {},
     LocationData = {},
     onClose,
-    onSave 
+    onSave
 }) => {
     const nav = useNavigate();
+    const workspace = useSelector((state: any) => state.authReducer || state.auth || {});
+    const { data: management } = useManagementAccess();
+    const canCopyRoles = management?.can_copy_role_assignments === true;
+    const scopeKey = `${workspace.user?.id}:${workspace.location_id}:${workspace.role_id}:${tokenHelpers.getTenantDb()}:${tokenHelpers.getToken()}`;
+    const [copySource, setCopySource] = useState<any>(null);
     const hasLoaded = useRef(false);
     const isMounted = useRef(true);
 
@@ -100,7 +107,7 @@ const Userroles: React.FC<UserrolesProps> = ({
     const analyzableFields = useMemo(() => getAnalyzableFields(TABLE_NAME), []);
     const displayName = useMemo(() => getTableDisplayName(TABLE_NAME), []);
     const { grp } = tableMapping || {};
-    const TABLE_PAGE_NUM = grp; 
+    const TABLE_PAGE_NUM = grp;
 
     const userid = UserData?.id;
     const {first_name, last_name} = UserData || {};
@@ -114,12 +121,12 @@ const Userroles: React.FC<UserrolesProps> = ({
     const [showInfo, setShowInfo] = useState<boolean>(false);
 
     // ==================== API HOOKS ====================
-    const { 
-        data, 
-        loadQuery, 
-        loadUpdate, 
-        deleteData, 
-        isLoading 
+    const {
+        data,
+        loadQuery,
+        loadUpdate,
+        deleteData,
+        isLoading
     } = useReduxApiData({
         table: "users",
         uniqueKey: TABLE_PATH,
@@ -128,9 +135,9 @@ const Userroles: React.FC<UserrolesProps> = ({
         narration: 'get role allocated to current user',
     });
 
-    const { 
-        data: roleData, 
-        loadQuery: loadRoleData, 
+    const {
+        data: roleData,
+        loadQuery: loadRoleData,
     } = useReduxApiData({
         table: "commons",
         uniqueKey: "role",
@@ -159,7 +166,7 @@ const Userroles: React.FC<UserrolesProps> = ({
     const onDelete = useCallback((rowData: any, e?: React.MouseEvent): void => {
         e?.preventDefault();
         e?.stopPropagation();
-        
+
         Swal.fire({
             title: 'Are you sure?',
             text: "You won't be able to revert this!",
@@ -264,13 +271,13 @@ const Userroles: React.FC<UserrolesProps> = ({
     // 🛡️ ONLY run when userid or staffId changes, NOT on function changes
     useEffect(() => {
         if (!isMounted.current) return;
-        
+
         if (userid && !hasLoaded.current) {
             hasLoaded.current = true;
             loadQuery(initialData);
             loadRoleData();
         }
-        
+
         // Cleanup
         return () => {
             isMounted.current = false;
@@ -278,16 +285,21 @@ const Userroles: React.FC<UserrolesProps> = ({
     // 🛡️ EMPTY dependency array - only runs once on mount
     }, []);
 
+    const RoleActions = useCallback((props: any) => <div className="flex items-center gap-2">
+        <FullSettingActionDeleteMinimal {...props} />
+        {canCopyRoles && Number(props.row?.is_active) === 1 && <button type="button" onClick={(event) => { event.stopPropagation(); setCopySource(props.row); }} aria-label={`Copy ${props.row.itemname2 || 'role'} to other locations`} className="min-h-11 whitespace-nowrap rounded-lg border border-blue-200 px-3 text-xs font-medium text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950/40">Copy to locations</button>}
+    </div>, [canCopyRoles]);
+
     // ==================== COLUMNS ====================
     const columns = useMemo(() => {
         return columnBuilder(
-            { 
-                table_action: FullSettingActionDeleteMinimal, 
-                table_data: tableData 
+            {
+                table_action: RoleActions,
+                table_data: tableData
             },
             { onNext, onView, onActivate, onEdit, onDelete }
         );
-    }, [tableData, onNext, onView, onActivate, onEdit, onDelete]);
+    }, [tableData, onNext, onView, onActivate, onEdit, onDelete, RoleActions]);
 
     // ==================== RENDER ====================
     return (
@@ -332,6 +344,8 @@ const Userroles: React.FC<UserrolesProps> = ({
                     <InfoIcon />
                 </button>
             </div>
+
+            {copySource && canCopyRoles && <RoleCopyPanel key={`${userid}-${copySource.id}-${scopeKey}`} staffId={userid} source={copySource} scopeKey={scopeKey} onClose={() => setCopySource(null)} onCopied={() => { loadQuery({ grp, user_id: userid, itemid1: LocationData.itemid1 }); onSave?.(); }} />}
 
             {/* Info Panel */}
             <InfoPanel
@@ -385,7 +399,7 @@ const Userroles: React.FC<UserrolesProps> = ({
             </div>
 
             </ComponentCard>
-            
+
         </div>
     );
 };

@@ -12,6 +12,8 @@ function setup() {
   const sessionStorage = { getItem: k => storage.get(k) || null };
   let response = { data: { status: 'success', data: { id: 1 } } };
   const common = { API_PATH_SETTING: '/api', axiosConfig: { headers: { Authorization: 'Bearer current' } }, axiosConfig1: {}, tokenHelpers: { getToken: () => 'current-token' } };
+  const bodyModule={exports:{}};
+  vm.runInNewContext(transformSync(fs.readFileSync(path.join(root,'src/utils/functions/mutationBody.js'),'utf8'),{format:'cjs'}).code,{module:bodyModule,exports:bodyModule.exports,FormData,Blob});
   const mocks = {
     'react-redux': { useSelector: select => select({ auth: selected }) },
     react: { useState: v => [v, () => {}] },
@@ -21,6 +23,7 @@ function setup() {
       useQueryClient: () => ({ invalidateQueries() {} })
     },
     '../actions/common': common,
+    '../utils/functions/mutationBody':bodyModule.exports,
     axios: { get: async (...args) => { request = args; return response; }, post: async (...args) => { request = args; return response; } },
     'react-hot-toast': () => {}
   };
@@ -41,8 +44,9 @@ test('update preserves caller action and fields', async () => {
   const s = setup(); s.hook(); const input = Object.freeze({ cat: 'update', id: 7, title: 'New title' });
   await s.mutation.mutationFn(input);
   assert.equal(input.cat, 'update');
-  assert.equal(s.request[1].get('cat'), 'update');
-  assert.equal(s.request[1].get('title'), 'New title');
+  assert.equal(s.request[1].cat, 'update');
+  assert.equal(s.request[1].title, 'New title');
+  assert.equal(s.request[2].headers.Authorization,'Bearer current');
 });
 test('API-level save failures reject instead of reporting success', async () => {
   const s = setup(); s.hook(); s.fail();

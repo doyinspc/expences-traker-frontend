@@ -12,6 +12,7 @@ import { DetailField } from '../../../components/DetailFieldsTables';
 import UploadReceiptModal from '../../../components/UploadReceiptModal';
 import ViewAttachmentsModal from '../../../components/ViewAttachementsDocuments';
 import MiniCashTransfers from './MiniTransfer';
+import StockLedgerPanel from '../../Inventory/StockLedgerPanel';
 
 // ==================== TYPES ====================
 export interface DocumentData {
@@ -186,6 +187,7 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
 }) => {
   const { user: { id: userId } } = useSelector((state: any) => state.auth);
   const [isDeactivating, setIsDeactivating] = useState(false);
+  const [showStockMovements,setShowStockMovements] = useState(false);
   const [documentItems, setDocumentItems] = useState<DocumentItem[]>([]);
   const [processingItemId, setProcessingItemId] = useState<string | number | null>(null);
 
@@ -736,6 +738,7 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
               leftFields={leftFields}
               rightFields={rightFields}
             />
+            {[1,2].includes(Number(documentTypeId))&&<details onToggle={event=>setShowStockMovements(event.currentTarget.open)} className="m-4 rounded-lg border border-gray-200 p-3 dark:border-gray-700"><summary className="cursor-pointer py-2 text-sm font-medium text-blue-700 dark:text-blue-300">Stock receipts & requisition fulfilment</summary>{showStockMovements&&<div className="pt-3"><StockLedgerPanel documentId={documentId} documentType={Number(documentTypeId)} onChanged={()=>loadQuery()}/></div>}</details>}
             {documentTypeId === 6 ? (
               <MiniCashTransfers
                 items={documentItems}
