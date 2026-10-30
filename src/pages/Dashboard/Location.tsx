@@ -724,27 +724,27 @@ export default function Landing() {
   // Filter roles by location_id matching selected location's id
   const getRolesForLocation = (locationId: string) => {
     if (!roles || !Array.isArray(roles)) return [];
-    return roles.filter((r: Role) => r.location_id === locationId);
+    return roles.filter((r: Role) => String(r.location_id) === String(locationId));
   };
 
-  // Handle location selection
+  // Pass the clicked location directly: React state is not updated within this click.
   const handleSelectLocation = (loc: Location) => {
     setSelectedLocation(loc);
+    setSelectedRole(null);
     const locationRoles = getRolesForLocation(loc.id);
-    setShowRoleSelection(true);
+    setShowRoleSelection(locationRoles.length !== 1);
     if (locationRoles.length === 1) {
-      handleSelectRole(locationRoles[0]);
+      handleSelectRole(locationRoles[0], loc);
     }
   };
 
-  // Handle role selection
-  const handleSelectRole = (selectedRole: Role) => {
-    setSelectedRole(selectedRole);
-    dispatch(authActions.tenantSwitchLocation(selectedLocation));
-    dispatch(authActions.tenantSwitchRole(selectedRole));
-    setTimeout(() => {
-      setShowRoleSelection(false);
-    }, 500);
+  // Locations with several roles are applied after the staff member chooses one.
+  const handleSelectRole = (nextRole: Role, targetLocation: Location | null = selectedLocation) => {
+    if (!targetLocation || String(nextRole.location_id) !== String(targetLocation.id)) return;
+    setSelectedRole(nextRole);
+    dispatch(authActions.tenantSwitchLocation(targetLocation));
+    dispatch(authActions.tenantSwitchRole(nextRole));
+    setShowRoleSelection(false);
   };
 
   // Handle back to locations
@@ -784,7 +784,7 @@ export default function Landing() {
             
             <div className="flex flex-wrap items-center gap-3">
               <CurrentLocationBadge location={selectedLocation || location} />
-              <CurrentRoleBadge role={selectedRole || role} />
+              <CurrentRoleBadge role={selectedRole} />
             </div>
           </div>
 
@@ -798,7 +798,7 @@ export default function Landing() {
 
           {/* Action Required / Status Card */}
           <div className="mb-6">
-            <ActionRequiredCard location={selectedLocation || location} role={selectedRole || role} />
+            <ActionRequiredCard location={selectedLocation || location} role={selectedRole} />
           </div>
 
           {/* Location & Role Selection Area */}
