@@ -103,7 +103,7 @@ const ExpenseDetails = ({ items = [], currency = 'NGN', income = false }) => {
                 <tr key={item.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                   <td className="px-3 py-2 text-sm text-gray-900 dark:text-gray-100">{item.item_name || 'N/A'}</td>
                   <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400">{item.account_name || 'N/A'}</td>
-                  <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400">{item.document_type_name || financialDocumentNames[Number(item.document_type)] || item.document_type || 'N/A'}</td>
+                  <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400">{item.document_type_name || financialDocumentNames[Number(item.document_type)] || item.document_type || 'N/A'}{item.workflow_state && <span className="mt-1 block text-xs text-blue-700 dark:text-blue-300">{item.workflow_state}</span>}</td>
                   <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 text-right">
                     {formatCurrency(item.unit_amount || 0)}
                   </td>

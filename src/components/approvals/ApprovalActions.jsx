@@ -22,6 +22,8 @@ export default function ApprovalActions({ workflow, onSubmit, isLoading }) {
   const [comments, setComments] = useState('');
   const [errors, setErrors] = useState({});
   const [error, setError] = useState('');
+  const [confirmDisbursement, setConfirmDisbursement] = useState(false);
+  const needsDisbursement = workflow.finance?.requires_confirmation && action === 'approve_instance';
   const [saving, setSaving] = useState(false);
   const statusRef = useRef(null), reasonRef = useRef(null), commentsRef = useRef(null);
   const options = permissions.can_resolve ? [['resolve_escalation', 'Resolve and return to approver'], ['return_escalation', 'Return for clarification']] : [
@@ -44,6 +46,7 @@ export default function ApprovalActions({ workflow, onSubmit, isLoading }) {
   const submit = async event => {
     event.preventDefault(); if (busy) return; setError('');
     const next = {};
+    if (needsDisbursement && !confirmDisbursement) next.disbursement = 'Confirm actual payment before approving this step.';
     if (!status) next.status = 'Choose a status for this decision.';
     if (requiresReason && !reason) next.reason = 'Choose a reason so the next reviewer has context.';
     if (selected !== 'approve_instance' && !comments.trim()) next.comments = 'Explain your decision in the comments.';
@@ -51,8 +54,8 @@ export default function ApprovalActions({ workflow, onSubmit, isLoading }) {
     if (Object.keys(next).length) { (next.status ? statusRef : next.reason ? reasonRef : commentsRef).current?.focus(); return; }
     setSaving(true);
     try {
-      await onSubmit({ action: selected, status_id: status, comments: comments.trim(), ...(selected === 'reject_instance' ? { rejection_reason_id: reason, rejection_comments: comments.trim() } : selected === 'escalate_instance' ? { escalation_reason_id: reason, escalation_comments: comments.trim() } : {}) });
-      setStatus(''); setReason(''); setComments('');
+      await onSubmit({ action: selected, confirm_disbursement: needsDisbursement && confirmDisbursement, status_id: status, comments: comments.trim(), ...(selected === 'reject_instance' ? { rejection_reason_id: reason, rejection_comments: comments.trim() } : selected === 'escalate_instance' ? { escalation_reason_id: reason, escalation_comments: comments.trim() } : {}) });
+      setStatus(''); setReason(''); setComments(''); setConfirmDisbursement(false);
     } catch (failure) { setError(failure.response?.data?.message || failure.message || 'The action could not be saved.'); }
     finally { setSaving(false); }
   };
@@ -62,6 +65,7 @@ export default function ApprovalActions({ workflow, onSubmit, isLoading }) {
     {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-200">{error}</p>}
     {referenceError && <p role="alert" className="mt-4 text-sm text-red-600 dark:text-red-300">Reference options could not be loaded. <button type="button" className="min-h-11 underline" onClick={() => { statuses.refetch(); if (requiresReason) reasons.refetch(); }}>Try again</button></p>}
     {Object.values(errors).some(Boolean) && <p role="alert" className="mt-4 text-sm text-red-600 dark:text-red-300">Complete the highlighted fields before saving your decision.</p>}
+    {needsDisbursement && <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"><label className="flex items-start gap-3"><input type="checkbox" checked={confirmDisbursement} disabled={busy} onChange={event => setConfirmDisbursement(event.target.checked)} className="mt-1" /><span>I confirm the full saved amount ({workflow.document_data?.currency_code || ''} {workflow.document_data?.amount ?? workflow.document_data?.total_amount}) has actually been paid. This records spending against the account and budget while the remaining workflow continues.</span></label>{errors.disbursement && <p role="alert" className="mt-2">{errors.disbursement}</p>}<p className="mt-2 text-xs">Use this confirmation for full payment only. Partial payments and returns need a separate reviewed record.</p></div>}
     <fieldset disabled={busy} className="mt-4 space-y-4 disabled:opacity-70">
       <div className={`grid gap-4 ${requiresReason ? 'lg:grid-cols-3' : 'sm:grid-cols-2'}`}>
         <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Action<select value={selected} onChange={event => { setAction(event.target.value); setReason(''); setErrors({}); setError(''); }} className={control}>{options.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>

@@ -120,6 +120,12 @@ const workflowsteps = {
             filterable: true,
             filterType: 'number',
         },
+        text_4: {
+            label: 'Cash disbursement', type: 'select', required: false,
+            options: 'disbursement_steps',
+            description: 'Procurement and cash advances only. Choose one step. Approval confirms the full saved amount was paid and counts it against the account and budget; later steps continue. Applies to newly submitted workflows.',
+            showInTable: true,
+        },
         text_5: {
             label: 'Escalation Role', type: 'select', options: 'roles', filterOptions: { grp: 1 },
             description: 'Review role for escalations at this step. Resolution returns to the original approver.',

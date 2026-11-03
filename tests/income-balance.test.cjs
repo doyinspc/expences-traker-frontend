@@ -53,5 +53,7 @@ test('Older backend responses retain the original expense summary and request an
  const html=financeMarkup([row]);assert.match(html,/Install the matching backend update/);assert.match(html,/Expense Summary/);assert.doesNotMatch(html,/Net balance/);
 });
 test('The original CSV columns remain present with the balance columns appended',()=>{
- const page=fs.readFileSync(path.join(root,'src/pages/Reports/ExpenseReport.jsx'),'utf8');assert.match(page,/\['Category','Item','Account','Document Type','Total Amount','Type','Date','Location','Currency','Expense Amount','Income Amount','Net Contribution'\]/);
+ const page=fs.readFileSync(path.join(root,'src/pages/Reports/ExpenseReport.jsx'),'utf8');assert.match(page,/\['Category','Item','Account','Document Type','Total Amount','Type','Date','Location','Currency','Expense Amount','Income Amount','Net Contribution','Workflow State'\]/);
 });
+
+test("CSV keeps ongoing disbursement visible without changing its amount",()=>{const rows=incomeExpenseCsvRows([financialRow(2,"100.00",{workflow_state:"Disbursed — workflow ongoing"})]);assert.equal(rows[0][9],"100.00");assert.equal(rows[0][12],"Disbursed — workflow ongoing");});

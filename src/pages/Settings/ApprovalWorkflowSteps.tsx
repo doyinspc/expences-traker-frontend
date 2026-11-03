@@ -243,6 +243,7 @@ const ApprovalWorkflowSteps: React.FC = () => {
             };
     
             return {
+                disbursement_steps: [{value:'approval',label:'Ordinary approval step'},{value:'cash_disbursement',label:'Confirm cash disbursement'}],
                 roles: formatOptions(safeData(roleData), 'name', 'id')
             };
         }, [ roleData ]);
