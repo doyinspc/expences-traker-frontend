@@ -123,6 +123,7 @@ const workflowsteps = {
         text_4: {
             label: 'Cash disbursement', type: 'select', required: false,
             options: 'disbursement_steps',
+            tableFormat: value => value === 'cash_disbursement' ? 'Confirms disbursement' : 'Ordinary approval',
             description: 'Procurement and cash advances only. Choose one step. Approval confirms the full saved amount was paid and counts it against the account and budget; later steps continue. Applies to newly submitted workflows.',
             showInTable: true,
         },
@@ -130,6 +131,9 @@ const workflowsteps = {
             label: 'Escalation Role', type: 'select', options: 'roles', filterOptions: { grp: 1 },
             description: 'Review role for escalations at this step. Resolution returns to the original approver.',
             showInTable: true, required: false,
+        },
+        escalation_role_name: {
+            label: 'Escalation Role', type: 'text', hidden: true, showInTable: true,
         },
         text_3: {
             label: 'Mandatory',

@@ -1,11 +1,11 @@
 // src/config/purchaseStocks.js
 
 const stocks = {
-    frontendRoutes: ['/procurement/stocks'],
-    description: 'Manage stock requisition orders to fulfill approved requisitions from available inventory. This module handles the picking, packing, and issuance of items from the store/warehouse. Items not available in stock are automatically flagged for purchase order processing.',
+    frontendRoutes: ['/procurement/stock'],
+    description: 'Existing stock documents are retained for reference. Use Stock balances & movements to confirm opening quantities, receive goods from procurement and issue available quantities against approved requisitions. Add any outstanding requested quantity to procurement.',
     form: 'StockForm',
     tableName: 'stocks',
-    displayName: 'Stock Requisition & Issuance',
+    displayName: 'Stock documents',
     icon: 'ShoppingCart',
     defaultSort: { field: 'created_at', direction: 'DESC' },
     defaultFilters: { status: 'pending_approval' },

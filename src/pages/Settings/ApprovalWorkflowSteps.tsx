@@ -27,6 +27,7 @@ import {
     getTableDisplayName
 } from '../../utils/functions/tableBuilder.js';
 import { getTableMapping } from '../../config/tableMapping.js';
+import {allowsCashDisbursement, workflowStepPayload} from '../../utils/functions/workflowStepSettings';
 import Swal from 'sweetalert2';
 
 import { 
@@ -64,6 +65,8 @@ const ApprovalWorkflowSteps: React.FC = () => {
     const titleHeaders = getTitleRow(1)
     const {id:parent_id, name:parent_name} = titleHeaders || {};
     const initialData = {parent_id}
+    const workflowType = titleHeaders?.item_id1;
+    const hiddenStepFields = useMemo(() => allowsCashDisbursement(workflowType) ? [] : ['text_4'], [workflowType]);
     
 
     if(!titleHeaders || Object.keys(titleHeaders).length === 0){
@@ -138,14 +141,14 @@ const ApprovalWorkflowSteps: React.FC = () => {
     }, []);
 
     const handleSave = useCallback(async (formData: any) => {
-        await loadUpdate(formData);
+        await loadUpdate(workflowStepPayload(formData, workflowType));
         setPage(0);
-    }, [loadUpdate]);
+    }, [loadUpdate, workflowType]);
 
     const handleUpdate = useCallback(async (formData: any) => {
-        await loadUpdate(formData);
+        await loadUpdate(workflowStepPayload(formData, workflowType));
         setPage(0);
-    }, [loadUpdate]);
+    }, [loadUpdate, workflowType]);
 
     const handleReload = useCallback((): void => {
         loadQuery(initialData);
@@ -382,6 +385,7 @@ const ApprovalWorkflowSteps: React.FC = () => {
                                 <div className="space-y-6">
                                     <DynamicForm
                                         tableName={TABLE_NAME}
+                                        hiddenFieldNames={hiddenStepFields}
                                         title={isEdit ? `Edit ${displayName}` : `Create ${displayName}`}
                                         submitLabel={isEdit ? `Update ${displayName}` : `Create ${displayName}`}
                                         onSave={isEdit ? handleUpdate : handleSave}

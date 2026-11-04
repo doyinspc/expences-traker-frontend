@@ -74,6 +74,7 @@ export interface DynamicFormProps {
   className?: string;
   optionData: OptionDataMap;
   countryOptions?: FieldOption[];
+  hiddenFieldNames?: string[];
 }
 
 // ==================== HELPER FUNCTIONS ====================
@@ -121,6 +122,7 @@ export const getCountryOptions = (): FieldOption[] => {
   ];
 };
 
+const EMPTY_HIDDEN_FIELDS: string[] = [];
 const EMPTY_INITIAL_DATA: Record<string, any> = {};
 
 // ==================== COMPONENT ====================
@@ -140,6 +142,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
   className = '',
   optionData,
   countryOptions,
+  hiddenFieldNames = EMPTY_HIDDEN_FIELDS,
 }) => {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -150,8 +153,8 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
   const fields = useMemo(() => {
     const configured = getFormFields(tableName);
     if (!configured) return configured;
-    return Object.fromEntries(Object.entries(configured).map(([name, field]) => [name, { ...field, hidden: field.hidden || (tableName === "users" && name === "password" && Boolean(initialData.id)), description: field.description || fieldGuidance[name] }]));
-  }, [tableName, initialData.id]);
+    return Object.fromEntries(Object.entries(configured).map(([name, field]) => [name, { ...field, hidden: hiddenFieldNames.includes(name) || field.hidden || (tableName === "users" && name === "password" && Boolean(initialData.id)), description: field.description || fieldGuidance[name] }]));
+  }, [tableName, initialData.id, hiddenFieldNames]);
 
   // Get visible fields (not hidden and showInForm !== false)
   const visibleFields = useMemo(() => {

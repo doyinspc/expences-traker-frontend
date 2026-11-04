@@ -78,6 +78,14 @@ function isFormField(field: any): field is FormField {
     return field && typeof field === 'object' && 'label' in field && 'type' in field;
 }
 
+const settingReferenceNames = (tableName: string, fields: Record<string, any>): Set<string> => {
+    if (getTableMapping(tableName)?.tableName !== 'commons') return new Set();
+    return new Set(Object.keys(fields).filter(name => fields[name].showInTable === true && (
+        name === 'parent_name' || /^item_name\d+$/.test(name) || name === 'escalation_role_name'
+    )));
+};
+const settingReferenceTarget = (name: string): string => name === 'parent_id' ? 'parent_name' : name === 'text_5' ? 'escalation_role_name' : name.replace(/^item_id(\d+)$/, 'item_name$1');
+
 // ==================== CORE FUNCTIONS ====================
 
 /**
@@ -88,6 +96,7 @@ export const buildTableDataFromMapping = (tableName: string): TableColumn[] => {
     if (!fields) return [];
 
     const tableData: TableColumn[] = [];
+    const referenceNames = settingReferenceNames(tableName, fields);
 
     // Add ID field (hidden)
     tableData.push({
@@ -106,15 +115,15 @@ export const buildTableDataFromMapping = (tableName: string): TableColumn[] => {
         if (!isFormField(field)) return;
         
         // Skip hidden fields
-        if (field.hidden) return;
+        if (field.hidden && !referenceNames.has(fieldName)) return;
 
         // Determine if field should show in table
-        const showTable = field.showInTable !== undefined 
+        const showTable = referenceNames.has(settingReferenceTarget(fieldName)) && !referenceNames.has(fieldName) ? false : field.showInTable !== undefined
             ? field.showInTable 
             : (field.type !== 'toggle' && field.type !== 'file' && field.type !== 'json' && field.type !== 'textarea');
 
         // Determine if field should show in form
-        const showForm = true;
+        const showForm = !field.hidden;
 
         // Map field type to table display type
         let tableType = 'text';
@@ -320,6 +329,7 @@ export const buildColumnVisibility = (tableName: string): Record<string, boolean
     if (!fields) return {};
 
     const visibility: Record<string, boolean> = {};
+    const referenceNames = settingReferenceNames(tableName, fields);
     
     // Always hide ID
     visibility['id'] = false;
@@ -328,6 +338,8 @@ export const buildColumnVisibility = (tableName: string): Record<string, boolean
     Object.entries(fields).forEach(([fieldName, field]) => {
         if (!isFormField(field)) return;
         
+        if (referenceNames.has(fieldName)) { visibility[fieldName] = true; return; }
+        if (referenceNames.has(settingReferenceTarget(fieldName))) { visibility[fieldName] = false; return; }
         // Hide hidden fields
         if (field.hidden) {
             visibility[fieldName] = false;

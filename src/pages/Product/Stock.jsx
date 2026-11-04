@@ -7,7 +7,7 @@ const StocksPage = () => {
     return (
         <>
         <StockLedgerPanel />
-        <p className="mb-4 rounded-lg border border-gray-200 p-3 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300">Existing stock documents are retained below for reference. Use Stock balances & movements above for confirmed opening quantities, procurement receipts and issues to requisitions.</p>
+        <p className="mb-4 rounded-lg border border-gray-200 p-3 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300">Earlier stock documents are retained below for reference; creating one does not deduct physical stock. Use Stock balances & movements above for confirmed opening quantities, procurement receipts and issues to requisitions.</p>
         <DisplayPage
             table_name="stocks"
             table_path="stock"
