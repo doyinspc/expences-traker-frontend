@@ -8,7 +8,8 @@
     "build": "node scripts/check-production-env.mjs && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "node --test"
+    "test": "node --test",
+    "lint:approval": "node scripts/check-approval-ui.mjs"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.3.1",

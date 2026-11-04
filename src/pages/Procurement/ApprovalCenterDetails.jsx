@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { ArrowLeft, FileText, History, CheckCircle2, Info } from 'lucide-react';
 import { API_PATH_SETTING, axiosConfig, tokenHelpers, SERVER_URL } from '../../actions/common';
 import PageBreadcrumb from '../../components/common/PageBreadCrumb';
+import ItemRevisionPanel from '../../components/approvals/ItemRevisionPanel';
 import CashMovementPanel from '../../components/approvals/CashMovementPanel';
 import ApprovalActions from '../../components/approvals/ApprovalActions';
 import StepsSidebar from '../../components/approvals/StepsSidebar';
@@ -26,14 +27,51 @@ const amount = value => Number(value || 0).toLocaleString(undefined, { minimumFr
 const card = 'min-w-0 rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900';
 const itemTitle = item => item.item_name || item.name || item.title || item.item_id || item.description || item.special_instructions || `Item ${item.id}`;
 const account = item => item.account_name || (item.account_id ? `Account ${item.account_id}` : 'Not assigned');
-const flags = item => [['Approved', Number(item.approved ?? item.is_approved) === 1 ? 'Yes' : 'No'], ['Fulfilled / Resolved', Number(item.resolved) === 1 ? 'Yes' : 'No']];
-function ItemLinks({ item, onUpload, uploading }) {
-  return <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-brand-600 dark:text-brand-300">{item.purchaseorder_id > 0 && <Link className="underline underline-offset-2" to={`/procurement/purchaseorder/${item.purchaseorder_id}`}>Procurement #{item.purchaseorder_id}</Link>}{item.sku_id > 0 && <Link className="underline underline-offset-2" to={`/procurement/stock/${item.sku_id}`}>Stock #{item.sku_id}</Link>}{item.doc_path && <a href={receiptUrl(item.doc_path)} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">View receipt / image <span className="sr-only">for {itemTitle(item)} (opens in a new tab)</span></a>}{onUpload && <label className="cursor-pointer underline underline-offset-2">{uploading ? 'Uploading…' : item.doc_path ? 'Replace receipt / image' : 'Upload receipt / image'}<input type="file" className="sr-only" disabled={uploading} accept=".pdf,.jpg,.jpeg,.png,.webp,.txt,.csv,.docx,.xlsx" onChange={event => { const file=event.target.files?.[0]; if(file)onUpload(item,file); event.target.value=''; }} /></label>}</div>;
+const flags = item => [['Approved', Number(item.approval_status)===2 ? 'Rejected' : Number(item.approved ?? item.is_approved) === 1 ? 'Yes' : 'No'], ['Fulfilled / Resolved', Number(item.resolved) === 1 ? 'Yes' : 'No']];
+function ItemLinks({ item, onUpload, uploading, revisions }) {
+  return <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-brand-600 dark:text-brand-300">{item.purchaseorder_id > 0 && <Link className="underline underline-offset-2" to={`/procurement/purchaseorder/${item.purchaseorder_id}`}>Procurement #{item.purchaseorder_id}</Link>}{item.sku_id > 0 && <Link className="underline underline-offset-2" to={`/procurement/stock/${item.sku_id}`}>Stock #{item.sku_id}</Link>}{item.doc_path && <a href={receiptUrl(item.doc_path)} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">View receipt / image <span className="sr-only">for {itemTitle(item)} (opens in a new tab)</span></a>}{onUpload && <label className="cursor-pointer underline underline-offset-2">{uploading ? 'Uploading…' : item.doc_path ? 'Replace receipt / image' : 'Upload receipt / image'}<input type="file" className="sr-only" disabled={uploading} accept=".pdf,.jpg,.jpeg,.png,.webp,.txt,.csv,.docx,.xlsx" onChange={event => { const file=event.target.files?.[0]; if(file)onUpload(item,file); event.target.value=''; }} /></label>}<ItemPriceHistory item={item} revisions={revisions}/></div>;
 }
-function RequestedItems({ items, documentType, onUpload, uploading }) {
+/** Expand only the selected item's audited changes, without opening a separate page. */
+export function ItemPriceHistory({ item, revisions }) {
+  const changes = (revisions?.history || []).filter(
+    (event) => Number(event.item_id) === Number(item.id),
+  );
+  if (!changes.length) return null;
+  return (
+    <details className="w-full text-gray-700 dark:text-gray-300">
+      <summary className="flex min-h-10 cursor-pointer items-center gap-1.5 text-brand-600 dark:text-brand-300">
+        <History size={14} aria-hidden="true" />
+        Price / item history ({changes.length})
+        <span className="sr-only"> for {itemTitle(item)}</span>
+      </summary>
+      <ol className="space-y-3 border-l-2 border-gray-200 pl-3 dark:border-gray-700">
+        {changes.map((event) => (
+          <li key={event.revision} className="max-w-xl">
+            <p className="font-medium">
+              {event.at} · {event.actor_name} · {event.role_name}
+            </p>
+            <p className="mt-1">
+              {event.change === 'price'
+                ? `Unit price: ${amount(event.before.unit_price)} → ${amount(event.after.unit_price)}`
+                : event.change === 'reject'
+                  ? 'Item rejected'
+                  : 'Item restored'}
+            </p>
+            <p className="mt-1">
+              Payable: {amount(event.before.rejected ? 0 : event.before.total_price)} →{' '}
+              {amount(event.after.rejected ? 0 : event.after.total_price)}
+            </p>
+            <p className="mt-1 whitespace-pre-wrap break-words">{event.reason}</p>
+          </li>
+        ))}
+      </ol>
+    </details>
+  );
+}
+function RequestedItems({ items, documentType, onUpload, uploading, revisions }) {
   return <section className={`${card} overflow-hidden`} aria-labelledby="requested-items-heading"><div className="flex items-center gap-2 border-b border-gray-100 p-5 dark:border-gray-800"><FileText size={18} className="text-gray-400" aria-hidden="true" /><h2 id="requested-items-heading" className="font-semibold text-gray-900 dark:text-white">{documentFlow(documentType).items} <span className="ml-1 text-sm font-normal text-gray-500 dark:text-gray-400">({items.length})</span></h2></div>
-    <div className="hidden overflow-x-auto xl:block" role="region" aria-label="Requested item details" tabIndex={0}><table className="w-full min-w-[900px] text-left text-sm"><thead className="bg-gray-50 text-xs text-gray-500 dark:text-gray-400 dark:bg-gray-800/50"><tr>{['Item / Description', 'Chart of account', 'Category', 'Quantity', 'Unit cost', 'Cost / Debit', 'Credit', 'Approved', 'Fulfilled / Resolved'].map(label => <th scope="col" key={label} className="whitespace-nowrap px-4 py-3">{label}</th>)}</tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-800">{items.map(item => <tr key={item.id} className="text-gray-700 dark:text-gray-300"><td className="px-4 py-4 font-medium text-gray-900 dark:text-gray-100">{itemTitle(item)}<ItemLinks item={item} onUpload={onUpload} uploading={uploading} /></td><td className="px-4 py-4">{account(item)}</td><td className="px-4 py-4">{item.category_name || '—'}</td><td className="px-4 py-4 tabular-nums">{item.quantity ?? '—'}</td><td className="px-4 py-4 tabular-nums">{amount(item.unit_price)}</td><td className="px-4 py-4 tabular-nums">{amount(item.total_price ?? item.amount)}</td><td className="px-4 py-4 tabular-nums">{amount(item.credit_price)}</td>{flags(item).map(([label, value]) => <td key={label} className="px-4 py-4">{value}</td>)}</tr>)}</tbody></table></div>
-    <div className="divide-y divide-gray-100 xl:hidden dark:divide-gray-800">{items.map(item => <article key={item.id} className="p-5"><div className="flex items-start justify-between gap-3"><h3 className="min-w-0 font-medium text-gray-900 dark:text-white">{itemTitle(item)}</h3><span className="shrink-0 text-sm font-semibold tabular-nums text-gray-900 dark:text-gray-100">{amount(item.total_price ?? item.amount)}</span></div><p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Chart of account: {account(item)}</p><dl className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">{[['Category', item.category_name || '—'], ['Quantity', item.quantity ?? '—'], ['Unit cost', amount(item.unit_price)], ['Credit', amount(item.credit_price)], ...flags(item)].map(([label, value]) => <div key={label}><dt className="text-gray-500 dark:text-gray-400">{label}</dt><dd className="mt-1 text-gray-800 dark:text-gray-200">{value}</dd></div>)}</dl><ItemLinks item={item} onUpload={onUpload} uploading={uploading} /></article>)}</div>
+    <div className="hidden overflow-x-auto xl:block" role="region" aria-label="Requested item details" tabIndex={0}><table className="w-full min-w-[900px] text-left text-sm"><thead className="bg-gray-50 text-xs text-gray-500 dark:text-gray-400 dark:bg-gray-800/50"><tr>{['Item / Description', 'Chart of account', 'Category', 'Quantity', 'Unit cost', 'Cost / Debit', 'Credit', 'Approved', 'Fulfilled / Resolved'].map(label => <th scope="col" key={label} className="whitespace-nowrap px-4 py-3">{label}</th>)}</tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-800">{items.map(item => <tr key={item.id} className="text-gray-700 dark:text-gray-300"><td className="px-4 py-4 font-medium text-gray-900 dark:text-gray-100">{itemTitle(item)}<ItemLinks item={item} onUpload={onUpload} uploading={uploading} revisions={revisions} /></td><td className="px-4 py-4">{account(item)}</td><td className="px-4 py-4">{item.category_name || '—'}</td><td className="px-4 py-4 tabular-nums">{item.quantity ?? '—'}</td><td className="px-4 py-4 tabular-nums">{amount(item.unit_price)}</td><td className="px-4 py-4 tabular-nums">{amount(item.total_price ?? item.amount)}</td><td className="px-4 py-4 tabular-nums">{amount(item.credit_price)}</td>{flags(item).map(([label, value]) => <td key={label} className="px-4 py-4">{value}</td>)}</tr>)}</tbody></table></div>
+    <div className="divide-y divide-gray-100 xl:hidden dark:divide-gray-800">{items.map(item => <article key={item.id} className="p-5"><div className="flex items-start justify-between gap-3"><h3 className="min-w-0 font-medium text-gray-900 dark:text-white">{itemTitle(item)}</h3><span className="shrink-0 text-sm font-semibold tabular-nums text-gray-900 dark:text-gray-100">{amount(item.total_price ?? item.amount)}</span></div><p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Chart of account: {account(item)}</p><dl className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">{[['Category', item.category_name || '—'], ['Quantity', item.quantity ?? '—'], ['Unit cost', amount(item.unit_price)], ['Credit', amount(item.credit_price)], ...flags(item)].map(([label, value]) => <div key={label}><dt className="text-gray-500 dark:text-gray-400">{label}</dt><dd className="mt-1 text-gray-800 dark:text-gray-200">{value}</dd></div>)}</dl><ItemLinks item={item} onUpload={onUpload} uploading={uploading} revisions={revisions} /></article>)}</div>
     {!items.length && <p className="p-5 text-sm text-gray-500 dark:text-gray-400">No line items recorded for this document.</p>}
   </section>;
 }
@@ -88,6 +126,40 @@ export default function ApprovalCenterDetails() {
     onSuccess: async result => {setFailure('');setSaved('Cash movement saved. Spending, budget usage and history have been updated.');if(Number(result.notifications?.failed)>0)toast('Cash entry saved. Email delivery is queued for retry.');await client.invalidateQueries();},
     onError: async error => {setFailure(error.response?.data?.message||error.message);await query.refetch();},
   });
+  // The version binds this change to the exact request the approver reviewed.
+  // Refreshing all dependent queries keeps totals, inbox ownership and budget data aligned.
+  const itemRevision = useMutation({
+    mutationFn: async (values) => {
+      const { data } = await axios.post(
+        API_PATH_SETTING,
+        {
+          ...values,
+          table: 'approvalcenter',
+          cat: 'revise_approval_item',
+          workflow_id,
+          expected_version: query.data.action_version,
+        },
+        axiosConfig,
+      );
+      if (data?.status === 'error') throw new Error(data.message);
+      return data;
+    },
+    onSuccess: async (result) => {
+      setFailure('');
+      setSaved(
+        result.data?.item_revisions?.reapproval
+          ? 'Item change saved. The request has returned to earlier approvers; further payments are paused.'
+          : 'Item change saved. Totals have been recalculated and notifications queued.',
+      );
+      if (Number(result.notifications?.failed) > 0)
+        toast('Change saved. Email delivery is queued for retry.');
+      await client.invalidateQueries();
+    },
+    onError: async (error) => {
+      setFailure(error.response?.data?.message || error.message);
+      await query.refetch();
+    },
+  });
   if (query.isPending) return <p role="status" className="p-8 text-gray-500 dark:text-gray-400">Loading approval request…</p>;
   if (query.error) return <div role="alert" className={`${card} space-y-3 p-6 text-red-600 dark:text-red-300`}><h1 className="font-semibold">Request could not be loaded</h1><p>{query.error.response?.data?.message || query.error.message}</p><button type="button" onClick={() => query.refetch()} className="min-h-11 underline">Try again</button><Link className="ml-4 underline" to={back}>{backLabel}</Link></div>;
   const workflow = query.data || {}, document = workflow.document_data || {}, step = currentStep(workflow);
@@ -106,8 +178,9 @@ export default function ApprovalCenterDetails() {
     </section>
     {workflow.finance?.disbursement && <p role="status" className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200">{closed ? 'Disbursed — workflow completed' : Number(workflow.document_type_id)===3 ? 'Cash advance disbursed — reconciliation ongoing' : 'Disbursed — workflow ongoing'} · {workflow.cash_movements?.net_paid ?? workflow.finance.disbursement.amount} net paid · First payment: {date(workflow.finance.disbursement.at)}. Already included in spending and budget usage; closure does not charge it again.</p>}
     <WorkflowDrawer key={workflow.id} currentOwner={workflow.current_role_name} closed={closed}><StepsSidebar steps={workflow.steps || []} role_id={auth.role_id} activeStep={step} workflow={workflow} isWorkflowCompleted={closed} /></WorkflowDrawer>
-      <RequestedItems items={workflow.document_items || []} documentType={workflow.document_type_id} onUpload={workflow.permissions?.can_upload_receipt ? (item,file)=>receiptUpload.mutate({item,file}) : undefined} uploading={receiptUpload.isPending} />
+      <RequestedItems items={workflow.document_items || []} documentType={workflow.document_type_id} revisions={workflow.item_revisions} onUpload={workflow.permissions?.can_upload_receipt ? (item,file)=>receiptUpload.mutate({item,file}) : undefined} uploading={receiptUpload.isPending} />
         {<p className="flex gap-2 rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200"><Info size={18} className="mt-1 shrink-0" aria-hidden="true" />{documentFlow(workflow.document_type_id).description}</p>}
+        <ItemRevisionPanel key={`items-${workflow.id}-${workflow.action_version}`} workflow={workflow} isLoading={itemRevision.isPending} onSave={values=>itemRevision.mutateAsync(values)} />
         <CashMovementPanel key={`cash-${workflow.id}-${workflow.action_version}`} workflow={workflow} isLoading={cashMutation.isPending} onSave={values=>cashMutation.mutateAsync(values)} />
         <div id="decision-panel" className="min-w-0 space-y-3"><ApprovalActions key={`${workflow.id}-${workflow.action_version}-${auth.role_id}`} workflow={workflow} isLoading={mutation.isPending} onSubmit={values => mutation.mutateAsync(values)} /><ApprovalEmailReminder workflow={workflow} />{!closed && <p className="px-1 text-xs leading-5 text-gray-500 dark:text-gray-400">{workflow.escalation_role_name ? `Escalation role: ${workflow.escalation_role_name}` : workflow.permissions?.can_approve ? 'No escalation role is configured. An administrator can set one in workflow settings.' : ''}</p>}</div>
       </div>

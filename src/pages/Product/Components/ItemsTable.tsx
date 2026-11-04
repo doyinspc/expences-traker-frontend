@@ -21,7 +21,8 @@ import {
   TrendingUp,
   TrendingDown,
   BarChart3,
-  PieChart
+  PieChart,
+  History
 } from 'lucide-react';
 import { SERVER_URL } from '../../../actions/common';
 import { isArrayWithValue } from '../../../utils/functions';
@@ -358,7 +359,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
 
   // Render budget information - only shows when resolved = 0 (pending)
   const renderBudgetInfo = (item: DocumentItem) => {
-    if (item.resolved !== 0) return null;
+    if (Number(item.resolved)!==0 || Number(item.approval_status)===2) return null;
     
     const budget = getBudgetInfo(item);
     if (!budget.hasBudgetData) return null;
@@ -532,7 +533,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
     );
   }
 
-  const hasBudgetData = budgetCategories.length > 0 || budgetCategoryItems.length > 0;
+  const hasBudgetData = (budgetCategories.length > 0 || budgetCategoryItems.length > 0) && items.some(item=>Number(item.resolved)===0&&Number(item.approval_status)!==2);
 
   return (
     <div className="border-t border-gray-200 dark:border-gray-700">
@@ -563,7 +564,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
         </div>
       </div>
 
-      {showBudget && getBudgetPerformanceSummary() && (
+      {showBudget && ![2,3].includes(Number(documentTypeId)) && getBudgetPerformanceSummary() && (
         <div className="px-4 py-2 bg-gray-50/80 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700">
           {renderBudgetSummary()}
         </div>
@@ -606,12 +607,12 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
             {items.map((item, index) => {
               const isProcessingItem = isProcessing(item.id);
               const isSettled = parseInt(documentTypeId) == 1 ? item.approved === 1 :  item.resolved === 1;
-              const isRejected = parseInt(documentTypeId) == 2 ? item.approved === 2 : item.resolved === 2;
-              const isPending = parseInt(documentTypeId) == 0 ? item.approved === 0 :item.resolved === 0;
+              const isRejected = Number(item.approval_status)===2 || Number(item.resolved)===2;
+              const isPending = !isRejected && (Number(documentTypeId)===1 ? Number(item.approved)===0 : Number(item.resolved)===0);
               const isExpanded = expandedRowId === item.id;
               const hasDoc = item?.doc_path && item.doc_path !== '';
               const budget = getBudgetInfo(item);
-              const resolvedStatus = getResolvedStatus(item.resolved);
+              const resolvedStatus = getResolvedStatus(isRejected?2:Number(item.resolved));
 
               return (
                 <React.Fragment key={item.id || index}>
@@ -878,6 +879,36 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                               </div>
                             )}
 
+                            {item.item_revision_history?.length > 0 && (
+                              <details className="col-span-1 sm:col-span-2 lg:col-span-4 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                                <summary className="flex min-h-10 cursor-pointer items-center gap-2 text-sm font-medium text-brand-600 dark:text-brand-300">
+                                  <History className="h-4 w-4" aria-hidden="true" />
+                                  Price / item history ({item.item_revision_history.length})
+                                </summary>
+                                <ol className="mt-2 space-y-3 text-xs text-gray-700 dark:text-gray-300">
+                                  {item.item_revision_history.map((event: any) => (
+                                    <li key={`${event.instance_id}:${event.revision}`}>
+                                      <p className="font-medium">
+                                        {event.at} · {event.actor_name} · {event.role_name}
+                                      </p>
+                                      <p className="mt-1">
+                                        {event.change === 'price'
+                                          ? `Unit price: ${formatCurrency(event.before.unit_price, currency)} → ${formatCurrency(event.after.unit_price, currency)}`
+                                          : event.change === 'reject'
+                                            ? 'Item rejected'
+                                            : 'Item restored'}
+                                      </p>
+                                      <p className="mt-1">
+                                        Payable:{' '}
+                                        {formatCurrency(event.before.rejected ? 0 : event.before.total_price, currency)} →{' '}
+                                        {formatCurrency(event.after.rejected ? 0 : event.after.total_price, currency)}
+                                      </p>
+                                      <p className="mt-1 whitespace-pre-wrap break-words">{event.reason}</p>
+                                    </li>
+                                  ))}
+                                </ol>
+                              </details>
+                            )}
                             {showBudget && renderBudgetInfo(item)}
                             {hasDoc && renderFilePreview(item)}
 

@@ -533,7 +533,7 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
 
     if (documentItems && Array.isArray(documentItems)) {
       documentItems.forEach(item => {
-        const amount = parseFloat(String(item.total_price || item.total_amount || 0));
+        const amount = Number(item.approval_status)===2 ? 0 : parseFloat(String(item.total_price ?? item.total_amount ?? 0));
         if (!isNaN(amount)) {
           totalAmount += amount;
           totalItems++;
