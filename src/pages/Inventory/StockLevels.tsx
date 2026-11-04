@@ -7,7 +7,7 @@ const StockLevels: React.FC = () => {
     <>
       <PageBreadcrumb pageTitle="Stock Levels" />
       <div className="space-y-6">
-        <StockLedgerPanel />
+        <StockLedgerPanel reportOnly />
       </div>
     </>
   );

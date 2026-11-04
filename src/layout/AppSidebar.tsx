@@ -214,6 +214,13 @@ const navItems: NavItem[] = [
         parent_path_number: 5,
         child_path_number: 3,
       },
+      {
+        id: 504,
+        name: "Stock report",
+        path: "/reports/stock",
+        parent_path_number: 3,
+        child_path_number: 6,
+      },
     ],
   },
 ];

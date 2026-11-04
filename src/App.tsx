@@ -65,6 +65,7 @@ const Budgets = lazy(() => import("./pages/Finance/Budgets"));
 // Inventory
 const GoodsReceived = lazy(() => import("./pages/Inventory/GoodsReceived"));
 const FixedAssets = lazy(() => import("./pages/Inventory/FixedAssets"));
+const StockReport = lazy(() => import("./pages/Reports/StockReport"));
 const StockLevels = lazy(() => import("./pages/Inventory/StockLevels"));
 const Allocations = lazy(() => import("./pages/Inventory/Allocations"));
 
@@ -156,6 +157,7 @@ export default function App() {
             <Route path="/inventory/allocations" element={<Allocations />} />
 
             {/* Reports & Analytics */}
+            <Route path="/reports/stock" element={<StockReport />} />
             <Route path="/reports/expense-asset" element={<ExpenseAsset />} />
             <Route path="/reports/cash-flow" element={<CashFlow />} />
             <Route path="/reports/audit" element={<AuditTrails />} />
