@@ -100,6 +100,22 @@ export interface ItemsTableProps {
   showBudgetInfo?: boolean;
 }
 
+/**
+ * Purpose: preserve the original expandable document item table and its contextual actions.
+ *
+ * Review additions in this update:
+ * 1. Keep the existing row expansion, quantities, prices, receipt access and action layout.
+ * 2. Interpret approval_status=2 as item rejection so rejected rows are clearly labelled.
+ * 3. Show category/item budget guidance only for unresolved, non-rejected items; a paid
+ *    procurement/cash-advance item does not repeat its pre-payment budget comparison.
+ * 4. In an expanded row, expose the supplied item_revision_history behind a clock control:
+ *    actor/role/date, before/after price or decision, payable values and the saved reason.
+ * 5. Keep original recorded prices visible while the parent total excludes rejected values.
+ *
+ * The model supplies only this item's matching history. UI action callbacks do not grant
+ * write permission: completed items, actual cash and stock movements remain protected by
+ * their backend services and normal CRUD integrity checks.
+ */
 const ItemsTable: React.FC<ItemsTableProps> = ({
   items,
   isLoading,

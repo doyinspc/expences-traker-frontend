@@ -28,10 +28,30 @@ const card = 'min-w-0 rounded-xl border border-gray-200 bg-white dark:border-gra
 const itemTitle = item => item.item_name || item.name || item.title || item.item_id || item.description || item.special_instructions || `Item ${item.id}`;
 const account = item => item.account_name || (item.account_id ? `Account ${item.account_id}` : 'Not assigned');
 const flags = item => [['Approved', Number(item.approval_status)===2 ? 'Rejected' : Number(item.approved ?? item.is_approved) === 1 ? 'Yes' : 'No'], ['Fulfilled / Resolved', Number(item.resolved) === 1 ? 'Yes' : 'No']];
+/**
+ * Purpose: keep document references, receipts and item history beside the existing item row.
+ *
+ * Algorithm: render only applicable procurement/stock links, resolve an existing receipt
+ * through the safe URL helper, expose upload input only when the parent supplied an
+ * authorised upload callback, and append this item's expandable revision history.
+ * The visibility of these links does not grant mutation rights; the API rechecks uploads.
+ */
 function ItemLinks({ item, onUpload, uploading, revisions }) {
   return <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-brand-600 dark:text-brand-300">{item.purchaseorder_id > 0 && <Link className="underline underline-offset-2" to={`/procurement/purchaseorder/${item.purchaseorder_id}`}>Procurement #{item.purchaseorder_id}</Link>}{item.sku_id > 0 && <Link className="underline underline-offset-2" to={`/procurement/stock/${item.sku_id}`}>Stock #{item.sku_id}</Link>}{item.doc_path && <a href={receiptUrl(item.doc_path)} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">View receipt / image <span className="sr-only">for {itemTitle(item)} (opens in a new tab)</span></a>}{onUpload && <label className="cursor-pointer underline underline-offset-2">{uploading ? 'Uploading…' : item.doc_path ? 'Replace receipt / image' : 'Upload receipt / image'}<input type="file" className="sr-only" disabled={uploading} accept=".pdf,.jpg,.jpeg,.png,.webp,.txt,.csv,.docx,.xlsx" onChange={event => { const file=event.target.files?.[0]; if(file)onUpload(item,file); event.target.value=''; }} /></label>}<ItemPriceHistory item={item} revisions={revisions}/></div>;
 }
-/** Expand only the selected item's audited changes, without opening a separate page. */
+/**
+ * Purpose: let a reviewer inspect the selected item's changes without leaving the compact table.
+ *
+ * Algorithm:
+ * 1. Filter the supplied revision history by this item's ID; return null when none matches.
+ * 2. Render a collapsed clock/history control containing only those matching events.
+ * 3. For each event show actor, role/time, original and revised unit price or rejection/
+ *    restoration, effective payable before/after values, and the saved reason.
+ * 4. Render values as React text rather than injected HTML; preserve the recorded order.
+ *
+ * The history is evidence, not an editor. Opening it never changes an item or approval.
+ * @returns {React.ReactNode} Per-item expandable history, or null without tracked changes.
+ */
 export function ItemPriceHistory({ item, revisions }) {
   const changes = (revisions?.history || []).filter(
     (event) => Number(event.item_id) === Number(item.id),
@@ -68,6 +88,15 @@ export function ItemPriceHistory({ item, revisions }) {
     </details>
   );
 }
+/**
+ * Purpose: retain readable item detail on desktop and phone while adding audit/receipt access.
+ *
+ * Algorithm: choose the existing desktop table or narrow-screen cards, display saved item,
+ * account, category, quantity and price values, interpret rejection/resolution markers,
+ * and pass each row's permitted receipt action/history into ItemLinks.
+ * Rejected original prices remain visible as evidence even though the payable header
+ * total excludes them. This component does not recalculate or persist financial events.
+ */
 function RequestedItems({ items, documentType, onUpload, uploading, revisions }) {
   return <section className={`${card} overflow-hidden`} aria-labelledby="requested-items-heading"><div className="flex items-center gap-2 border-b border-gray-100 p-5 dark:border-gray-800"><FileText size={18} className="text-gray-400" aria-hidden="true" /><h2 id="requested-items-heading" className="font-semibold text-gray-900 dark:text-white">{documentFlow(documentType).items} <span className="ml-1 text-sm font-normal text-gray-500 dark:text-gray-400">({items.length})</span></h2></div>
     <div className="hidden overflow-x-auto xl:block" role="region" aria-label="Requested item details" tabIndex={0}><table className="w-full min-w-[900px] text-left text-sm"><thead className="bg-gray-50 text-xs text-gray-500 dark:text-gray-400 dark:bg-gray-800/50"><tr>{['Item / Description', 'Chart of account', 'Category', 'Quantity', 'Unit cost', 'Cost / Debit', 'Credit', 'Approved', 'Fulfilled / Resolved'].map(label => <th scope="col" key={label} className="whitespace-nowrap px-4 py-3">{label}</th>)}</tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-800">{items.map(item => <tr key={item.id} className="text-gray-700 dark:text-gray-300"><td className="px-4 py-4 font-medium text-gray-900 dark:text-gray-100">{itemTitle(item)}<ItemLinks item={item} onUpload={onUpload} uploading={uploading} revisions={revisions} /></td><td className="px-4 py-4">{account(item)}</td><td className="px-4 py-4">{item.category_name || '—'}</td><td className="px-4 py-4 tabular-nums">{item.quantity ?? '—'}</td><td className="px-4 py-4 tabular-nums">{amount(item.unit_price)}</td><td className="px-4 py-4 tabular-nums">{amount(item.total_price ?? item.amount)}</td><td className="px-4 py-4 tabular-nums">{amount(item.credit_price)}</td>{flags(item).map(([label, value]) => <td key={label} className="px-4 py-4">{value}</td>)}</tr>)}</tbody></table></div>
@@ -75,6 +104,28 @@ function RequestedItems({ items, documentType, onUpload, uploading, revisions })
     {!items.length && <p className="p-5 text-sm text-gray-500 dark:text-gray-400">No line items recorded for this document.</p>}
   </section>;
 }
+/**
+ * Purpose: coordinate one approval detail page without replacing its original workflow layout.
+ *
+ * Data/action algorithm:
+ * 1. Read the workflow route ID and authenticated location/role; keep return navigation
+ *    consistent with My Approvals versus the oversight centre.
+ * 2. Query authorised detail using tenant, session and selected context in the cache key,
+ *    so switching location or role cannot reuse another context's reviewable response.
+ * 3. Render the current owner, original stage sidebar/mobile drawer, item table and compact
+ *    optional revision tools from server capabilities rather than deriving approval rights.
+ * 4. Bind decision, receipt, cash and item-change writes to the detail's action_version.
+ *    Decisions also include the current step ID; uploads send only the allowed receipt data.
+ * 5. After a saved change, refresh dependent caches so totals, inbox owner, financial data
+ *    and earlier-step reapproval state stay aligned. Explain queued email retries separately
+ *    from the already committed business change.
+ * 6. On failure, retain the error and refetch current detail; stale decisions are not silently
+ *    replayed against a new role, location, price or financial balance.
+ * 7. Preserve expanded histories and keep closed workflows read-only through server rights.
+ *
+ * This React coordinator sends proposals; the backend owns authorisation, exact-cents
+ * calculation, locks, audit, workflow movement and cash/refund rules.
+ */
 export default function ApprovalCenterDetails() {
   const { workflow_id } = useParams();
   const route = useLocation();

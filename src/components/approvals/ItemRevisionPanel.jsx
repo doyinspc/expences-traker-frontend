@@ -1,5 +1,12 @@
 import React, { useRef, useState } from 'react';
 
+/**
+ * Purpose: format a review amount for display using the reader's locale.
+ *
+ * Algorithm: coerce an absent display value to zero, then request exactly two fractional
+ * digits from toLocaleString(). This is presentation only; the server uses integer cents
+ * for validation, workflow limits, payments and refunds.
+ */
 const money = (value) =>
   Number(value || 0).toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -7,8 +14,34 @@ const money = (value) =>
   });
 const control =
   'mt-1 block min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100';
+/**
+ * Purpose: give item controls a readable label without requiring another lookup.
+ *
+ * Algorithm: prefer the supplied item name, then stored name/description, and finally an
+ * explicit Item #ID fallback. Return text; React performs the HTML escaping when displayed.
+ */
 const title = (item) => item.item_name || item.name || item.description || `Item #${item.id}`;
-/** Preview the effective payable amount; the server validates and commits exact cents. */
+/**
+ * Purpose: preview the effective item amount before a reasoned change is submitted.
+ *
+ * Algorithm:
+ * 1. Return null without a selected item; treat a rejected item's current payable value as zero.
+ * 2. For rejection preview zero; for restoration recover the saved original line amount.
+ * 3. For a price edit, reject unsupported decimal syntax before calculating the display value.
+ * 4. Use procurement_quantity when the procurement funds only a remainder; otherwise use
+ *    saved quantity. Treat a quantity-free service as one amount without changing its units.
+ * 5. Return before, after and whether this individual item increased, so the user sees the
+ *    projected total and earlier-approval consequence before saving.
+ *
+ * The preview never mutates an item or authorises payment. The server rechecks exact cents,
+ * document membership, permissions, workflow limits and expected version in its transaction.
+ *
+ * @param {object} item Selected saved item and decision state.
+ * @param {'price'|'reject'|'restore'} change Requested type of adjustment.
+ * @param {string} price Proposed unit price for a price adjustment.
+ * @param {number|string} type Parent document type; 2 denotes procurement.
+ * @returns {{before:number, after:number, increases:boolean}|null} Display preview or invalid input.
+ */
 export function revisionPreview(item, change, price, type) {
   if (!item) return null;
   const rejected = Number(item.approval_status) === 2,
@@ -27,9 +60,30 @@ export function revisionPreview(item, change, price, type) {
   return { before, after, increases: after > before };
 }
 /**
- * Compact, optional review tools inside the existing approval layout.
- * Server permissions control editing; a successful save refreshes the workflow version,
- * totals and owner. History remains available to viewers after editing is locked.
+ * Purpose: add compact, auditable item-review tools inside the existing approval layout.
+ *
+ * Render/action algorithm:
+ * 1. Initialise only local form/saving state; do not alter the supplied workflow or its items.
+ * 2. Render only for procurement/cash advance when the server supplies edit rights, history
+ *    or applicable budget guidance. Completed/view-only requests never gain an edit form.
+ * 3. Keep the outer review row collapsed by default, with concise visible badges for
+ *    reapproval/payment pause or money due for return, preserving the compact page.
+ * 4. Derive the selected item's allowed action. A rejected item must be restored before its
+ *    price can be changed; calculate before/after values and the proposed document total.
+ * 5. Present optional pre-payment budget guidance without inventing missing allocations or
+ *    making budget setup a new approval restriction. Paid items no longer repeat this check.
+ * 6. Submit only a reasoned proposed change through onSave. The owning page supplies the
+ *    live expected_version and refreshes totals, history, permissions and current ownership.
+ * 7. Keep individual revisions and approval snapshots available in expandable history.
+ *    Label older recovered baselines instead of claiming a historical price was captured then.
+ *
+ * All access and financial restrictions are server-enforced. This component cannot close
+ * approval, overwrite saved cash, edit quantities/accounts or silently send a bank payment.
+ *
+ * @param {object} props.workflow Authorised server detail, items, capabilities and revision history.
+ * @param {Function} props.onSave Async mutation supplied by the approval detail coordinator.
+ * @param {boolean} props.isLoading Whether an external save is already in progress.
+ * @returns {React.ReactNode} One compact review section or null when not applicable.
  */
 export default function ItemRevisionPanel({ workflow, onSave, isLoading = false }) {
   const [itemId, setItemId] = useState(''),
@@ -60,6 +114,20 @@ export default function ItemRevisionPanel({ workflow, onSave, isLoading = false 
     ),
     newTotal = preview ? currentTotal - preview.before + preview.after : currentTotal;
   const busy = saving || isLoading;
+  /**
+   * Purpose: send one complete item adjustment while preventing repeated UI submissions.
+   *
+   * Algorithm:
+   * 1. Prevent native form navigation and return while a save is already active.
+   * 2. Require an item, valid preview and non-empty reason; leave the form open on failure.
+   * 3. Set the synchronous ref guard and rendered saving state, then await onSave with only
+   *    item ID, change type, proposed unit price and trimmed reason.
+   * 4. Clear the local selection/reason only after success; otherwise show the server's error.
+   * 5. Release both saving guards in finally, allowing a retry after a refused/stale action.
+   *
+   * The parent mutation adds the workflow/version. A browser preview is never trusted as
+   * the saved document total or as permission to bypass earlier approval.
+   */
   const submit = async (event) => {
     event.preventDefault();
     if (submitting.current || isLoading) return;

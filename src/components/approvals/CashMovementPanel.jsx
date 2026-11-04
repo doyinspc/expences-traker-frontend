@@ -2,6 +2,24 @@ import React, {useRef,useState} from 'react';
 import {formatReportMoney,reportDecimal} from '../../utils/functions/incomeExpenseReport';
 
 const control='mt-1 block min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100';
+/**
+ * Purpose: show actual item cash and offer only server-authorised payment/return actions.
+ *
+ * Algorithm:
+ * 1. Keep local kind/item/amount/date/reference/confirmation state; hide the panel when
+ *    the backend has not configured the cash milestone or supplied a cash summary.
+ * 2. Build action choices from can_pay/can_refund and the saved balances. A payment pause
+ *    or return requirement therefore cannot be bypassed by changing a local dropdown.
+ * 3. Offer only items with remaining allowance: planned minus gross paid for payment,
+ *    or paid minus already returned for a return. Keep rejected paid lines visible for refunds.
+ * 4. Display approved/payable, gross paid, returned, net paid, unpaid and money due for return.
+ * 5. Require actual-movement confirmation and submit a stable request key for safe retry.
+ * 6. Show immutable event history with dates, references and actors; do not treat final
+ *    closure as another payment or a returned amount as income.
+ *
+ * The server independently checks every cap, role, location, date and workflow version.
+ * These controls record money already moved; they do not initiate a bank transaction.
+ */
 export default function CashMovementPanel({workflow,onSave,isLoading=false}) {
   const cash=workflow.cash_movements;
   const [kind,setKind]=useState('payment'),[itemId,setItemId]=useState(''),[amount,setAmount]=useState(''),[date,setDate]=useState(cash?.today||''),[reference,setReference]=useState(''),[confirmed,setConfirmed]=useState(false),[error,setError]=useState('');
@@ -13,6 +31,15 @@ export default function CashMovementPanel({workflow,onSave,isLoading=false}) {
   const items=(workflow.document_items||[]).filter(item=>{const value=cash.lines?.[item.id];return value&&(action==='payment'?value.planned-value.paid:value.paid-value.returned)>0;});
   const selected=cash.lines?.[itemId],available=selected?(action==='payment'?selected.planned-selected.paid:selected.paid-selected.returned):0;
   const busy=isLoading||saving.current;
+  /**
+   * Purpose: submit one confirmed actual cash event with a retry-safe UI request key.
+   *
+   * Algorithm: prevent duplicate submission; validate selected item, positive decimal amount,
+   * actual date, reference and confirmation; create a request key once; await the parent save;
+   * clear completed inputs/key only on success; retain error/key for safe retry on failure;
+   * always release the synchronous saving guard. The backend detects changed-key reuse and
+   * stale versions, and the parent refreshes the authoritative cash summary after a save.
+   */
   const submit=async event=>{
     event.preventDefault();if(saving.current||isLoading)return;setError('');
     if(!itemId||!/^\d+(?:\.\d{1,2})?$/.test(amount)||Number(amount)<=0||!date||!reference.trim()||!confirmed){setError('Choose the item, amount, actual date and reference, then confirm the cash movement.');return;}
