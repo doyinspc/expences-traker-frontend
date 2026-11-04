@@ -79,7 +79,7 @@ const ExpenseAnalysis = () => {
     if (!selectedRows.length) return;
     
     // Create CSV from data
-    const headers = ['Category','Item','Account','Document Type','Total Amount','Type','Date','Location','Currency','Expense Amount','Income Amount','Net Contribution','Workflow State'];
+    const headers = ['Category','Item','Account','Document Type','Total Amount','Type','Date','Location','Currency','Expense Amount','Income Amount','Net Contribution','Workflow State','Cash Entry','Payment or Return Reference'];
     const rows = incomeExpenseCsvRows(selectedRows);
 
     const csv = buildReportCsv(headers, rows);

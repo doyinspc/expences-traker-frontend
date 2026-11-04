@@ -124,7 +124,7 @@ const workflowsteps = {
             label: 'Cash disbursement', type: 'select', required: false,
             options: 'disbursement_steps',
             tableFormat: value => value === 'cash_disbursement' ? 'Confirms disbursement' : 'Ordinary approval',
-            description: 'Procurement and cash advances only. Choose one step. Approval confirms the full saved amount was paid and counts it against the account and budget; later steps continue. Applies to newly submitted workflows.',
+            description: 'Procurement and cash advances only. Choose one step. Record actual full or partial payments at this step. Paid amounts count against the account and budget while later approvals, instalments and returns continue. Applies to newly submitted workflows.',
             showInTable: true,
         },
         text_5: {

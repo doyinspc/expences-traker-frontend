@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { ArrowLeft, FileText, History, CheckCircle2, Info } from 'lucide-react';
 import { API_PATH_SETTING, axiosConfig, tokenHelpers, SERVER_URL } from '../../actions/common';
 import PageBreadcrumb from '../../components/common/PageBreadCrumb';
+import CashMovementPanel from '../../components/approvals/CashMovementPanel';
 import ApprovalActions from '../../components/approvals/ApprovalActions';
 import StepsSidebar from '../../components/approvals/StepsSidebar';
 import WorkflowDrawer from '../../components/approvals/WorkflowDrawer';
@@ -79,6 +80,14 @@ export default function ApprovalCenterDetails() {
     onSuccess: async () => {setFailure('');setSaved('Receipt saved. Other reviewers can view it from this item.');await client.invalidateQueries({queryKey:['approvalcenter']});},
     onError: async error => {setFailure(error.response?.data?.message||error.message);await query.refetch();},
   });
+  const cashMutation = useMutation({
+    mutationFn: async values => {
+      const {data}=await axios.post(API_PATH_SETTING,{...values,table:'approvalcenter',cat:'record_cash_movement',workflow_id,expected_version:query.data.action_version},axiosConfig);
+      if(data?.status==='error')throw new Error(data.message);return data;
+    },
+    onSuccess: async result => {setFailure('');setSaved('Cash movement saved. Spending, budget usage and history have been updated.');if(Number(result.notifications?.failed)>0)toast('Cash entry saved. Email delivery is queued for retry.');await client.invalidateQueries();},
+    onError: async error => {setFailure(error.response?.data?.message||error.message);await query.refetch();},
+  });
   if (query.isPending) return <p role="status" className="p-8 text-gray-500 dark:text-gray-400">Loading approval request…</p>;
   if (query.error) return <div role="alert" className={`${card} space-y-3 p-6 text-red-600 dark:text-red-300`}><h1 className="font-semibold">Request could not be loaded</h1><p>{query.error.response?.data?.message || query.error.message}</p><button type="button" onClick={() => query.refetch()} className="min-h-11 underline">Try again</button><Link className="ml-4 underline" to={back}>{backLabel}</Link></div>;
   const workflow = query.data || {}, document = workflow.document_data || {}, step = currentStep(workflow);
@@ -95,10 +104,11 @@ export default function ApprovalCenterDetails() {
       {document.purpose && <div className="mt-5 border-t border-gray-100 pt-4 dark:border-gray-800"><p className="text-xs text-gray-500 dark:text-gray-400">Purpose</p><p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-gray-700 dark:text-gray-300">{document.purpose}</p></div>}
       {progress.total > 0 && <div className="mt-5 flex items-center gap-4"><div role="progressbar" aria-label="Approval progress" aria-valuenow={progress.percent} aria-valuemin={0} aria-valuemax={100} className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800"><div className="h-full rounded-full bg-brand-500" style={{ width: `${progress.percent}%` }} /></div><p className="shrink-0 text-xs text-gray-500 dark:text-gray-400">{progress.completed} of {progress.total} steps complete</p></div>}
     </section>
-    {workflow.finance?.disbursement && <p role="status" className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200">{closed ? 'Disbursed — workflow completed' : Number(workflow.document_type_id)===3 ? 'Cash advance disbursed — reconciliation ongoing' : 'Disbursed — workflow ongoing'} · {workflow.finance.disbursement.amount} · {date(workflow.finance.disbursement.at)}. Already included in spending and budget usage; closure does not charge it again.</p>}
+    {workflow.finance?.disbursement && <p role="status" className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200">{closed ? 'Disbursed — workflow completed' : Number(workflow.document_type_id)===3 ? 'Cash advance disbursed — reconciliation ongoing' : 'Disbursed — workflow ongoing'} · {workflow.cash_movements?.net_paid ?? workflow.finance.disbursement.amount} net paid · First payment: {date(workflow.finance.disbursement.at)}. Already included in spending and budget usage; closure does not charge it again.</p>}
     <WorkflowDrawer key={workflow.id} currentOwner={workflow.current_role_name} closed={closed}><StepsSidebar steps={workflow.steps || []} role_id={auth.role_id} activeStep={step} workflow={workflow} isWorkflowCompleted={closed} /></WorkflowDrawer>
       <RequestedItems items={workflow.document_items || []} documentType={workflow.document_type_id} onUpload={workflow.permissions?.can_upload_receipt ? (item,file)=>receiptUpload.mutate({item,file}) : undefined} uploading={receiptUpload.isPending} />
         {<p className="flex gap-2 rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200"><Info size={18} className="mt-1 shrink-0" aria-hidden="true" />{documentFlow(workflow.document_type_id).description}</p>}
+        <CashMovementPanel key={`cash-${workflow.id}-${workflow.action_version}`} workflow={workflow} isLoading={cashMutation.isPending} onSave={values=>cashMutation.mutateAsync(values)} />
         <div id="decision-panel" className="min-w-0 space-y-3"><ApprovalActions key={`${workflow.id}-${workflow.action_version}-${auth.role_id}`} workflow={workflow} isLoading={mutation.isPending} onSubmit={values => mutation.mutateAsync(values)} /><ApprovalEmailReminder workflow={workflow} />{!closed && <p className="px-1 text-xs leading-5 text-gray-500 dark:text-gray-400">{workflow.escalation_role_name ? `Escalation role: ${workflow.escalation_role_name}` : workflow.permissions?.can_approve ? 'No escalation role is configured. An administrator can set one in workflow settings.' : ''}</p>}</div>
       </div>
       <aside aria-label="Workflow stages and next approver" className="hidden min-w-0 lg:sticky lg:top-28 lg:block"><StepsSidebar steps={workflow.steps || []} role_id={auth.role_id} activeStep={step} workflow={workflow} isWorkflowCompleted={closed} /></aside>

@@ -48,6 +48,6 @@ export function incomeExpenseCsvRows(rows=[]) {
     const cents=reportCents(income?(row.income_amount??row.credit_amount):(row.expense_amount??row.total_amount));
     const amount=reportDecimal(cents);
     const classification=income?'Income':row.type!==null&&row.type!==undefined&&row.type!==''&&Number(row.type)===0?'OPEX':Number(row.type)===1?'CAPEX':'Not classified';
-    return [row.category_name||'Uncategorized',row.item_name||'',row.account_name||'',financialDocumentNames[Number(row.document_type)],amount,classification,row.resolved_date||'',row.location_name||'',row.currency_code||(row.currency_id?`Currency #${row.currency_id}`:'Currency not set'),income?'0.00':amount,income?amount:'0.00',cents===null?'':reportDecimal(income?cents:-cents),row.workflow_state||'Historical record'];
+    return [row.category_name||'Uncategorized',row.item_name||'',row.account_name||'',financialDocumentNames[Number(row.document_type)],amount,classification,row.resolved_date||'',row.location_name||'',row.currency_code||(row.currency_id?`Currency #${row.currency_id}`:'Currency not set'),income?'0.00':amount,income?amount:'0.00',cents===null?'':reportDecimal(income?cents:-cents),row.workflow_state||'Historical record',row.financial_kind||'Historical entry',row.payment_reference||''];
   });
 }
