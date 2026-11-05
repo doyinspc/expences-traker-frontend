@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const vm = require('node:vm');
 const esbuild = require('esbuild');
+const { QueryClient, QueryObserver } = require('@tanstack/query-core');
 const root = path.resolve(__dirname, '..');
 
 // Exercise the real picker and shared query hook together. The adapter preserves
@@ -32,7 +33,7 @@ function harness() {
   const states = new Map();
   const requests = [];
   const pending = [];
-  let current, cursor, seen;
+  let current, cursor, seen, rendered;
   const hooks = {
     useState(initial) {
       const state = states.get(current);
@@ -75,7 +76,25 @@ function harness() {
                 data: { data: [] },
                 isLoading: false,
                 isFetching: false,
-                refetch() {},
+                refetch() {
+                  // Use the installed query engine to verify that a manual refresh
+                  // really fetches even when automatic loading is disabled.
+                  const client = new QueryClient({
+                    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+                  });
+                  const observer = new QueryObserver(client, {
+                    ...options,
+                    enabled: false,
+                  });
+                  const request = observer
+                    .refetch({ throwOnError: true })
+                    .finally(() => {
+                      observer.destroy();
+                      client.clear();
+                    });
+                  pending.push(request);
+                  return request;
+                },
               };
             },
             useMutation: () => ({ mutateAsync: async () => ({}) }),
@@ -110,14 +129,26 @@ function harness() {
       cursor = 0;
       seen.add(key);
       if (!states.has(key)) states.set(key, []);
-      visit(element.type(element.props), key + '/child');
+      return visit(element.type(element.props), key + '/child');
     }
+    return element;
+  }
+  function findRefresh(element) {
+    if (!element || typeof element !== 'object') return null;
+    if (element.type === 'button' && element.props.children === 'Refresh')
+      return element;
+    const children = element.props?.children;
+    for (const child of Array.isArray(children) ? children : [children]) {
+      const button = findRefresh(child);
+      if (button) return button;
+    }
+    return null;
   }
   return {
     requests,
     async render(isOpen, purchaseOrderId = 302) {
       seen = new Set();
-      visit(
+      rendered = visit(
         {
           type: Picker,
           props: { isOpen, purchaseOrderId, onClose() {}, onItemsAdded() {} },
@@ -125,6 +156,13 @@ function harness() {
         'picker',
       );
       for (const key of states.keys()) if (!seen.has(key)) states.delete(key);
+      await Promise.all(pending.splice(0));
+    },
+    async refresh() {
+      const button = findRefresh(rendered);
+      assert.ok(button, 'Refresh button missing from the opened picker');
+      assert.equal(Boolean(button.props.disabled), false);
+      button.props.onClick();
       await Promise.all(pending.splice(0));
     },
   };
@@ -154,4 +192,14 @@ test('closing and reopening the picker starts a fresh read for the new purchase 
   await view.render(true, 303);
   assert.equal(view.requests.length, count + 1);
   assert.equal(view.requests.at(-1).procurement_candidates_for, 303);
+});
+
+test('the actual picker Refresh button forces a fresh GET through the shared hook', async () => {
+  const view = harness();
+  await view.render(false);
+  await view.render(true, 302);
+  const before = view.requests.length;
+  await view.refresh();
+  assert.equal(view.requests.length, before + 1);
+  assert.equal(view.requests.at(-1).procurement_candidates_for, 302);
 });
