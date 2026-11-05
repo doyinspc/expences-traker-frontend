@@ -1191,7 +1191,7 @@ const Requisitions: React.FC = () => {
                                             onClose={() => setPage(0)}
                                             onDeactivate={onDeactivate}
                                             deactivateLoading={false}
-                                            title="Requisition Details"
+                                            title={`${displayName} Details`}
                                             showDeactivate={true}
                                             statusData={statusData || []}
                                             priorityData={priorityData || []}

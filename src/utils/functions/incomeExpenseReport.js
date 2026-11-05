@@ -1,4 +1,5 @@
-export const financialDocumentNames={2:'Procurement',3:'Cash advance',7:'Income'};
+import { PROCUREMENT_DOCUMENT_LABEL } from './documentLabels.js';
+export const financialDocumentNames={2:PROCUREMENT_DOCUMENT_LABEL,3:'Cash advance',7:'Income'};
 
 export function reportCents(value) {
   const text=String(value??'').trim();

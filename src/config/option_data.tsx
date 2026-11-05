@@ -174,7 +174,7 @@ const OPTION_DATA: Record<string, Array<{ value: any; label: string }>> = {
         { value: 'payment', label: 'Payment' },
         { value: 'grn', label: 'GRN' },
         { value: 'retirement', label: 'Retirement' },
-        { value: 'purchase_order', label: 'Purchase Order' },
+        { value: 'purchase_order', label: 'Procurement / Purchase Order' },
         { value: 'advance', label: 'Advance' },
     ],
     account_types: [

@@ -1,3 +1,4 @@
+import { PROCUREMENT_DOCUMENT_LABEL } from '../../utils/functions/documentLabels';
 import {useMemo,useState} from 'react';
 import ExpenseSummary from './ExpenseSummary';
 import ExpenseDetails from './ExpenseDetails';
@@ -23,7 +24,7 @@ export default function IncomeExpenseBalance({data=[],onExport,isLoading=false})
         ['Total expenses',group.totals.expenses,'bg-blue-50 text-blue-800 dark:bg-blue-950/30 dark:text-blue-200'],
         ['Net balance · Income − expenses',group.totals.net,'bg-purple-50 text-purple-800 dark:bg-purple-950/30 dark:text-purple-200']
       ].map(([label,value,style])=><div key={label} className={`rounded-lg p-4 ${style}`}><p className="text-sm">{label}</p><p className="mt-2 break-words text-xl font-bold tabular-nums">{formatReportMoney(value,group.currency)}</p></div>)}</div>
-      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-600 dark:text-gray-300"><p>Procurement: <strong>{formatReportMoney(group.totals.procurement,group.currency)}</strong></p><p>Cash advances: <strong>{formatReportMoney(group.totals.cashAdvances,group.currency)}</strong></p></div>
+      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-600 dark:text-gray-300"><p>{PROCUREMENT_DOCUMENT_LABEL}: <strong>{formatReportMoney(group.totals.procurement,group.currency)}</strong></p><p>Cash advances: <strong>{formatReportMoney(group.totals.cashAdvances,group.currency)}</strong></p></div>
     </section>
     <ExpenseSummary data={group.expenses} emptyTitle="No expense entries" emptyMessage="No recognised procurement or cash-advance expense entries for this currency and period." currency={group.currency} suppressTotals={!group.valid} onExport={()=>onExport?.(group.rows)} isLoading={isLoading}/>
     <details className="rounded-lg border border-gray-200 bg-white shadow dark:border-gray-800 dark:bg-gray-900"><summary className="cursor-pointer p-5 font-semibold text-gray-800 dark:text-gray-200">Income entries ({group.income.length})</summary><div className="p-4 pt-0">{group.income.length?<ExpenseDetails items={group.income} currency={group.currency} income/>:<p className="text-sm text-gray-500 dark:text-gray-400">No completed income entries for this currency and period.</p>}</div></details>

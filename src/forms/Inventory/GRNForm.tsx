@@ -66,10 +66,10 @@ const GRNForm: React.FC = () => {
           </div>
         </div>
         <div>
-          <Label required>Purchase Order</Label>
+          <Label required>Procurement / Purchase Order</Label>
           <Select
             name="po_id"
-            placeholder="Select Purchase Order"
+            placeholder="Select Procurement / Purchase Order"
             options={purchase_ordersOptions}
             
             class="dark:bg-dark-900"

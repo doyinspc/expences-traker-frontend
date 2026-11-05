@@ -1,3 +1,4 @@
+import { PROCUREMENT_DOCUMENT_LABEL } from '../utils/functions/documentLabels';
 // src/config/navigationConfig.ts
 
 export interface NavItem {
@@ -103,7 +104,7 @@ export const navItems: NavItem[] = [
       },
       {
         id: 302,
-        name: "Purchase Orders",
+        name: PROCUREMENT_DOCUMENT_LABEL,
         path: "/procurement/purchaseorder",
         parent_path_number: 3,
         child_path_number: 2,

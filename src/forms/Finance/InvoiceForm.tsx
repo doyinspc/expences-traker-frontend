@@ -66,10 +66,10 @@ const InvoiceForm: React.FC = () => {
           </div>
         </div>
         <div>
-          <Label>Purchase Order</Label>
+          <Label>Procurement / Purchase Order</Label>
           <Select
             name="po_id"
-            placeholder="Select Purchase Order"
+            placeholder="Select Procurement / Purchase Order"
             options={purchase_ordersOptions}
             
             class="dark:bg-dark-900"

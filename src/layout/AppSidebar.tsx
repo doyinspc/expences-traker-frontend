@@ -1,3 +1,4 @@
+import { PROCUREMENT_DOCUMENT_LABEL } from '../utils/functions/documentLabels';
 import useManagementAccess from '../hooks/useManagementAccess';
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
@@ -114,7 +115,7 @@ const navItems: NavItem[] = [
       },
       {
         id: 302,
-        name: "Purchase Orders",
+        name: PROCUREMENT_DOCUMENT_LABEL,
         path: "/procurement/purchaseorder",
         parent_path_number: 3,
         child_path_number: 2,

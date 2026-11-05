@@ -119,7 +119,7 @@ const UploadReceiptModal: React.FC<UploadReceiptModalProps> = ({
               Item: {itemName} (ID: {itemId})
             </p>
             <p className="text-xs text-gray-400 dark:text-gray-500">
-              Purchase Order: #{purchaseOrderId}
+              Procurement / Purchase Order: #{purchaseOrderId}
             </p>
           </div>
           <button

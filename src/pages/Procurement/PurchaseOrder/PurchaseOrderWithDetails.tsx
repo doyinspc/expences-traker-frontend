@@ -154,7 +154,7 @@ const PurchaseOrderViewWithDetails: React.FC<PurchaseOrderViewWithDetailsProps> 
   deactivateLoading = false,
   submitLoading = false,
   className = '',
-  title = 'Purchase Order Details',
+  title = 'Procurement / Purchase Order Details',
   showDeactivate = true,
   showSubmitForApproval = true,
   canDeleteAttachments = false,
@@ -699,11 +699,11 @@ const PurchaseOrderViewWithDetails: React.FC<PurchaseOrderViewWithDetailsProps> 
           </div>
         </div>
 
-        {/* Purchase Order Items Section */}
+        {/* Procurement / Purchase Order Items Section */}
         <div className="border-t border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between px-4 py-2 bg-gray-50/50 dark:bg-gray-800/50">
             <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-              Purchase Order Items
+              Procurement / Purchase Order Items
             </h3>
             <span className="text-xs text-gray-500 dark:text-gray-400">
               {purchaseOrderItems.length} item{purchaseOrderItems.length !== 1 ? 's' : ''}
@@ -808,8 +808,8 @@ const PurchaseOrderViewWithDetails: React.FC<PurchaseOrderViewWithDetailsProps> 
         onClose={closeModal}
         onSubmit={handleModalSubmit}
         isSubmitting={submitLoading}
-        title="Submit Purchase Order for Approval"
-        documentType="Purchase Order"
+        title="Submit Procurement / Purchase Order for Approval"
+        documentType="Procurement / Purchase Order"
         maxAmount={purchaseOrder?.grand_total || purchaseOrder?.total_amount || 0}
         formatCurrency={(amount) => formatCurrency(amount, getCurrency())}
         workflowParams={{

@@ -1,6 +1,7 @@
+import { PROCUREMENT_DOCUMENT_LABEL } from './documentLabels.js';
 export const documentFlows = {
   1: {items:'Requested items',description:'Approval authorises this request. Fulfilment through procurement or issue from stock is recorded separately.'},
-  2: {items:'Procurement items',description:'Procurement can fulfil approved requisition items or replenish stock. The shared item retains its original request, account and stock links.'},
+  2: {items:`${PROCUREMENT_DOCUMENT_LABEL} items`,description:'Procurement / Purchase Order can fulfil approved requisition items or replenish stock. The shared item retains its original request, account and stock links.'},
   3: {items:'Cash advance items',description:'A cash advance requests cash to pay directly for these items. It follows its own approval workflow and bypasses the requisition-to-procurement process. Keep the supporting receipts with the item records.'},
   4: {items:'Budget allocations',description:'Budget approval authorises the spending plan. Individual allocation approval and closing the budget period remain separate operations.'},
   6: {items:'Transfer entries',description:'Cash transfers record movements between accounts. Review the debit and credit entries and their selected accounts.'},

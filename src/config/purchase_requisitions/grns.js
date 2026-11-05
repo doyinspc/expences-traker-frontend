@@ -37,7 +37,7 @@ const grns = {
             analyzable: false,
         },
         po_id: {
-            label: 'Purchase Order',
+            label: 'Procurement / Purchase Order',
             placeholder: 'Select PO',
             type: 'select',
             required: true,

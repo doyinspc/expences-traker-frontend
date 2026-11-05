@@ -1,11 +1,12 @@
+import { PROCUREMENT_DOCUMENT_LABEL } from '../../utils/functions/documentLabels';
 // src/config/purchasePurchaseorders.js
 
 const purchaseorders = {
     frontendRoutes: ['/procurement/purchaseorders'],
-    description: 'Purchase purchaseorders initiated by employees',
+    description: 'Procurement / Purchase Order requests initiated by employees',
     form: 'PurchaseorderForm',
     tableName: 'purchaseorders',
-    displayName: 'Purchase Order',
+    displayName: PROCUREMENT_DOCUMENT_LABEL,
     icon: 'ShoppingCart',
     defaultSort: { field: 'created_at', direction: 'DESC' },
     defaultFilters: { status: 'pending_approval' },
@@ -35,7 +36,7 @@ const purchaseorders = {
             placeholder: 'Office Supplies Purchase',
             type: 'text',
             required: true,
-            description: 'Brief title of the Purchase order',
+            description: 'Brief title of the Procurement / Purchase Order',
             showInTable: true,
             showInForm: true,
             tableWidth: '200px',
@@ -47,9 +48,9 @@ const purchaseorders = {
         },
         description: {
             label: 'Description',
-            placeholder: 'Detailed description of Purchase Order',
+            placeholder: 'Detailed description of Procurement / Purchase Order',
             type: 'textarea',
-            description: 'Detailed description of the Purchase Order',
+            description: 'Detailed description of the Procurement / Purchase Order',
             showInTable: false,
             showInForm: true,
             filterable: false,

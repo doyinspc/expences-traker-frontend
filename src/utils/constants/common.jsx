@@ -1,8 +1,9 @@
+import { PROCUREMENT_DOCUMENT_LABEL } from '../functions/documentLabels';
 // src/constants/requisitionConstants.js
 
 export const REQUISITION_TYPES = {
     1: 'REQUISITIONS', // data in  requisitions table with requisition_type 1
-    2: 'PURCHASE ORDER', //data in budgets table
+    2: PROCUREMENT_DOCUMENT_LABEL, //data in budgets table
     3: 'CASH ADVANCE', // data in  requisitions table with requisition_type 2
     4: 'BUDGET', // data in  requisitions table with requisition_type 1
     5: 'USER', //data in users table
@@ -27,7 +28,7 @@ export const DOCUMENT_TYPE_CONFIG = {
     2: {
         id: 2,
         code: 'PURCHASE_ORDER',
-        name: 'Purchase Orders',
+        name: PROCUREMENT_DOCUMENT_LABEL,
         table: 'purchase_orders',
         number_column: 'po_number',
         title_column: 'title',
