@@ -53,7 +53,15 @@ function money(value: number | string | undefined, code = 'NGN') {
  *    permission/location/quantity errors and allow refresh; never assume a write worked.
  * This modal is shared by the existing procurement pages without changing their layout.
  */
-export default function AddRequisitionItemsModal({
+export default function AddRequisitionItemsModal(props: Props) {
+  // Mount the query-owning form only when opened. The shared query hook captures
+  // its initial enabled state; mounting it closed would leave this GET disabled.
+  // A different order also receives fresh selection/query state through its key.
+  if (!props.isOpen) return null;
+  return <OpenRequisitionItemsModal key={props.purchaseOrderId} {...props} />;
+}
+
+function OpenRequisitionItemsModal({
   isOpen,
   onClose,
   purchaseOrderId,
