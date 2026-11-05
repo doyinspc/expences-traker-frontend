@@ -1,3 +1,5 @@
+import ParentDocumentContext from '../../components/common/ParentDocumentContext.jsx';
+import useParentDocumentContext from '../../hooks/useParentDocumentContext.js';
 // src/pages/Procurement/Requisitions.tsx
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
@@ -35,7 +37,6 @@ import {
     generateAnalysisData, 
     countActiveFilters 
 } from '../../utils/functions/dataHelpers.js';
-import { getTitleRow } from "../../utils/functions/basci.jsx";
 import { X } from "lucide-react";
 
 // ==================== CONSTANTS ====================
@@ -61,13 +62,13 @@ const ExpensItems: React.FC = () => {
     const displayName = useMemo(() => getTableDisplayName(TABLE_NAME), []);
     const {grp} = tableMapping || {}
 
-    const titleHeaders = getTitleRow(1)
-    const {id:parent_id, name:parent_name} = titleHeaders || {};
+    const parentContext = useParentDocumentContext();
+    const titleHeaders = parentContext.document || {};
+    const parent_id = parentContext.id;
+    const parent_name = titleHeaders?.name;
     const initialData = useMemo(() => ({parent_id}), [parent_id]);
     
-    if(!titleHeaders || Object.keys(titleHeaders).length === 0){
-        nav(-1)
-    }
+
 
     // ==================== STATE ====================
     const [page, setPage] = useState<number>(0);
@@ -304,6 +305,7 @@ const ExpensItems: React.FC = () => {
     return (
         <>
             <PageBreadcrumb pageTitle={displayName + `: ${parent_name || '-'}`} />
+            <ParentDocumentContext context={parentContext} />
 
             {/* ==================== LEARN MORE INFO BAR ==================== */}
             {showLearnMore && (

@@ -1,4 +1,6 @@
-﻿// src/pages/Procurement/PurchaseOrderItems.tsx
+import ParentDocumentContext from '../../components/common/ParentDocumentContext.jsx';
+import useParentDocumentContext from '../../hooks/useParentDocumentContext.js';
+// src/pages/Procurement/PurchaseOrderItems.tsx
 
 import React, { useState, useMemo, useCallback } from "react";
 import { useSelector } from 'react-redux';
@@ -74,6 +76,7 @@ type TabType = 'table' | 'analysis';
 // ==================== MAIN COMPONENT ====================
 const PurchaseOrderItems: React.FC = () => {
     const nav = useNavigate();
+    const parentContext = useParentDocumentContext();
     const { id:purchaseorder_id } = useParams();
     const { user } = useSelector((state: any) => state.authReducer || {});
 
@@ -184,6 +187,7 @@ const PurchaseOrderItems: React.FC = () => {
     return (
         <>
             <PageBreadcrumb pageTitle="Procurement / Purchase Order Items" />
+            <ParentDocumentContext context={parentContext} />
             
             {/* Header */}
             <div className="flex items-center justify-end gap-2 mb-4">

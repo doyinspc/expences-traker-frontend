@@ -1,3 +1,5 @@
+import ParentDocumentContext from '../../components/common/ParentDocumentContext.jsx';
+import useParentDocumentContext from '../../hooks/useParentDocumentContext.js';
 // src/pages/Procurement/Requisitions.tsx
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -35,7 +37,6 @@ import {
     generateAnalysisData, 
     countActiveFilters 
 } from '../../utils/functions/dataHelpers.js';
-import { getTitleRow } from "../../utils/functions/basci.jsx";
 
 // ==================== CONSTANTS ====================
 const TABLE_NAME = "serviceitems";
@@ -64,7 +65,8 @@ const ExpensItems: React.FC = () => {
     const displayName = useMemo(() => getTableDisplayName(TABLE_NAME), []);
     const {grp} = tableMapping || {}
 
-    const titleHeaders = getTitleRow(1)
+    const parentContext = useParentDocumentContext();
+    const titleHeaders = parentContext.document || {};
     const parent_id = Number(page_id);
     const parent_name = Number(titleHeaders?.id) === parent_id ? titleHeaders?.name : `Service group ${parent_id}`;
     const initialData = useMemo(() => ({parent_id, grp}), [parent_id, grp]);
@@ -232,6 +234,7 @@ const ExpensItems: React.FC = () => {
     return (
         <>
             <PageBreadcrumb pageTitle={displayName + `: ${parent_name || '-'}`} />
+            <ParentDocumentContext context={parentContext} />
             {settingsError && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-200">{settingsError.response?.data?.message || settingsError.message || "Settings could not be loaded. Check your selected location and access."}</p>}
             <p className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200">Items and prices belong to {parent_name} at the selected location ({workspace?.location?.name || workspace.location_id || 'not selected'}). Editing keeps the original group and location.</p>
             

@@ -1,4 +1,6 @@
-﻿// src/pages/Procurement/Requisitions.tsx
+import ParentDocumentContext from '../../components/common/ParentDocumentContext.jsx';
+import useParentDocumentContext from '../../hooks/useParentDocumentContext.js';
+// src/pages/Procurement/Requisitions.tsx
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useSelector } from 'react-redux';
@@ -25,7 +27,7 @@ import {
 } from '../../utils/functions/dataHelpers.js';
 import RequisitionView from "./Components/ItemsTable.js";
 import { STATUS_OPTIONS } from "../../utils/constants/common.jsx";
-import { getTitleRow, numberFunction } from "../../utils/functions/basci.jsx";
+import { numberFunction } from "../../utils/functions/basci.jsx";
 import Swal from "sweetalert2";
 
 // ==================== TABLE CONFIGURATION ====================
@@ -139,8 +141,9 @@ const Requisitions: React.FC = () => {
     const {id:requisition_id} = useParams()
     const { user, location_id } = useSelector((state: any) => state.authReducer);
      const {id:user_id} = user
-    const parent_row = getTitleRow(1)
-    const {currency_name = 'NGN', title} = parent_row || {}
+    const parentContext = useParentDocumentContext();
+    const parent_row = parentContext.document || {};
+    const {currency_name = 'NGN'} = parent_row || {}
 
     // ==================== STATE ====================
     const [page, setPage] = useState<number>(0);
@@ -667,7 +670,8 @@ const Requisitions: React.FC = () => {
     // ==================== RENDER ====================
     return (
         <>
-            <PageBreadcrumb pageTitle={`${displayName} : ${title}` } />
+            <PageBreadcrumb pageTitle={`${parentContext.route?.label || displayName} items`} />
+            <ParentDocumentContext context={parentContext} />
             
             {/* Header */}
             <div className="flex items-center justify-end gap-2 mb-4">

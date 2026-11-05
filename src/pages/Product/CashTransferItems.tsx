@@ -1,3 +1,5 @@
+import ParentDocumentContext from '../../components/common/ParentDocumentContext.jsx';
+import useParentDocumentContext from '../../hooks/useParentDocumentContext.js';
 // src/pages/Finance/CashTransfers.tsx
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -5,7 +7,7 @@ import { useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import { X, Plus, Edit2, Trash2, Eye, Loader2, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 import useReduxApiData from "../../hooks/useTanstackQuery.js";
-import { moneyFunction, getTitleRow } from "../../utils/functions/basci.jsx";
+import { moneyFunction } from "../../utils/functions/basci.jsx";
 
 // ==================== CONSTANTS ====================
 const TABLE_NAME = "requisitionitems";
@@ -78,7 +80,8 @@ const CashTransfers: React.FC = () => {
     const { user } = useSelector((state: any) => state.authReducer);
     const { id: user_id } = user || {};
     
-    const { currency_code, name: title } = getTitleRow(1);
+    const parentContext = useParentDocumentContext();
+    const { currency_code } = parentContext.document || {};
 
     const parentId = paramId || 0;
 
@@ -722,6 +725,7 @@ const CashTransfers: React.FC = () => {
     // ==================== MAIN RENDER ====================
     return (
         <div className="p-6">
+            <ParentDocumentContext context={parentContext} />
             {toast && (
                 <Toast
                     message={toast.message}

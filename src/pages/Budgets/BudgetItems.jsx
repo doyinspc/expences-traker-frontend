@@ -1,3 +1,5 @@
+import ParentDocumentContext from '../../components/common/ParentDocumentContext.jsx';
+import useParentDocumentContext from '../../hooks/useParentDocumentContext.js';
 // BudgetItemReport.jsx
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -15,17 +17,15 @@ import {
   Filter
 } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import { getTitleRow } from '../../utils/functions/basci.jsx';
 
 export default function BudgetItemReport(props) {
   const nav = useNavigate();
   const { user } = useSelector((state) => state.authReducer);
-  const row = getTitleRow(1);
+  const parentContext = useParentDocumentContext();
+  const row = parentContext.document || {};
+  const budget_id = parentContext.id;
   
-  if (Array.isArray(Object.keys(row)) && Object(row).hasOwnProperty('id')) {}
-  else { nav(-1) }
-  
-  const { id: budget_id, budget_name, total_amount, currency, approved_by_name, approved_by_date } = row || {};
+  const { budget_name, total_amount, currency, approved_by_name, approved_by_date } = row || {};
   const { id: user_id } = user || {};
 
   // State
@@ -246,15 +246,19 @@ export default function BudgetItemReport(props) {
 
   if (isLoadingExpenses || isLoading) {
     return (
-      <div className="flex flex-col justify-center items-center py-32 space-y-4">
-        <RefreshCw className="animate-spin text-blue-600 dark:text-blue-500" size={40} />
-        <p className="text-gray-500 dark:text-gray-400 font-medium">Loading report data...</p>
-      </div>
+      <>
+        <ParentDocumentContext context={parentContext} />
+        <div className="flex flex-col justify-center items-center py-32 space-y-4">
+          <RefreshCw className="animate-spin text-blue-600 dark:text-blue-500" size={40} />
+          <p className="text-gray-500 dark:text-gray-400 font-medium">Loading report data...</p>
+        </div>
+      </>
     );
   }
 
   return (
     <div className="max-w-7xl mx-auto space-y-4 print:space-y-4 bg-gray-50/50 dark:bg-gray-900 min-h-screen p-3 sm:p-4 lg:p-6">
+      <ParentDocumentContext context={parentContext} />
       
       {/* Header Section */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 print:shadow-none print:border-none print:bg-transparent print:p-0">

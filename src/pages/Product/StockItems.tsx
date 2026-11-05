@@ -1,4 +1,6 @@
-﻿// src/pages/Procurement/StockItems.tsx
+import ParentDocumentContext from '../../components/common/ParentDocumentContext.jsx';
+import useParentDocumentContext from '../../hooks/useParentDocumentContext.js';
+// src/pages/Procurement/StockItems.tsx
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useSelector } from 'react-redux';
@@ -429,6 +431,7 @@ const AddItemsModal: React.FC<AddItemsModalProps> = ({
 // ==================== MAIN COMPONENT ====================
 const StockItems: React.FC = () => {
     const nav = useNavigate();
+    const parentContext = useParentDocumentContext();
     const { id:sku_id } = useParams();
     
     // ==================== STATE ====================
@@ -537,6 +540,7 @@ const StockItems: React.FC = () => {
     return (
         <>
             <PageBreadcrumb pageTitle="Stock Items" />
+            <ParentDocumentContext context={parentContext} />
             
             {/* Header */}
             <div className="flex items-center justify-end gap-2 mb-4">

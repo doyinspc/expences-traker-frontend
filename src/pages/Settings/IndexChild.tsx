@@ -1,3 +1,5 @@
+import ParentDocumentContext from '../../components/common/ParentDocumentContext.jsx';
+import useParentDocumentContext from '../../hooks/useParentDocumentContext.js';
 // src/pages/Procurement/Requisitions.tsx
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -35,7 +37,6 @@ import {
     generateAnalysisData, 
     countActiveFilters 
 } from '../../utils/functions/dataHelpers.js';
-import { getTitleRow } from "../../utils/functions/basci.jsx";
 
 // ==================== CONSTANTS ====================
 const TABLE_NAME = "expenseitems";
@@ -62,14 +63,14 @@ const IndexChild: React.FC = () => {
     const displayName = useMemo(() => getTableDisplayName(TABLE_NAME), []);
     const {grp} = tableMapping || {}
 
-    const titleHeaders = getTitleRow(1)
-    const {id:parent_id, name:parent_name} = titleHeaders || {};
+    const parentContext = useParentDocumentContext();
+    const titleHeaders = parentContext.document || {};
+    const parent_id = parentContext.id;
+    const parent_name = titleHeaders?.name;
     const initialData = {parent_id}
     
 
-    if(!titleHeaders || Object.keys(titleHeaders).length === 0){
-        nav(-1)
-    }
+
 
     // ==================== STATE ====================
     const [page, setPage] = useState<number>(0);
@@ -228,6 +229,7 @@ const IndexChild: React.FC = () => {
     return (
         <>
             <PageBreadcrumb pageTitle={displayName + `: ${parent_name || '-'}`} />
+            <ParentDocumentContext context={parentContext} />
             
             {/* Header */}
             <div className="flex items-center justify-end gap-2 mb-4">

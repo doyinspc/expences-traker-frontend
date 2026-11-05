@@ -1,3 +1,5 @@
+import ParentDocumentContext from '../../components/common/ParentDocumentContext.jsx';
+import useParentDocumentContext from '../../hooks/useParentDocumentContext.js';
 // src/pages/Procurement/Requisitions.tsx
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -36,7 +38,6 @@ import {
     generateAnalysisData, 
     countActiveFilters 
 } from '../../utils/functions/dataHelpers.js';
-import { getTitleRow } from "../../utils/functions/basci.jsx";
 
 // ==================== CONSTANTS ====================
 const TABLE_NAME = "workflowsteps";
@@ -62,16 +63,16 @@ const ApprovalWorkflowSteps: React.FC = () => {
     const availableDimensions = useMemo(() => getAvailableDimensions(TABLE_NAME), []);
     const displayName = useMemo(() => getTableDisplayName(TABLE_NAME), []);
     
-    const titleHeaders = getTitleRow(1)
-    const {id:parent_id, name:parent_name} = titleHeaders || {};
+    const parentContext = useParentDocumentContext();
+    const titleHeaders = parentContext.document || {};
+    const parent_id = parentContext.id;
+    const parent_name = titleHeaders?.name;
     const initialData = {parent_id}
     const workflowType = titleHeaders?.item_id1;
     const hiddenStepFields = useMemo(() => allowsCashDisbursement(workflowType) ? [] : ['text_4'], [workflowType]);
     
 
-    if(!titleHeaders || Object.keys(titleHeaders).length === 0){
-        nav(-1)
-    }
+
 
     // ==================== STATE ====================
     const [page, setPage] = useState<number>(0);
@@ -256,6 +257,7 @@ const ApprovalWorkflowSteps: React.FC = () => {
     return (
         <>
             <PageBreadcrumb pageTitle={displayName + `: ${parent_name || '-'}`} />
+            <ParentDocumentContext context={parentContext} />
             
             {/* Header */}
             <div className="flex items-center justify-end gap-2 mb-4">
