@@ -60,9 +60,10 @@ const cashtransfers = {
             placeholder: 'Select budget',
             type: 'select',
             options: 'budgets',
-            description: 'Budget making the request',
+            hidden: true,
+            description: 'Cash transfers move money between accounts and do not use a budget.',
             showInTable: false,
-            showInForm: true,
+            showInForm: false,
             tableWidth: '150px',
             filterable: true,
             filterType: 'select',
@@ -75,10 +76,10 @@ const cashtransfers = {
         budget_name: {
             label: 'Budget Name',
             type: 'text',
-            hidden: false, // ✅ Changed from true to false
+            hidden: true,
             disabled: true,
-            description: 'Budget name',
-            showInTable: true,
+            description: 'Not applicable to cash transfers.',
+            showInTable: false,
             showInForm: false, // ✅ Explicitly set to false
             filterable: true,
             filterType: 'text',

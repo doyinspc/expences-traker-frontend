@@ -151,6 +151,9 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
     const PAGE_SIZE = page_size;
     const DOCUMENT_TYPE = document_type;
     const PAGE_CODE = page_code;
+    // Only financial-spending documents can select a budget. Income records and
+    // transfers record money received or moved, while requisitions are demand records.
+    const supportsBudget = DOCUMENT_TYPE === 2 || DOCUMENT_TYPE === 3;
 
     // ==================== CONFIGURATIONS ====================
     const tableMapping = useMemo(() => getTableMapping(TABLE_NAME), [TABLE_NAME]);
@@ -630,10 +633,15 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
     // ==================== COLUMNS ====================
     const columns = useMemo(() => {
         return columnBuilder(
-            { table_action: TableActionDocument, table_data: table_data },
+            {
+                table_action: TableActionDocument,
+                table_data: supportsBudget
+                    ? table_data
+                    : table_data.filter(({ name }) => name !== 'budget_id' && name !== 'budget_name')
+            },
             { onNext, onView, onActivate, onEdit, onDelete }
         );
-    }, [table_data, onNext, onView, onActivate, onEdit, onDelete]);
+    }, [supportsBudget, onNext, onView, onActivate, onEdit, onDelete]);
 
     // ==================== EFFECTS ====================
     useEffect(() => {
@@ -752,6 +760,7 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
                                         initialData={row}
                                         onCancel={() => setPage(0)}
                                         optionData={formattedSelectRows}
+                                        excludedFieldNames={supportsBudget ? [] : ['budget_id', 'budget_name']}
                                     />
                                 </div>
                             ) : null}

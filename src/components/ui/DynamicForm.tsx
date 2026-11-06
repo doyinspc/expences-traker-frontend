@@ -75,6 +75,8 @@ export interface DynamicFormProps {
   optionData: OptionDataMap;
   countryOptions?: FieldOption[];
   hiddenFieldNames?: string[];
+  /** Fields that do not belong to this document type and must not be submitted. */
+  excludedFieldNames?: string[];
 }
 
 // ==================== HELPER FUNCTIONS ====================
@@ -123,6 +125,7 @@ export const getCountryOptions = (): FieldOption[] => {
 };
 
 const EMPTY_HIDDEN_FIELDS: string[] = [];
+const EMPTY_EXCLUDED_FIELDS: string[] = [];
 const EMPTY_INITIAL_DATA: Record<string, any> = {};
 
 // ==================== COMPONENT ====================
@@ -143,6 +146,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
   optionData,
   countryOptions,
   hiddenFieldNames = EMPTY_HIDDEN_FIELDS,
+  excludedFieldNames = EMPTY_EXCLUDED_FIELDS,
 }) => {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -153,8 +157,10 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
   const fields = useMemo(() => {
     const configured = getFormFields(tableName);
     if (!configured) return configured;
-    return Object.fromEntries(Object.entries(configured).map(([name, field]) => [name, { ...field, hidden: hiddenFieldNames.includes(name) || field.hidden || (tableName === "users" && name === "password" && Boolean(initialData.id)), description: field.description || fieldGuidance[name] }]));
-  }, [tableName, initialData.id, hiddenFieldNames]);
+    return Object.fromEntries(Object.entries(configured)
+      .filter(([name]) => !excludedFieldNames.includes(name))
+      .map(([name, field]) => [name, { ...field, hidden: hiddenFieldNames.includes(name) || field.hidden || (tableName === "users" && name === "password" && Boolean(initialData.id)), description: field.description || fieldGuidance[name] }]));
+  }, [tableName, initialData.id, hiddenFieldNames, excludedFieldNames]);
 
   // Get visible fields (not hidden and showInForm !== false)
   const visibleFields = useMemo(() => {

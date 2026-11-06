@@ -76,10 +76,10 @@ const requisitions = {
         budget_name: {
             label: 'Budget Name',
             type: 'text',
-            hidden: false, // ✅ Changed from true to false
+            hidden: true,
             disabled: true,
-            description: 'Budget name',
-            showInTable: true,
+            description: 'Requisitions do not consume a budget directly.',
+            showInTable: false,
             showInForm: false, // ✅ Explicitly set to false
             filterable: true,
             filterType: 'text',
@@ -419,15 +419,14 @@ const requisitions = {
             filterType: 'select',
             filterOptions: 'approval_workflows',
             analyzable: false,
-            nameField: 'approval_workflow_name',
+            nameField: 'workflow_name',
         },
-        approval_workflow_name: {
-            label: 'Workflow Name',
+        workflow_name: {
+            label: 'Workflow Used',
             type: 'text',
-            hidden:true,
-            hidden: false, // ✅ Changed from true to false
+            hidden: false,
             disabled: true,
-            description: 'Approval workflow name',
+            description: 'The approval workflow used by this requisition.',
             showInTable: true,
             showInForm: false, // ✅ Explicitly set to false
             filterable: false,

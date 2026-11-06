@@ -61,7 +61,7 @@ const table_data = [
     {label: 'Approver Name', name:'approver_name', type:'text', showTable: true, editable:false, element:null},
     {label: 'Approval Date', name:'approve_date', type:'datetime', showTable: true, editable:false, element:null},
     {label: 'Approval Workflow', name:'approval_workflow_id', type:'select', showTable: false, editable:true, element:null},
-    {label: 'Workflow Name', name:'approval_workflow_name', type:'text', showTable: true, editable:false, element:null},
+    {label: 'Workflow Used', name:'workflow_name', type:'text', showTable: true, editable:false, element:null},
     {label: 'Current Approval Level', name:'current_approval_level', type:'number', showTable: false, editable:false, element:null},
     {label: 'Expected Delivery Date', name:'expected_delivery_date', type:'date', showTable: true, editable:true, element:null},
     {label: 'Notes', name:'notes', type:'textarea', showTable: false, editable:true, element:null},
@@ -92,7 +92,9 @@ const columnVisibility = {
     status: true,
     approver_name: false,
     approve_date: false,
-    approval_workflow_name: false,
+    // Requisitions are not budget transactions.  Keep their workflow visible
+    // so a completed request can always be traced to the process used.
+    workflow_name: true,
     expected_delivery_date: false,
     created_at: false,
     created_by_name: false,

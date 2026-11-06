@@ -76,9 +76,9 @@ const purchaseorders = {
         budget_name: {
             label: 'Budget Name',
             type: 'text',
-            hidden: false, // ✅ Changed from true to false
+            hidden: false,
             disabled: true,
-            description: 'Budget name',
+            description: 'Budget name from the linked requisition items.',
             showInTable: true,
             showInForm: false, // ✅ Explicitly set to false
             filterable: true,
@@ -433,15 +433,14 @@ const purchaseorders = {
             filterType: 'select',
             filterOptions: 'approval_workflows',
             analyzable: false,
-            nameField: 'approval_workflow_name',
+            nameField: 'workflow_name',
         },
-        approval_workflow_name: {
-            label: 'Workflow Name',
+        workflow_name: {
+            label: 'Workflow Used',
             type: 'text',
-            hidden:true,
-            hidden: false, // ✅ Changed from true to false
+            hidden: false,
             disabled: true,
-            description: 'Approval workflow name',
+            description: 'The approval workflow used by this procurement order.',
             showInTable: true,
             showInForm: false, // ✅ Explicitly set to false
             filterable: false,
