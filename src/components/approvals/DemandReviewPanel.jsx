@@ -1,27 +1,61 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 /**
- * Purpose: review price-free requisition demand without presenting a price editor.
- * Algorithm: offer rejection or restoration for the selected line with a required reason;
- * submit through the existing version-bound amendment operation. The server checks the
- * current role and locks completed workflows. Restoration returns to earlier approvers
- * when necessary. History stays collapsed and records actor, time and reason.
+ * Purpose: review quantities and decisions without introducing prices on requisitions.
+ * Algorithm: use the current approver's version-bound operation for quantity, rejection
+ * or restoration; require a reason; show immutable quantity history. The backend protects
+ * issued/allocated units, checks the current role and reopens earlier approvals when demand
+ * increases. Historic stored estimates remain untouched and are not rendered here.
  */
-export default function DemandReviewPanel({ workflow, onSave, isLoading }) {
+export default function DemandReviewPanel({
+  workflow,
+  onSave,
+  isLoading,
+  editRequest = null,
+}) {
   const [itemId, setItemId] = useState(''),
     [reason, setReason] = useState(''),
-    [error, setError] = useState('');
+    [error, setError] = useState(''),
+    [quantity, setQuantity] = useState(''),
+    [change, setChange] = useState('quantity'),
+    [open, setOpen] = useState(false);
+  const panel = useRef(null),
+    lastRequest = useRef(null);
+  const canEdit = workflow.permissions?.can_revise_items;
+  useEffect(() => {
+    if (!canEdit || !editRequest || lastRequest.current === editRequest) return;
+    const line = workflow.document_items?.find(
+      (row) => Number(row.id) === Number(editRequest.itemId),
+    );
+    if (!line) return;
+    lastRequest.current = editRequest;
+    setItemId(String(line.id));
+    setQuantity(String(line.quantity));
+    setChange('quantity');
+    setOpen(true);
+    setError('');
+    globalThis.requestAnimationFrame?.(() => {
+      panel.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      panel.current?.querySelector('input')?.focus();
+    });
+  }, [editRequest, canEdit, workflow.document_items]);
   const item = workflow.document_items?.find(
-    (line) => String(line.id) === itemId,
-  );
-  const history = workflow.item_revisions?.history || [];
-  if (!workflow.permissions?.can_revise_items && !history.length) return null;
+      (line) => String(line.id) === itemId,
+    ),
+    history = workflow.item_revisions?.history || [];
+  const action = Number(item?.approval_status) === 2 ? 'restore' : change;
+  if (!canEdit && !history.length) return null;
   return (
-    <details className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+    <details
+      ref={panel}
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+      className="rounded-xl border border-gray-200 p-4 dark:border-gray-700"
+    >
       <summary className="min-h-10 cursor-pointer text-sm font-semibold">
-        Review requested items · decisions and history
+        Review requested items · quantities, decisions and history
       </summary>
-      {workflow.permissions?.can_revise_items && (
+      {canEdit && (
         <form
           className="mt-3 space-y-3"
           onSubmit={async (event) => {
@@ -30,9 +64,9 @@ export default function DemandReviewPanel({ workflow, onSave, isLoading }) {
             try {
               await onSave({
                 item_id: item.id,
-                change:
-                  Number(item.approval_status) === 2 ? 'restore' : 'reject',
+                change: action,
                 reason: reason.trim(),
+                ...(action === 'quantity' ? { quantity } : {}),
               });
               setItemId('');
               setReason('');
@@ -47,7 +81,13 @@ export default function DemandReviewPanel({ workflow, onSave, isLoading }) {
             <select
               required
               value={itemId}
-              onChange={(event) => setItemId(event.target.value)}
+              onChange={(event) => {
+                setItemId(event.target.value);
+                const selected = workflow.document_items.find(
+                  (line) => String(line.id) === event.target.value,
+                );
+                setQuantity(String(selected?.quantity ?? ''));
+              }}
               className="mt-1 min-h-11 w-full rounded-lg border bg-white px-3 dark:border-gray-700 dark:bg-gray-900"
             >
               <option value="">Choose item</option>
@@ -60,6 +100,39 @@ export default function DemandReviewPanel({ workflow, onSave, isLoading }) {
             </select>
           </label>
           <label className="block text-sm">
+            Change
+            <select
+              value={action}
+              onChange={(event) => setChange(event.target.value)}
+              className="mt-1 min-h-11 w-full rounded-lg border bg-white px-3 dark:border-gray-700 dark:bg-gray-900"
+            >
+              {Number(item?.approval_status) === 2 ? (
+                <option value="restore">Restore rejected item</option>
+              ) : (
+                <>
+                  <option value="quantity">Adjust requested quantity</option>
+                  <option value="reject">Reject this item</option>
+                </>
+              )}
+            </select>
+          </label>
+          {item && action === 'quantity' && (
+            <label className="block text-sm">
+              Quantity * (
+              {item.unit_of_measure || item.unit || 'saved item unit'})
+              <input
+                required
+                type="number"
+                min="1"
+                max="999999999"
+                step="1"
+                value={quantity}
+                onChange={(event) => setQuantity(event.target.value)}
+                className="mt-1 min-h-11 w-full rounded-lg border bg-white px-3 dark:border-gray-700 dark:bg-gray-900"
+              />
+            </label>
+          )}
+          <label className="block text-sm">
             Reason
             <textarea
               required
@@ -70,8 +143,9 @@ export default function DemandReviewPanel({ workflow, onSave, isLoading }) {
             />
           </label>
           <p className="text-xs text-gray-500">
-            Rejected demand remains in history and cannot be purchased or issued
-            from stock. Restoring an item may require earlier approval again.
+            Increased demand returns to earlier approvers where needed. Rejected
+            demand cannot be purchased or issued. Prices are set on the Purchase
+            Order.
           </p>
           <button
             type="submit"
@@ -80,9 +154,11 @@ export default function DemandReviewPanel({ workflow, onSave, isLoading }) {
           >
             {isLoading
               ? 'Saving…'
-              : Number(item?.approval_status) === 2
+              : action === 'restore'
                 ? 'Restore item and notify'
-                : 'Reject item and notify'}
+                : action === 'reject'
+                  ? 'Reject item and notify'
+                  : 'Save quantity and notify'}
           </button>
         </form>
       )}
@@ -91,9 +167,18 @@ export default function DemandReviewPanel({ workflow, onSave, isLoading }) {
           {history.map((event) => (
             <li key={event.revision}>
               <strong>
-                {event.change === 'reject' ? 'Item rejected' : 'Item restored'}
+                {event.change === 'quantity'
+                  ? 'Quantity adjusted'
+                  : event.change === 'reject'
+                    ? 'Item rejected'
+                    : 'Item restored'}
               </strong>{' '}
               · {event.actor_name} · {event.role_name} · {event.at}
+              {event.change === 'quantity' && (
+                <p className="mt-1">
+                  Quantity: {event.before.quantity} → {event.after.quantity}
+                </p>
+              )}
               <p className="mt-1 whitespace-pre-wrap">{event.reason}</p>
             </li>
           ))}

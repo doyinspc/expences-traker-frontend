@@ -921,9 +921,9 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                                         {event.at} · {event.actor_name} · {event.role_name}
                                       </p>
                                       <p className="mt-1">
-                                        {event.change === 'price'
+                                        {['price','terms'].includes(event.change)
                                           ? `Unit price: ${formatCurrency(event.before.unit_price, currency)} → ${formatCurrency(event.after.unit_price, currency)}`
-                                          : event.change === 'reject'
+                                          : event.change === 'quantity' ? 'Quantity adjusted' : event.change === 'reject'
                                             ? 'Item rejected'
                                             : 'Item restored'}
                                       </p>
@@ -932,7 +932,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                                         {formatCurrency(event.before.rejected ? 0 : event.before.total_price, currency)} →{' '}
                                         {formatCurrency(event.after.rejected ? 0 : event.after.total_price, currency)}
                                       </p>
-                                      <p className="mt-1 whitespace-pre-wrap break-words">{event.reason}</p>
+                                      <p className="mt-1">Quantity: {event.before.procurement_quantity??event.before.quantity??'Not recorded'} → {event.after.procurement_quantity??event.after.quantity??'Not recorded'}</p>{event.account_change&&<p className="mt-1">Account: {event.account_change.before.name} → {event.account_change.after.name}</p>}<p className="mt-1 whitespace-pre-wrap break-words">{event.reason}</p>
                                     </li>
                                   ))}
                                 </ol>

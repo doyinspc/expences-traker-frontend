@@ -233,7 +233,8 @@ test('Price-free approval review offers rejection with a reason and no price edi
     },
   });
   assert.match(result, /Reason/);
-  assert.match(result, /Reject item and notify/);
+  assert.match(result, /Reject this item/);
+  assert.match(result, /Adjust requested quantity/);
   assert.doesNotMatch(result, /Unit price|unit_price|type="number"/);
 });
 test('Completed demand review keeps decision history and hides mutation controls', () => {
