@@ -105,7 +105,7 @@ const CashFlowAnalysis = () => {
     
     try {
       // Create CSV from data
-      const headers = ['Date', 'Item', 'Account', 'Category', 'Document Type', 'Debit Amount', 'Credit Amount', 'Type'];
+      const headers = ['Date', 'Item', 'Account', 'Category', 'Document Type', 'Cash Out', 'Cash In', 'Type'];
       const rows = analysisData.map(item => {
         if (!item) return null;
         return [
@@ -116,7 +116,7 @@ const CashFlowAnalysis = () => {
           item.document_type || 'N/A',
           Number(item.category_id) === 0 ? (item.total_amount || 0) : '-',
           Number(item.category_id) === 1 ? (item.credit_amount || 0) : '-',
-          Number(item.category_id) === 0 ? 'Debit' : 'Credit'
+          Number(item.category_id) === 0 ? 'Cash Out' : 'Cash In'
         ];
       }).filter(row => row !== null);
       

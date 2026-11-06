@@ -81,7 +81,7 @@ const CashFlowDetails = ({ items = [] }) => {
               filterType === 'debit' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 dark:text-gray-300 hover:bg-gray-300'
             }`}
           >
-            Debit (Inflow)
+            Cash Out
           </button>
           <button
             onClick={() => setFilterType('credit')}
@@ -89,7 +89,7 @@ const CashFlowDetails = ({ items = [] }) => {
               filterType === 'credit' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 dark:text-gray-300 hover:bg-gray-300'
             }`}
           >
-            Credit (Outflow)
+            Cash In
           </button>
         </div>
         <span className="text-sm text-gray-500 dark:text-gray-400 self-center">
@@ -105,8 +105,8 @@ const CashFlowDetails = ({ items = [] }) => {
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Item</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Account</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</th>
-              <th className="px-3 py-2 text-right text-xs font-medium text-green-600 dark:text-green-300 uppercase tracking-wider">Debit Amount</th>
-              <th className="px-3 py-2 text-right text-xs font-medium text-red-600 dark:text-red-300 uppercase tracking-wider">Credit Amount</th>
+              <th className="px-3 py-2 text-right text-xs font-medium text-red-600 dark:text-red-300 uppercase tracking-wider">Cash Out</th>
+              <th className="px-3 py-2 text-right text-xs font-medium text-green-600 dark:text-green-300 uppercase tracking-wider">Cash In</th>
               <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
             </tr>
           </thead>
@@ -145,7 +145,7 @@ const CashFlowDetails = ({ items = [] }) => {
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                         isDebit ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                       }`}>
-                        {isDebit ? 'Debit' : 'Credit'}
+                        {isDebit ? 'Cash Out' : 'Cash In'}
                       </span>
                     </td>
                   </tr>

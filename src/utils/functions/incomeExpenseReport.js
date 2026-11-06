@@ -43,6 +43,34 @@ export function incomeExpenseGroups(data=[]) {
   });
 }
 
+/**
+ * Group recognised income and expense events by the financial event month.
+ * Returns integer-cent totals so monthly net balances do not accumulate
+ * floating-point rounding errors. Undated rows stay visible in a separate bucket.
+ */
+export function incomeExpenseMonthlyReconciliation(rows=[]) {
+  const months=new Map();
+  for(const row of rows){
+    const type=Number(row.document_type);
+    if(![2,3,7].includes(type)||row.resolved!==undefined&&Number(row.resolved)!==1)continue;
+    const date=String(row.resolved_date||'').slice(0,10);
+    const key=/^\d{4}-\d{2}-\d{2}$/.test(date)?date.slice(0,7):'undated';
+    if(!months.has(key))months.set(key,{key,label:key==='undated'?'Date not recorded':new Date(`${key}-01T00:00:00`).toLocaleDateString(undefined,{year:'numeric',month:'long'}),incomeCents:0,expenseCents:0,count:0,invalidAmounts:0});
+    const month=months.get(key);
+    month.count++;
+    const cents=reportCents(type===7?(row.income_amount??row.credit_amount):(row.expense_amount??row.total_amount));
+    if(cents===null){month.invalidAmounts++;continue;}
+    const field=type===7?'incomeCents':'expenseCents';
+    if(!Number.isSafeInteger(month[field]+cents)){month.invalidAmounts++;continue;}
+    month[field]+=cents;
+  }
+  return [...months.values()].sort((a,b)=>a.key==='undated'?1:b.key==='undated'?-1:b.key.localeCompare(a.key)).map(month=>{
+    const netCents=month.incomeCents-month.expenseCents;
+    const valid=month.invalidAmounts===0&&Number.isSafeInteger(netCents);
+    return {...month,valid,totals:{income:valid?reportDecimal(month.incomeCents):null,expenses:valid?reportDecimal(month.expenseCents):null,net:valid?reportDecimal(netCents):null}};
+  });
+}
+
 export function incomeExpenseCsvRows(rows=[]) {
   return rows.filter(row=>[2,3,7].includes(Number(row.document_type))).map(row=>{
     const income=Number(row.document_type)===7;

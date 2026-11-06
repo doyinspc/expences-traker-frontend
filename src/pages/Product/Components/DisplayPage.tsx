@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { columnBuilder } from '../../../actions/common';
 import PageBreadcrumb from "../../../components/common/PageBreadCrumb";
 import Tables from '../../../components/table/index.jsx';
@@ -42,6 +42,13 @@ export interface RequisitionsPageProps {
     page_code: string;
     /** Column visibility configuration - optional, will use defaults if not provided */
     columnVisibility?: ColumnVisibility;
+    /** Optional single-screen form for creating a document and its required first entries. */
+    renderCreateForm?: (props: {
+        onSave: (data: any) => Promise<any>;
+        onCancel: () => void;
+        user: any;
+        locationId: number | string;
+    }) => React.ReactNode;
 }
 
 export interface ColumnVisibility {
@@ -137,10 +144,12 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
         page_size, 
         document_type, 
         page_code,
+        renderCreateForm,
         columnVisibility = DEFAULT_COLUMN_VISIBILITY
     } = props;
     
     const nav = useNavigate();
+    const routeLocation = useLocation();
     const { user, location_id } = useSelector((state: any) => state.authReducer);
     const { locations = [], id: user_id } = user || {};
     const locationData = locations || [];
@@ -351,6 +360,17 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
         setPage(0);
     }, [user, location_id, DOCUMENT_TYPE]);
 
+    const handleCustomCreate = useCallback(async (formData: any): Promise<any> => {
+        const payload = {
+            ...formData,
+            created_by_id: user?.id || null,
+            requester_id: user?.id || null,
+            requisition_type: DOCUMENT_TYPE || null,
+            location_id: location_id || 0,
+        };
+        return loadUpdate(payload);
+    }, [user?.id, location_id, DOCUMENT_TYPE, loadUpdate]);
+
     const handleUpdate = useCallback((formData: any): void => {
         formData.location_id = location_id || 0;
         formData.created_by_id = user?.id;
@@ -466,6 +486,19 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
             requisition_type_name: getOptionLabel(row.requisition_type, REQUISITION_TYPE_OPTIONS),
         }));
     }, [data, TABLE_NAME, PAGE_CODE, getOptionLabel]);
+
+    useEffect(() => {
+        const approvalId = routeLocation.state?.openApprovalId;
+        if (DOCUMENT_TYPE !== 6 || !approvalId) return;
+        const createdTransfer = processedRows.find(
+            (candidate: any) => String(candidate.id) === String(approvalId)
+        );
+        if (!createdTransfer) return;
+        setRow(createdTransfer);
+        setIsEdit(false);
+        setPage(2);
+        nav(routeLocation.pathname, { replace: true, state: null });
+    }, [DOCUMENT_TYPE, processedRows, routeLocation.pathname, routeLocation.state, nav]);
 
     const filteredRows = useMemo(() => 
         filterData(processedRows, filters, searchTerm, filterConfig), 
@@ -752,16 +785,23 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
                             ) : null}
                             {page === 1 ? (
                                 <div className="space-y-6">
-                                    <DynamicForm
-                                        tableName={TABLE_NAME}
-                                        title={isEdit ? `Edit ${displayName}` : `Create ${displayName}`}
-                                        submitLabel={isEdit ? `Update ${displayName}` : `Create ${displayName}`}
-                                        onSave={isEdit ? handleUpdate : handleSave}
-                                        initialData={row}
-                                        onCancel={() => setPage(0)}
-                                        optionData={formattedSelectRows}
-                                        excludedFieldNames={supportsBudget ? [] : ['budget_id', 'budget_name']}
-                                    />
+                                    {!isEdit && renderCreateForm ? renderCreateForm({
+                                        onSave: handleCustomCreate,
+                                        onCancel: () => setPage(0),
+                                        user,
+                                        locationId: location_id || 0,
+                                    }) : (
+                                        <DynamicForm
+                                            tableName={TABLE_NAME}
+                                            title={isEdit ? `Edit ${displayName}` : `Create ${displayName}`}
+                                            submitLabel={isEdit ? `Update ${displayName}` : `Create ${displayName}`}
+                                            onSave={isEdit ? handleUpdate : handleSave}
+                                            initialData={row}
+                                            onCancel={() => setPage(0)}
+                                            optionData={formattedSelectRows}
+                                            excludedFieldNames={supportsBudget ? [] : ['budget_id', 'budget_name']}
+                                        />
+                                    )}
                                 </div>
                             ) : null}
                             {page === 2 ? (

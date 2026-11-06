@@ -16,21 +16,21 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
     }
 
     try {
-      // category_id = 0 is Debit (Inflow) - uses total_amount
-      // category_id = 1 is Credit (Outflow) - uses credit_amount
-      const totalDebit = data.reduce((sum, item) => {
+      // Paired transfers use category 0 for the source account (cash out)
+      // and category 1 for the destination account (cash in).
+      const totalOutgoing = data.reduce((sum, item) => {
         if (!item) return sum;
         const amount = parseFloat(item.total_amount);
         return sum + (Number(item.category_id) === 0 && !isNaN(amount) ? amount : 0);
       }, 0);
 
-      const totalCredit = data.reduce((sum, item) => {
+      const totalIncoming = data.reduce((sum, item) => {
         if (!item) return sum;
         const amount = parseFloat(item.credit_amount);
         return sum + (Number(item.category_id) === 1 && !isNaN(amount) ? amount : 0);
       }, 0);
 
-      const netCashFlow = totalDebit - totalCredit;
+      const netCashFlow = totalIncoming - totalOutgoing;
 
       // Group by date - with null safety
       const groupedByDate = data.reduce((acc, item) => {
@@ -39,7 +39,7 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
         let dateKey = 'Unknown';
         try {
           if (item.resolved_date) {
-            dateKey = new Date(item.resolved_date).toISOString().split('T')[0];
+            dateKey = new Date(item.resolved_date).toISOString().slice(0, 7);
           }
         } catch (e) {
           dateKey = 'Unknown';
@@ -48,8 +48,8 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
         if (!acc[dateKey]) {
           acc[dateKey] = {
             date: dateKey,
-            debit: 0,
-            credit: 0,
+            outgoing: 0,
+            incoming: 0,
             items: [],
             count: 0
           };
@@ -59,12 +59,12 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
         if (Number(item.category_id) === 0) {
           const amount = parseFloat(item.total_amount);
           if (!isNaN(amount)) {
-            acc[dateKey].debit += amount;
+            acc[dateKey].outgoing += amount;
           }
         } else if (Number(item.category_id) === 1) {
           const amount = parseFloat(item.credit_amount);
           if (!isNaN(amount)) {
-            acc[dateKey].credit += amount;
+            acc[dateKey].incoming += amount;
           }
         }
 
@@ -74,8 +74,8 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
       }, {});
 
       return {
-        totalDebit: isNaN(totalDebit) ? 0 : totalDebit,
-        totalCredit: isNaN(totalCredit) ? 0 : totalCredit,
+        totalOutgoing: isNaN(totalOutgoing) ? 0 : totalOutgoing,
+        totalIncoming: isNaN(totalIncoming) ? 0 : totalIncoming,
         netCashFlow: isNaN(netCashFlow) ? 0 : netCashFlow,
         transactionCount: data.length || 0,
         groupedByDate: Object.values(groupedByDate) || [],
@@ -263,16 +263,16 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
         {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
           <div className="bg-green-50 dark:bg-green-950/30 rounded-lg p-3">
-            <p className="text-sm text-green-600 dark:text-green-300">Total Debit (Inflow)</p>
-            <p className="text-lg font-bold text-green-800">{formatCurrency(summary.totalDebit)}</p>
+            <p className="text-sm text-green-600 dark:text-green-300">Cash In</p>
+            <p className="text-lg font-bold text-green-800">{formatCurrency(summary.totalIncoming)}</p>
           </div>
           <div className="bg-red-50 dark:bg-red-950/30 rounded-lg p-3">
-            <p className="text-sm text-red-600 dark:text-red-300">Total Credit (Outflow)</p>
-            <p className="text-lg font-bold text-red-800">{formatCurrency(summary.totalCredit)}</p>
+            <p className="text-sm text-red-600 dark:text-red-300">Cash Out</p>
+            <p className="text-lg font-bold text-red-800">{formatCurrency(summary.totalOutgoing)}</p>
           </div>
           <div className={`rounded-lg p-3 ${summary.netCashFlow >= 0 ? 'bg-blue-50 dark:bg-blue-950/30' : 'bg-orange-50 dark:bg-orange-950/30'}`}>
             <p className={`text-sm ${summary.netCashFlow >= 0 ? 'text-blue-600 dark:text-blue-300' : 'text-orange-600 dark:text-orange-300'}`}>
-              Net Cash Flow
+              Net Balance
             </p>
             <p className={`text-lg font-bold ${summary.netCashFlow >= 0 ? 'text-blue-800' : 'text-orange-800'}`}>
               {formatCurrency(summary.netCashFlow)}
@@ -309,10 +309,10 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
                   Items {sortConfig.key === 'count' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-green-600 dark:text-green-300 uppercase tracking-wider">
-                  Debit (Inflow)
+                  Cash In
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-red-600 dark:text-red-300 uppercase tracking-wider">
-                  Credit (Outflow)
+                  Cash Out
                 </th>
               </tr>
             </thead>
@@ -341,16 +341,16 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
                           </svg></button>
                         </td>
                         <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {formatDate(group.date)}
+                  {formatDate(`${group.date}-01`)}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 text-right">
                           {group.count || 0}
                         </td>
                         <td className="px-4 py-3 text-sm font-semibold text-green-700 text-right">
-                          {formatCurrency(group.debit || 0)}
+                          {formatCurrency(group.incoming || 0)}
                         </td>
                         <td className="px-4 py-3 text-sm font-semibold text-red-700 text-right">
-                          {formatCurrency(group.credit || 0)}
+                          {formatCurrency(group.outgoing || 0)}
                         </td>
                       </tr>
 
@@ -503,7 +503,7 @@ const CashFlowSummary = ({ data = [], onExport, isLoading = false }) => {
                               <div>
                                 <span className="font-medium text-gray-500 dark:text-gray-400">Type:</span>
                                 <span className={`ml-2 font-semibold ${isDebit ? 'text-green-700' : 'text-red-700'}`}>
-                                  {isDebit ? 'Debit (Inflow)' : 'Credit (Outflow)'}
+                                  {isDebit ? 'Cash Out' : 'Cash In'}
                                 </span>
                               </div>
                               <div>
