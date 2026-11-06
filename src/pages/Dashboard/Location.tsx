@@ -1,38 +1,30 @@
 // src/pages/Dashboard/Landing.tsx
 
-import React, { useState } from 'react';
-import { 
-  MapPin, 
-  ChevronDown, 
-  Building, 
-  Store, 
-  Warehouse, 
-  Factory,
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  MapPin,
+  ChevronDown,
+  Building,
   Users,
-  Briefcase,
   Globe,
   Check,
   Settings,
-  LogOut,
   Bell,
   User,
   Shield,
   UserCog,
   UserCheck,
-  UserMinus,
   UserPlus,
   ArrowRight,
-  X,
   ChevronLeft,
   Info,
   AlertCircle,
   Key,
   Lock,
   Unlock,
-  HelpCircle,
   Sparkles,
   Clock,
-  TrendingUp,
   Activity,
   Calendar,
   ChevronUp,
@@ -40,13 +32,13 @@ import {
   Mail,
   MapPin as MapPinIcon,
   Building2,
-  Award,
-  ExternalLink
-} from 'lucide-react';
-import PageMeta from '../../components/common/PageMeta';
-import { useDispatch, useSelector } from 'react-redux';
-import { API_PATHS, SERVER_PATHS, SERVER_URL } from '../../actions/common';
-import { authActions } from '../../actions/auth';
+  ExternalLink,
+} from "lucide-react";
+import PageMeta from "../../components/common/PageMeta";
+import { useDispatch, useSelector } from "react-redux";
+import { SERVER_URL } from "../../actions/common";
+import { authActions } from "../../actions/auth";
+import useTanstackQuery from "../../hooks/useTanstackQuery";
 
 // ============ LOCATION DATA ============
 interface Location {
@@ -74,19 +66,56 @@ interface Role {
   permissions?: string[];
 }
 
+interface CompanyProfile {
+  name?: string;
+  logo_path?: string;
+  address_line1?: string;
+  address_line2?: string;
+  city?: string;
+  state?: string;
+  email?: string;
+  phone?: string;
+  registration_number?: string;
+  country?: string;
+  industry?: string;
+  website?: string;
+  description?: string;
+}
+
+interface DashboardUser {
+  id?: number;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  company?: CompanyProfile;
+  locations?: Location[];
+  photo?: string;
+}
+
+interface DashboardAuthState {
+  user?: DashboardUser;
+  location_id?: string | number;
+  locations?: Location[];
+  location?: Location | null;
+  roles?: Role[];
+  role?: Role | null;
+}
+
 // ============ COLLAPSIBLE INFO BANNER ============
 const InfoBanner: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <div className="mb-6">
-      <div className={`
+      <div
+        className={`
         overflow-hidden rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 
         border border-blue-200 dark:border-blue-800 transition-all duration-500 ease-in-out
-        ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-12 opacity-90'}
-      `}>
+        ${isExpanded ? "max-h-[500px] opacity-100" : "max-h-12 opacity-90"}
+      `}
+      >
         {/* Header - Always visible */}
-        <div 
+        <div
           className="flex items-center justify-between p-4 cursor-pointer hover:bg-blue-100/30 dark:hover:bg-blue-800/20 transition-colors"
           onClick={() => setIsExpanded(!isExpanded)}
         >
@@ -112,7 +141,7 @@ const InfoBanner: React.FC = () => {
                 <ChevronDown className="h-5 w-5 text-blue-500 dark:text-blue-400" />
               </div>
             )}
-            <button 
+            <button
               className="p-1 rounded-lg hover:bg-blue-200/50 dark:hover:bg-blue-700/30 transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
@@ -129,27 +158,40 @@ const InfoBanner: React.FC = () => {
         </div>
 
         {/* Content - Collapsible */}
-        <div className={`
+        <div
+          className={`
           px-4 pb-4 transition-all duration-500 ease-in-out
-          ${isExpanded ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none absolute'}
-        `}>
+          ${isExpanded ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none absolute"}
+        `}
+        >
           <div className="mt-1 space-y-3 text-sm text-blue-800 dark:text-blue-300">
             <p className="flex items-start gap-2">
               <span className="mt-0.5">📍</span>
               <span>
-                <span className="font-medium">Location & Role Selection:</span> 
-                Your actions and permissions depend on your selected location and role. 
-                Choose the right combination to access the features you need.
+                <span className="font-medium">Location & Role Selection:</span>
+                Your actions and permissions depend on your selected location
+                and role. Choose the right combination to access the features
+                you need.
               </span>
             </p>
             <div className="flex flex-wrap gap-4 text-xs">
               <span className="flex items-center gap-1.5">
                 <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                <span>Active location shown in <span className="font-medium text-blue-600 dark:text-blue-400">blue</span></span>
+                <span>
+                  Active location shown in{" "}
+                  <span className="font-medium text-blue-600 dark:text-blue-400">
+                    blue
+                  </span>
+                </span>
               </span>
               <span className="flex items-center gap-1.5">
                 <div className="h-2 w-2 rounded-full bg-purple-500"></div>
-                <span>Active role shown in <span className="font-medium text-purple-600 dark:text-purple-400">purple</span></span>
+                <span>
+                  Active role shown in{" "}
+                  <span className="font-medium text-purple-600 dark:text-purple-400">
+                    purple
+                  </span>
+                </span>
               </span>
               <span className="flex items-center gap-1.5">
                 <div className="h-2 w-2 rounded-full bg-amber-500"></div>
@@ -174,14 +216,18 @@ const InfoBanner: React.FC = () => {
 };
 
 // ============ PERMISSION INFO CARD ============
-const PermissionInfoCard: React.FC<{ role: Role | null; location: Location | null }> = ({ role, location }) => {
+const PermissionInfoCard: React.FC<{
+  role: Role | null;
+  location: Location | null;
+}> = ({ role, location }) => {
   if (!role || !location) {
     return (
       <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
         <div className="flex items-center gap-3">
           <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
           <p className="text-sm text-amber-800 dark:text-amber-300">
-            <span className="font-medium">Action Required:</span> Please select a location and role to view your permissions
+            <span className="font-medium">Action Required:</span> Please select
+            a location and role to view your permissions
           </p>
         </div>
       </div>
@@ -189,12 +235,12 @@ const PermissionInfoCard: React.FC<{ role: Role | null; location: Location | nul
   }
 
   const samplePermissions = [
-    'View Documents',
-    'Create Requisitions',
-    'Approve Purchase Orders',
-    'Manage Users',
-    'View Reports',
-    'Edit Settings'
+    "View Documents",
+    "Create Requisitions",
+    "Approve Purchase Orders",
+    "Manage Users",
+    "View Reports",
+    "Edit Settings",
   ];
 
   return (
@@ -212,7 +258,10 @@ const PermissionInfoCard: React.FC<{ role: Role | null; location: Location | nul
           </h5>
           <div className="mt-2 flex flex-wrap gap-2">
             {samplePermissions.slice(0, 4).map((perm, idx) => (
-              <span key={idx} className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-0.5 text-xs text-emerald-700 dark:text-emerald-300">
+              <span
+                key={idx}
+                className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-0.5 text-xs text-emerald-700 dark:text-emerald-300"
+              >
                 <Check className="h-3 w-3" />
                 {perm}
               </span>
@@ -232,26 +281,28 @@ const PermissionInfoCard: React.FC<{ role: Role | null; location: Location | nul
 };
 
 // ============ USER PROFILE CARD (with Company Details) ============
-const UserProfileCard = () => {
-  const { user } = useSelector((state: any) => state.auth);
-  const { roles } = useSelector((state: any) => state.auth);
-  const { first_name, last_name, email, company, locations, phone, photo } = user || {};
-  const { 
-    name: companyName, 
-    logo_path, 
-    favicon_path,
-    address_line1, 
-    address_line2, 
-    city: companyCity, 
-    state: companyState, 
-    email: companyEmail, 
-    phone: companyPhone, 
+const UserProfileCard: React.FC<{ pendingApprovals: number }> = ({
+  pendingApprovals,
+}) => {
+  const { user } = useSelector(
+    (state: { auth: DashboardAuthState }) => state.auth,
+  );
+  const { first_name, last_name, email, company, locations, photo } =
+    user || {};
+  const {
+    name: companyName,
+    logo_path,
+    address_line1,
+    address_line2,
+    city: companyCity,
+    state: companyState,
+    email: companyEmail,
+    phone: companyPhone,
     registration_number: registrationNumber,
     country: companyCountry,
     industry,
-    established_year: establishedYear,
     website,
-    description
+    description,
   } = company || {};
 
   const photo_url = photo ? SERVER_URL + photo : null;
@@ -261,18 +312,24 @@ const UserProfileCard = () => {
   const [showMenu, setShowMenu] = useState(false);
 
   const getInitials = (name: string) => {
-    if (!name) return 'U';
+    if (!name) return "U";
     return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
+      .split(" ")
+      .map((word) => word[0])
+      .join("")
       .toUpperCase()
       .slice(0, 2);
   };
 
   // Build company address
-  const addressParts = [address_line1, address_line2, companyCity, companyState, companyCountry].filter(Boolean);
-  const fullAddress = addressParts.join(', ');
+  const addressParts = [
+    address_line1,
+    address_line2,
+    companyCity,
+    companyState,
+    companyCountry,
+  ].filter(Boolean);
+  const fullAddress = addressParts.join(", ");
 
   return (
     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-6 text-white shadow-xl">
@@ -281,7 +338,7 @@ const UserProfileCard = () => {
         <div className="absolute -top-32 -right-32 h-96 w-96 rounded-full bg-white/10 blur-3xl animate-pulse" />
         <div className="absolute -bottom-32 -left-32 h-96 w-96 rounded-full bg-white/10 blur-3xl animate-pulse delay-1000" />
         <div className="absolute top-1/2 left-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/5 blur-2xl animate-pulse delay-500" />
-        
+
         {/* Decorative dots */}
         <div className="absolute top-10 right-20 grid grid-cols-4 gap-2 opacity-20">
           {[...Array(16)].map((_, i) => (
@@ -306,7 +363,7 @@ const UserProfileCard = () => {
                 {photo_url ? (
                   <img
                     src={photo_url}
-                    alt={fullname || 'User'}
+                    alt={fullname || "User"}
                     className="h-16 w-16 rounded-full object-cover"
                   />
                 ) : (
@@ -322,11 +379,11 @@ const UserProfileCard = () => {
 
             <div>
               <h2 className="text-2xl font-bold tracking-tight">
-                {fullname || 'Guest User'}
+                {fullname || "Guest User"}
               </h2>
               <p className="text-sm text-white/80 flex items-center gap-1">
                 <User className="h-3.5 w-3.5" />
-                {email || 'guest@example.com'}
+                {email || "guest@example.com"}
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-xs backdrop-blur-sm">
@@ -345,10 +402,10 @@ const UserProfileCard = () => {
             <button className="relative rounded-full bg-white/20 p-2 backdrop-blur-sm transition hover:bg-white/30">
               <Bell className="h-5 w-5" />
               <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold">
-                8
+                {pendingApprovals}
               </span>
             </button>
-            <button 
+            <button
               onClick={() => setShowMenu(!showMenu)}
               className="relative rounded-full bg-white/20 p-2 backdrop-blur-sm transition hover:bg-white/30"
             >
@@ -363,9 +420,15 @@ const UserProfileCard = () => {
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
                 {logo_url ? (
-                  <img src={logo_url} alt={companyName} className="h-8 w-8 rounded-full object-cover" />
+                  <img
+                    src={logo_url}
+                    alt={companyName}
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
                 ) : (
-                  <span className="text-sm font-bold text-white">{getInitials(companyName)}</span>
+                  <span className="text-sm font-bold text-white">
+                    {getInitials(companyName)}
+                  </span>
                 )}
               </div>
               <div>
@@ -384,117 +447,45 @@ const UserProfileCard = () => {
                   </p>
                 )}
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-white/70 mt-0.5">
-                  {companyPhone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{companyPhone}</span>}
-                  {companyEmail && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{companyEmail}</span>}
-                  {website && <span className="flex items-center gap-1"><ExternalLink className="h-3 w-3" /><a href={website} target="_blank" rel="noopener noreferrer" className="hover:underline">Website</a></span>}
-                  {industry && <span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{industry}</span>}
+                  {companyPhone && (
+                    <span className="flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      {companyPhone}
+                    </span>
+                  )}
+                  {companyEmail && (
+                    <span className="flex items-center gap-1">
+                      <Mail className="h-3 w-3" />
+                      {companyEmail}
+                    </span>
+                  )}
+                  {website && (
+                    <span className="flex items-center gap-1">
+                      <ExternalLink className="h-3 w-3" />
+                      <a
+                        href={website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                      >
+                        Website
+                      </a>
+                    </span>
+                  )}
+                  {industry && (
+                    <span className="flex items-center gap-1">
+                      <Building2 className="h-3 w-3" />
+                      {industry}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
             {description && (
-              <p className="text-xs text-white/60 max-w-md line-clamp-2">{description}</p>
+              <p className="text-xs text-white/60 max-w-md line-clamp-2">
+                {description}
+              </p>
             )}
-          </div>
-        )}
-
-    
-      </div>
-    </div>
-  );
-};
-
-// ============ LOCATION CARD ============
-interface LocationCardProps {
-  location: Location;
-  isSelected: boolean;
-  onSelect: (location: Location) => void;
-  roleCount: number;
-  isRoleSelectionMode: boolean;
-}
-
-const LocationCard: React.FC<LocationCardProps> = ({ 
-  location, 
-  isSelected, 
-  onSelect,
-  roleCount,
-  isRoleSelectionMode
-}) => {
-  const Icon = Building;
-  const gradientColor = 'from-purple-500 to-pink-500';
-
-  return (
-    <div
-      onClick={() => !isRoleSelectionMode && onSelect(location)}
-      className={`
-        group relative cursor-pointer overflow-hidden rounded-2xl border-2 p-6 transition-all duration-300
-        ${isSelected && isRoleSelectionMode 
-          ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 shadow-lg shadow-blue-500/20' 
-          : isRoleSelectionMode
-            ? 'border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-800/30 opacity-60 cursor-default'
-            : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900/50'
-        }
-      `}
-    >
-      {/* Gradient background accent */}
-      <div className={`
-        absolute inset-0 bg-gradient-to-br ${gradientColor} opacity-0 transition-opacity duration-300
-        ${isSelected && isRoleSelectionMode ? 'opacity-5' : 'group-hover:opacity-5'}
-      `} />
-
-      {/* Status indicator */}
-      <div className="absolute right-4 top-4 flex items-center gap-1.5">
-        <span className="relative flex h-2.5 w-2.5">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
-        </span>
-        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Active</span>
-      </div>
-
-      {location.isDefault && (
-        <div className="absolute left-4 top-4">
-          <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-            Default
-          </span>
-        </div>
-      )}
-
-      <div className="relative">
-        {/* Icon */}
-        <div className={`
-          mb-4 inline-flex rounded-xl p-3 transition-all duration-300
-          ${isSelected && isRoleSelectionMode 
-            ? 'bg-gradient-to-br from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30' 
-            : 'bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600 dark:bg-gray-800 dark:text-gray-400'
-          }
-        `}>
-          <Icon className="h-6 w-6" />
-        </div>
-
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          {location.name}
-        </h3>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          {location.city}
-        </p>
-        <div className="mt-2 flex items-start gap-1.5 text-sm text-gray-500 dark:text-gray-400">
-          <MapPin className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-          <span>
-            {location.address}, {location.city}
-          </span>
-        </div>
-
-        {/* Role count badge */}
-        <div className="mt-4 flex items-center gap-2 border-t border-gray-200 pt-4 dark:border-gray-800">
-          <Shield className="h-4 w-4 text-gray-400" />
-          <span className="text-sm text-gray-600 dark:text-gray-400">
-            {roleCount} {roleCount === 1 ? 'Role' : 'Roles'} available
-          </span>
-        </div>
-
-        {/* Selected checkmark */}
-        {isSelected && isRoleSelectionMode && (
-          <div className="absolute bottom-4 right-4 rounded-full bg-blue-600 p-1 text-white shadow-lg">
-            <Check className="h-4 w-4" />
           </div>
         )}
       </div>
@@ -509,36 +500,32 @@ interface RoleCardProps {
   onSelect: (role: Role) => void;
 }
 
-const RoleCard: React.FC<RoleCardProps> = ({ 
-  role, 
-  isSelected, 
-  onSelect 
-}) => {
+const RoleCard: React.FC<RoleCardProps> = ({ role, isSelected, onSelect }) => {
   const getRoleIcon = (roleName: string) => {
-    const name = roleName?.toLowerCase() || '';
-    if (name.includes('admin')) return <Shield className="h-5 w-5" />;
-    if (name.includes('manager')) return <UserCog className="h-5 w-5" />;
-    if (name.includes('supervisor')) return <UserCheck className="h-5 w-5" />;
-    if (name.includes('user')) return <User className="h-5 w-5" />;
+    const name = roleName?.toLowerCase() || "";
+    if (name.includes("admin")) return <Shield className="h-5 w-5" />;
+    if (name.includes("manager")) return <UserCog className="h-5 w-5" />;
+    if (name.includes("supervisor")) return <UserCheck className="h-5 w-5" />;
+    if (name.includes("user")) return <User className="h-5 w-5" />;
     return <UserPlus className="h-5 w-5" />;
   };
 
   const getRoleColor = (roleName: string) => {
-    const name = roleName?.toLowerCase() || '';
-    if (name.includes('admin')) return 'from-red-500 to-pink-500';
-    if (name.includes('manager')) return 'from-purple-500 to-indigo-500';
-    if (name.includes('supervisor')) return 'from-blue-500 to-cyan-500';
-    if (name.includes('user')) return 'from-emerald-500 to-teal-500';
-    return 'from-gray-500 to-gray-600';
+    const name = roleName?.toLowerCase() || "";
+    if (name.includes("admin")) return "from-red-500 to-pink-500";
+    if (name.includes("manager")) return "from-purple-500 to-indigo-500";
+    if (name.includes("supervisor")) return "from-blue-500 to-cyan-500";
+    if (name.includes("user")) return "from-emerald-500 to-teal-500";
+    return "from-gray-500 to-gray-600";
   };
 
   const getPermissionLevel = (roleName: string) => {
-    const name = roleName?.toLowerCase() || '';
-    if (name.includes('admin')) return 'Full Access';
-    if (name.includes('manager')) return 'Management Access';
-    if (name.includes('supervisor')) return 'Supervisory Access';
-    if (name.includes('user')) return 'Basic Access';
-    return 'Limited Access';
+    const name = roleName?.toLowerCase() || "";
+    if (name.includes("admin")) return "Full Access";
+    if (name.includes("manager")) return "Management Access";
+    if (name.includes("supervisor")) return "Supervisory Access";
+    if (name.includes("user")) return "Basic Access";
+    return "Limited Access";
   };
 
   const gradientColor = getRoleColor(role.name);
@@ -548,17 +535,20 @@ const RoleCard: React.FC<RoleCardProps> = ({
       onClick={() => onSelect(role)}
       className={`
         group relative cursor-pointer overflow-hidden rounded-2xl border-2 p-6 transition-all duration-300
-        ${isSelected 
-          ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 shadow-lg shadow-purple-500/20' 
-          : 'border-gray-200 bg-white hover:border-purple-300 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900/50'
+        ${
+          isSelected
+            ? "border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 shadow-lg shadow-purple-500/20"
+            : "border-gray-200 bg-white hover:border-purple-300 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900/50"
         }
       `}
     >
       {/* Gradient background accent */}
-      <div className={`
+      <div
+        className={`
         absolute inset-0 bg-gradient-to-br ${gradientColor} opacity-0 transition-opacity duration-300
-        ${isSelected ? 'opacity-5' : 'group-hover:opacity-5'}
-      `} />
+        ${isSelected ? "opacity-5" : "group-hover:opacity-5"}
+      `}
+      />
 
       {/* Status indicator */}
       <div className="absolute right-4 top-4 flex items-center gap-1.5">
@@ -566,7 +556,9 @@ const RoleCard: React.FC<RoleCardProps> = ({
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
           <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
         </span>
-        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Active</span>
+        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+          Active
+        </span>
       </div>
 
       {role.isDefault && (
@@ -579,13 +571,16 @@ const RoleCard: React.FC<RoleCardProps> = ({
 
       <div className="relative">
         {/* Icon */}
-        <div className={`
+        <div
+          className={`
           mb-4 inline-flex rounded-xl p-3 transition-all duration-300
-          ${isSelected 
-            ? 'bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30' 
-            : 'bg-gray-100 text-gray-600 group-hover:bg-purple-100 group-hover:text-purple-600 dark:bg-gray-800 dark:text-gray-400'
+          ${
+            isSelected
+              ? "bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30"
+              : "bg-gray-100 text-gray-600 group-hover:bg-purple-100 group-hover:text-purple-600 dark:bg-gray-800 dark:text-gray-400"
           }
-        `}>
+        `}
+        >
           {getRoleIcon(role.name)}
         </div>
 
@@ -618,7 +613,9 @@ const RoleCard: React.FC<RoleCardProps> = ({
 };
 
 // ============ CURRENT LOCATION BADGE ============
-const CurrentLocationBadge: React.FC<{ location: Location | null }> = ({ location }) => {
+const CurrentLocationBadge: React.FC<{ location: Location | null }> = ({
+  location,
+}) => {
   if (!location) {
     return (
       <div className="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-1.5 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
@@ -656,13 +653,18 @@ const CurrentRoleBadge: React.FC<{ role: Role | null }> = ({ role }) => {
       <Shield className="h-4 w-4" />
       <span className="text-sm font-medium">{role.name}</span>
       <div className="h-3 w-px bg-purple-300 dark:bg-purple-600" />
-      <span className="text-xs opacity-70">{role.description?.split(' ').slice(0, 2).join(' ') || 'Role'}</span>
+      <span className="text-xs opacity-70">
+        {role.description?.split(" ").slice(0, 2).join(" ") || "Role"}
+      </span>
     </div>
   );
 };
 
 // ============ ACTION REQUIRED CARD ============
-const ActionRequiredCard: React.FC<{ location: Location | null; role: Role | null }> = ({ location, role }) => {
+const ActionRequiredCard: React.FC<{
+  location: Location | null;
+  role: Role | null;
+}> = ({ location, role }) => {
   if (location && role) {
     return (
       <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-4">
@@ -671,10 +673,18 @@ const ActionRequiredCard: React.FC<{ location: Location | null; role: Role | nul
             <Unlock className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
           </div>
           <p className="text-sm text-emerald-800 dark:text-emerald-300">
-            <span className="font-medium">You're all set!</span> You have access to 
-            <span className="font-medium text-emerald-900 dark:text-emerald-200"> {location.name}</span> as 
-            <span className="font-medium text-emerald-900 dark:text-emerald-200"> {role.name}</span>. 
-            You can now perform actions based on your permissions.
+            <span className="font-medium">You're all set!</span> You have access
+            to
+            <span className="font-medium text-emerald-900 dark:text-emerald-200">
+              {" "}
+              {location.name}
+            </span>{" "}
+            as
+            <span className="font-medium text-emerald-900 dark:text-emerald-200">
+              {" "}
+              {role.name}
+            </span>
+            . You can now perform actions based on your permissions.
           </p>
         </div>
       </div>
@@ -689,8 +699,12 @@ const ActionRequiredCard: React.FC<{ location: Location | null; role: Role | nul
             <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
           </div>
           <p className="text-sm text-amber-800 dark:text-amber-300">
-            <span className="font-medium">Action Required:</span> Select a role for 
-            <span className="font-medium text-amber-900 dark:text-amber-200"> {location.name}</span> 
+            <span className="font-medium">Action Required:</span> Select a role
+            for
+            <span className="font-medium text-amber-900 dark:text-amber-200">
+              {" "}
+              {location.name}
+            </span>
             to access features and perform actions.
           </p>
         </div>
@@ -705,8 +719,9 @@ const ActionRequiredCard: React.FC<{ location: Location | null; role: Role | nul
           <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
         </div>
         <p className="text-sm text-amber-800 dark:text-amber-300">
-          <span className="font-medium">Welcome! 👋</span> To get started, select a location below, 
-          then choose your role. This ensures you have the right permissions for your work.
+          <span className="font-medium">Welcome! 👋</span> To get started,
+          select a location below, then choose your role. This ensures you have
+          the right permissions for your work.
         </p>
       </div>
     </div>
@@ -715,16 +730,38 @@ const ActionRequiredCard: React.FC<{ location: Location | null; role: Role | nul
 
 // ============ MAIN LANDING PAGE ============
 export default function Landing() {
+  const nav = useNavigate();
   const dispatch = useDispatch();
-  const { locations, location, roles, role } = useSelector((state: any) => state.auth);
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(location);
+  const { user, location_id, locations, location, roles, role } = useSelector(
+    (state: { auth: DashboardAuthState }) => state.auth,
+  );
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(
+    location,
+  );
   const [selectedRole, setSelectedRole] = useState<Role | null>(role);
   const [showRoleSelection, setShowRoleSelection] = useState(false);
+  const activeLocationId = location_id || location?.id || 0;
+  const { data: approvalResponse } = useTanstackQuery({
+    table: "approvalcenter",
+    uniqueKey: "location-approval-summary",
+    queryType: "getApprovalItems",
+    mainParam: { user_id: user?.id || 0, location_id: activeLocationId },
+    narration: "get pending approvals for selected location",
+    enabled: Boolean(user?.id && activeLocationId),
+  });
+  const approvalItems = Array.isArray(approvalResponse)
+    ? approvalResponse
+    : Array.isArray(approvalResponse?.data)
+      ? approvalResponse.data
+      : [];
+  const totalApprovalItems = approvalItems.length;
 
   // Filter roles by location_id matching selected location's id
   const getRolesForLocation = (locationId: string) => {
     if (!roles || !Array.isArray(roles)) return [];
-    return roles.filter((r: Role) => String(r.location_id) === String(locationId));
+    return roles.filter(
+      (r: Role) => String(r.location_id) === String(locationId),
+    );
   };
 
   // Pass the clicked location directly: React state is not updated within this click.
@@ -739,8 +776,15 @@ export default function Landing() {
   };
 
   // Locations with several roles are applied after the staff member chooses one.
-  const handleSelectRole = (nextRole: Role, targetLocation: Location | null = selectedLocation) => {
-    if (!targetLocation || String(nextRole.location_id) !== String(targetLocation.id)) return;
+  const handleSelectRole = (
+    nextRole: Role,
+    targetLocation: Location | null = selectedLocation,
+  ) => {
+    if (
+      !targetLocation ||
+      String(nextRole.location_id) !== String(targetLocation.id)
+    )
+      return;
     setSelectedRole(nextRole);
     dispatch(authActions.tenantSwitchLocation(targetLocation));
     dispatch(authActions.tenantSwitchRole(nextRole));
@@ -753,13 +797,16 @@ export default function Landing() {
   };
 
   // Calculate total roles across all locations
-  const totalRoles = locations?.reduce((total: number, loc: Location) => {
-    const locationRoles = getRolesForLocation(loc.id);
-    return total + locationRoles.length;
-  }, 0) || 0;
+  const totalRoles =
+    locations?.reduce((total: number, loc: Location) => {
+      const locationRoles = getRolesForLocation(loc.id);
+      return total + locationRoles.length;
+    }, 0) || 0;
 
   // Get roles for selected location
-  const locationRoles = selectedLocation ? getRolesForLocation(selectedLocation.id) : [];
+  const locationRoles = selectedLocation
+    ? getRolesForLocation(selectedLocation.id)
+    : [];
 
   return (
     <>
@@ -781,7 +828,7 @@ export default function Landing() {
                 Manage your operations across all locations
               </p>
             </div>
-            
+
             <div className="flex flex-wrap items-center gap-3">
               <CurrentLocationBadge location={selectedLocation || location} />
               <CurrentRoleBadge role={selectedRole} />
@@ -793,12 +840,15 @@ export default function Landing() {
 
           {/* User Profile Card (with company details) */}
           <div className="mb-6">
-            <UserProfileCard />
+            <UserProfileCard pendingApprovals={totalApprovalItems} />
           </div>
 
           {/* Action Required / Status Card */}
           <div className="mb-6">
-            <ActionRequiredCard location={selectedLocation || location} role={selectedRole} />
+            <ActionRequiredCard
+              location={selectedLocation || location}
+              role={selectedRole}
+            />
           </div>
 
           {/* Location & Role Selection Area */}
@@ -815,7 +865,12 @@ export default function Landing() {
                       >
                         <ChevronLeft className="h-5 w-5 text-gray-500" />
                       </button>
-                      <span>Select Your Role for <span className="text-purple-600 dark:text-purple-400">{selectedLocation?.name}</span></span>
+                      <span>
+                        Select Your Role for{" "}
+                        <span className="text-purple-600 dark:text-purple-400">
+                          {selectedLocation?.name}
+                        </span>
+                      </span>
                     </>
                   ) : (
                     <>
@@ -838,67 +893,79 @@ export default function Landing() {
             </div>
 
             {/* Location Cards */}
-            <div className={`grid gap-4 transition-all duration-300 ${
-              showRoleSelection 
-                ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 opacity-50 scale-[0.98]' 
-                : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
-            }`}>
-              {locations?.slice(0, showRoleSelection ? 3 : 4).map((loc: Location) => {
-                const isSelected = selectedLocation?.id === loc.id;
-                const roleCount = getRolesForLocation(loc.id).length;
-                const Icon = Building;
-                const gradientColor = 'from-purple-500 to-pink-500';
+            <div
+              className={`grid gap-4 transition-all duration-300 ${
+                showRoleSelection
+                  ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 opacity-50 scale-[0.98]"
+                  : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+              }`}
+            >
+              {locations
+                ?.slice(0, showRoleSelection ? 3 : 4)
+                .map((loc: Location) => {
+                  const isSelected = selectedLocation?.id === loc.id;
+                  const roleCount = getRolesForLocation(loc.id).length;
+                  const Icon = Building;
+                  const gradientColor = "from-purple-500 to-pink-500";
 
-                return (
-                  <div
-                    key={loc.id}
-                    onClick={() => !showRoleSelection && handleSelectLocation(loc)}
-                    className={`
+                  return (
+                    <div
+                      key={loc.id}
+                      onClick={() =>
+                        !showRoleSelection && handleSelectLocation(loc)
+                      }
+                      className={`
                       group relative overflow-hidden rounded-xl border p-4 text-left transition-all duration-300
-                      ${isSelected && showRoleSelection 
-                        ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 shadow-lg shadow-blue-500/20' 
-                        : showRoleSelection
-                          ? 'border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-800/30 opacity-60 cursor-default'
-                          : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-lg hover:-translate-y-0.5 dark:border-gray-800 dark:bg-gray-900/50 cursor-pointer'
+                      ${
+                        isSelected && showRoleSelection
+                          ? "border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 shadow-lg shadow-blue-500/20"
+                          : showRoleSelection
+                            ? "border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-800/30 opacity-60 cursor-default"
+                            : "border-gray-200 bg-white hover:border-blue-300 hover:shadow-lg hover:-translate-y-0.5 dark:border-gray-800 dark:bg-gray-900/50 cursor-pointer"
                       }
                     `}
-                  >
-                    <div className={`
+                    >
+                      <div
+                        className={`
                       absolute inset-0 bg-gradient-to-br ${gradientColor} opacity-0 transition-opacity duration-300
-                      ${isSelected && showRoleSelection ? 'opacity-5' : 'group-hover:opacity-5'}
-                    `} />
+                      ${isSelected && showRoleSelection ? "opacity-5" : "group-hover:opacity-5"}
+                    `}
+                      />
 
-                    <div className="relative flex items-center gap-3">
-                      <div className={`
+                      <div className="relative flex items-center gap-3">
+                        <div
+                          className={`
                         rounded-lg p-2 transition-colors
-                        ${isSelected && showRoleSelection 
-                          ? 'bg-gradient-to-br from-blue-500 to-purple-500 text-white' 
-                          : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                        ${
+                          isSelected && showRoleSelection
+                            ? "bg-gradient-to-br from-blue-500 to-purple-500 text-white"
+                            : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
                         }
-                      `}>
-                        <Icon className="h-4 w-4" />
+                      `}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900 dark:text-white">
+                            {loc.name}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {loc.city}
+                            <span className="mx-1">•</span>
+                            {roleCount} {roleCount === 1 ? "role" : "roles"}
+                          </p>
+                        </div>
+                        {isSelected && showRoleSelection && (
+                          <Check className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        )}
+                        {!showRoleSelection && (
+                          <ArrowRight className="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        )}
                       </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900 dark:text-white">
-                          {loc.name}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {loc.city}
-                          <span className="mx-1">•</span>
-                          {roleCount} {roleCount === 1 ? 'role' : 'roles'}
-                        </p>
-                      </div>
-                      {isSelected && showRoleSelection && (
-                        <Check className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                      )}
-                      {!showRoleSelection && (
-                        <ArrowRight className="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      )}
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
 
             {/* Role Selection */}
@@ -907,7 +974,9 @@ export default function Landing() {
                 <div className="mb-3 flex items-center justify-between">
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     <Shield className="inline h-4 w-4 mr-1.5 text-purple-500" />
-                    {locationRoles.length} {locationRoles.length === 1 ? 'role' : 'roles'} available for {selectedLocation.name}
+                    {locationRoles.length}{" "}
+                    {locationRoles.length === 1 ? "role" : "roles"} available
+                    for {selectedLocation.name}
                   </p>
                   {locationRoles.length === 0 && (
                     <button
@@ -932,7 +1001,9 @@ export default function Landing() {
                   ) : (
                     <div className="col-span-full text-center py-8 bg-white dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
                       <Shield className="h-12 w-12 mx-auto mb-3 text-gray-400 opacity-30" />
-                      <p className="text-gray-500 dark:text-gray-400">No roles available for this location</p>
+                      <p className="text-gray-500 dark:text-gray-400">
+                        No roles available for this location
+                      </p>
                       <button
                         onClick={handleBackToLocations}
                         className="mt-3 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 inline-flex items-center gap-1"
@@ -946,7 +1017,10 @@ export default function Landing() {
                 {/* Permission Info */}
                 {selectedRole && (
                   <div className="mt-4">
-                    <PermissionInfoCard role={selectedRole} location={selectedLocation} />
+                    <PermissionInfoCard
+                      role={selectedRole}
+                      location={selectedLocation}
+                    />
                   </div>
                 )}
               </div>
@@ -972,7 +1046,9 @@ export default function Landing() {
                 <div>
                   <p className="text-sm opacity-90">Total Roles</p>
                   <p className="mt-1 text-2xl font-bold">{totalRoles}</p>
-                  <p className="mt-1 text-xs opacity-70">Across all locations</p>
+                  <p className="mt-1 text-xs opacity-70">
+                    Across all locations
+                  </p>
                 </div>
                 <Shield className="h-8 w-8 opacity-30" />
               </div>
@@ -992,7 +1068,9 @@ export default function Landing() {
                 <div>
                   <p className="text-sm opacity-90">Departments</p>
                   <p className="mt-1 text-2xl font-bold">33</p>
-                  <p className="mt-1 text-xs opacity-70">Across all locations</p>
+                  <p className="mt-1 text-xs opacity-70">
+                    Across all locations
+                  </p>
                 </div>
                 <Users className="h-8 w-8 opacity-30" />
               </div>
@@ -1008,11 +1086,11 @@ export default function Landing() {
                   Ready to get started?
                 </h3>
                 <p className="mt-1 text-white/80">
-                  {selectedLocation && selectedRole 
+                  {selectedLocation && selectedRole
                     ? `✅ Working as ${selectedRole.name} in ${selectedLocation.name} — you have full access to your features`
-                    : selectedLocation 
+                    : selectedLocation
                       ? `👆 Select a role for ${selectedLocation.name} to continue`
-                      : '📍 Select a location above to begin managing your operations'}
+                      : "📍 Select a location above to begin managing your operations"}
                 </p>
               </div>
               <button
@@ -1025,32 +1103,68 @@ export default function Landing() {
                 }}
                 className="group rounded-full bg-white px-6 py-2.5 font-medium text-blue-600 transition hover:shadow-lg hover:scale-105 flex items-center gap-2"
               >
-                {selectedLocation && selectedRole 
-                  ? 'Switch Location/Role' 
-                  : selectedLocation 
-                    ? 'Select Role' 
-                    : 'Select Location'}
+                {selectedLocation && selectedRole
+                  ? "Switch Location/Role"
+                  : selectedLocation
+                    ? "Select Role"
+                    : "Select Location"}
                 <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
           </div>
 
           {/* Footer info */}
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-            <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-2">
-              <Lock className="h-3 w-3" />
-              Your permissions are based on your selected location and role
-            </p>
-            <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                Session active
-              </span>
-              <span className="h-3 w-px bg-gray-300 dark:bg-gray-600" />
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-              </span>
+          <div className="mt-6 border-t border-gray-200 pt-4 dark:border-gray-700">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              {/* ---------- Left: permission hint ---------- */}
+              <p className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+                <Lock className="h-3.5 w-3.5 shrink-0" />
+                <span>
+                  Your permissions are based on your selected location and role
+                </span>
+              </p>
+
+              {/* ---------- Right: approvals pill + date ---------- */}
+              <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                {/* Pending approvals — clickable */}
+                <button
+                  type="button"
+                  onClick={() => nav("/procurement/approvals")}
+                  disabled={!totalApprovalItems}
+                  className={`group inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-medium transition ${
+                    totalApprovalItems
+                      ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300 hover:bg-amber-100 dark:border-amber-800/60 dark:bg-amber-900/20 dark:text-amber-300 dark:hover:bg-amber-900/30"
+                      : "cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400 dark:border-gray-700 dark:bg-gray-800/40 dark:text-gray-500"
+                  }`}
+                  title={
+                    totalApprovalItems
+                      ? "Go to approvals"
+                      : "No pending approvals"
+                  }
+                >
+                  <Clock className="h-3.5 w-3.5 shrink-0" />
+                  <span className="tabular-nums">{totalApprovalItems}</span>
+                  <span>
+                    pending approval{totalApprovalItems === 1 ? "" : "s"}
+                  </span>
+                  {totalApprovalItems > 0 && (
+                    <ArrowRight className="h-3 w-3 -translate-x-0.5 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
+                  )}
+                </button>
+
+                {/* Divider */}
+                <span className="hidden h-4 w-px bg-gray-200 dark:bg-gray-700 sm:block" />
+
+                {/* Date */}
+                <span className="inline-flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
+                  <Calendar className="h-3.5 w-3.5 shrink-0" />
+                  {new Date().toLocaleDateString("en-US", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </span>
+              </div>
             </div>
           </div>
         </div>
