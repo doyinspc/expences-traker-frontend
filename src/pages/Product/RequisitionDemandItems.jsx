@@ -17,8 +17,9 @@ const control =
 
 /**
  * Purpose: capture departmental demand in quantities, without asking staff for prices.
- * Algorithm: resolve the exact parent from the route; preserve historical requisitions
- * and cash advances on their established screen. For new requisitions load server-owned
+ * Algorithm: resolve the exact parent from the route; preserve the earlier requisition
+ * layout through its price-free fallback, while cash advances retain their priced form.
+ * Existing stored estimates are never erased on edit. For new requisitions load server-owned
  * lifecycle/fulfilment state, save only catalogue, account, quantity and specifications,
  * and keep stage evidence attached to each saved line. A saved unit comes from Settings;
  * neither the browser nor the request form can redefine it. Approval locks editing and
@@ -108,8 +109,7 @@ export default function RequisitionDemandItems() {
         item_id: Number(form.item_id),
         account_id: Number(form.account_id),
         quantity: Number(form.quantity),
-        unit_price: '0.00',
-        total_price: '0.00',
+        ...(!form.id ? {unit_price: '0.00', total_price: '0.00'} : {}),
         cat: 'insert',
       });
       setForm(null);

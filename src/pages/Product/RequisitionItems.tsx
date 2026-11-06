@@ -144,6 +144,7 @@ const Requisitions: React.FC = () => {
      const {id:user_id} = user
     const parentContext = useParentDocumentContext();
     const parent_row = parentContext.document || {};
+    const priceFree = Number(parent_row.requisition_type ?? parentContext.route?.type) === 1;
     const {currency_name = 'NGN'} = parent_row || {}
 
     // ==================== STATE ====================
@@ -663,10 +664,10 @@ const Requisitions: React.FC = () => {
     // ==================== COLUMNS ====================
     const columns = useMemo(() => {
         return columnBuilder(
-            { table_action: TableAction, table_data: table_data },
+            { table_action: TableAction, table_data: priceFree ? table_data.filter(field => !['unit_price','total_price','credit_price'].includes(field.name)) : table_data },
             { onNext, onView, onActivate, onEdit, onDelete }
         );
-    }, [table_data, onNext, onView, onActivate, onEdit, onDelete]);
+    }, [priceFree, onNext, onView, onActivate, onEdit, onDelete]);
 
     // ==================== RENDER ====================
     return (
@@ -763,11 +764,11 @@ const Requisitions: React.FC = () => {
                                                 rows={filteredRows}
                                                 columns={columns}
                                                 pageSize={PAGE_SIZE}
-                                                cV={columnVisibility}
+                                                cV={priceFree ? {...columnVisibility, unit_price:false, total_price:false, credit_price:false} : columnVisibility}
                                             />
                                             
                                             {/* ANALYSIS BELOW TABLE */}
-                                            {renderAnalysisSection()}
+                                            {!priceFree && renderAnalysisSection()}
                                         </>
                                     )}
 
@@ -783,6 +784,8 @@ const Requisitions: React.FC = () => {
                                     <RequisitionitemForm
                                         requisitionId={requisition_id || null}
                                         parent_row={parent_row}
+                                        priceFree={priceFree}
+                                        isEdit={isEdit}
                                         onSave={isEdit ? handleUpdate : handleSave}
                                         initialData={row}
                                         onCancel={() => setPage(0)}

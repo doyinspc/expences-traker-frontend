@@ -28,7 +28,7 @@ test('requisition lists do not show a budget column by default', () => {
 test('only purchase orders and cash advances retain budget fields', () => {
   const page = read('src/pages/Product/Components/DisplayPage.tsx');
   assert.match(page, /const supportsBudget = DOCUMENT_TYPE === 2 \|\| DOCUMENT_TYPE === 3/);
-  assert.match(page, /excludedFieldNames=\{supportsBudget \? \[\] : \['budget_id', 'budget_name'\]\}/);
+  assert.match(page, /supportsBudget \? \[\] : \['budget_id', 'budget_name'\]/);
 });
 
 test('purchase order API returns its workflow and linked budget names', () => {

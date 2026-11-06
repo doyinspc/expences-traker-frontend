@@ -90,7 +90,7 @@ export const buildLeftFields = (helpers: DetailFieldsHelpers): DetailField[] => 
     { key: 'document_number', label: `${documentType} Number`, value: safeValue(document.document_number || document.id) },
     { key: 'title', label: 'Title', value: safeValue(document.title) },
     { key: 'description', label: 'Description', value: safeValue(document.description) },
-    ...(Number(document.requisition_type) === 1 && Number(document.purchasing_version) === 2 ? [] : [{
+    ...(Number(document.requisition_type) === 1 ? [] : [{
       key: 'total_amount_record', 
       label: 'Total Amount', 
       value: formatCurrency(document.total_amount_record || document.total_amount, currency)

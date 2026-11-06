@@ -15,6 +15,7 @@ const RequisitionItemForm = ({
     onSave,
     onCancel,
     isEdit = false,
+    priceFree = Number(parent_row?.requisition_type) === 1,
     isLoading = false,
     onError,
 }) => {
@@ -157,6 +158,7 @@ const RequisitionItemForm = ({
 
     // ==================== CALCULATE TOTAL PRICE ====================
     useEffect(() => {
+        if (priceFree) return;
         const quantity = formData.quantity;
         const unitPrice = formData.unit_price;
         
@@ -168,7 +170,7 @@ const RequisitionItemForm = ({
                 total_price: roundedTotal,
             }));
         }
-    }, [formData.quantity, formData.unit_price]);
+    }, [priceFree, formData.quantity, formData.unit_price]);
     
     // ==================== VALIDATE FORM ====================
     const validateForm = useCallback(() => {
@@ -190,15 +192,15 @@ const RequisitionItemForm = ({
             newErrors.item_id = 'Selected item is invalid';
         }
 
-        if (!formData.total_price && !formData.unit_price) {
+        if (!priceFree && !formData.total_price && !formData.unit_price) {
             newErrors.total_price = 'A Total Price or Unit Price is required';
         }
 
-        if (formData.unit_price !== null && formData.unit_price < 0) {
+        if (!priceFree && formData.unit_price !== null && formData.unit_price < 0) {
             newErrors.unit_price = 'Unit price cannot be negative';
         }
 
-        if (formData.total_price !== null && formData.total_price < 0) {
+        if (!priceFree && formData.total_price !== null && formData.total_price < 0) {
             newErrors.total_price = 'Total price cannot be negative';
         }
 
@@ -215,7 +217,7 @@ const RequisitionItemForm = ({
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
-    }, [formData, requisitionId, categories, items]);
+    }, [priceFree, formData, requisitionId, categories, items]);
 
     // ==================== HANDLE BLUR FOR VALIDATION ====================
     const handleBlur = (e) => {
@@ -248,8 +250,7 @@ const RequisitionItemForm = ({
             item_id: formData.item_id,
             is_type: formData.is_type,
             quantity: formData.quantity,
-            unit_price: formData.unit_price,
-            total_price: formData.total_price ?? (formData.quantity ?? 0) * (formData.unit_price ?? 0),
+            ...(!priceFree ? {unit_price: formData.unit_price, total_price: formData.total_price ?? (formData.quantity ?? 0) * (formData.unit_price ?? 0)} : !(isEdit || initialData?.id) ? {unit_price:'0.00', total_price:'0.00'} : {}),
             delivery_required_by: formData.delivery_required_by,
             special_instructions: formData.special_instructions?.trim() ?? '',
             created_by_id: formData.created_by_id,
@@ -287,7 +288,7 @@ const RequisitionItemForm = ({
                                         <span className="font-medium">Category &amp; Item:</span> First choose a category, then select the specific item from the filtered list
                                     </li>
                                     <li>
-                                        <span className="font-medium">Pricing:</span> Enter quantity and either unit price or total price (the other will auto-calculate)
+                                        {priceFree ? <>Enter the quantity and specifications. Pricing is handled on the Purchase Order.</> : <><span className="font-medium">Pricing:</span> Enter quantity and either unit price or total price (the other will auto-calculate)</>}
                                     </li>
                                     <li>
                                         <span className="font-medium">Delivery Date:</span> Use the calendar dropdown to select when the item is required
@@ -500,6 +501,7 @@ const RequisitionItemForm = ({
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-300">{selectedUnit?`Enter whole quantities in ${selectedUnit}. Procurement and stock use this same item unit.`:'Set the item’s unit in Settings before receiving or issuing it as stock.'}</p>
                 </div>
 
+                {!priceFree && <>
                 {/* Unit Price */}
                 <div>
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -559,6 +561,7 @@ const RequisitionItemForm = ({
                     )}
                 </div>
 
+                </>}
                 {/* Delivery Required By - React DatePicker */}
                 <div>
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">

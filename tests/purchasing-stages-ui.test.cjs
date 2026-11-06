@@ -127,6 +127,39 @@ test('Historical requests and cash advances retain their existing item screen', 
       /Existing cash advance/,
     );
 });
+
+test('An older requisition retains its existing layout after purchasing preparation',()=>{
+  const Page=page('src/pages/Product/RequisitionDemandItems.jsx',{parent:{...document,requisition_type:1,purchasing_version:1,stage_evidence_enabled:1},state:{items:[{id:401,item_name:'Keyboard',quantity:5,issued_quantity:0,remaining_quantity:5,unit_price:'100.00',total_price:'500.00'}]}});
+  const result=html(Page);assert.match(result,/Existing cash advance \/ historical screen/);assert.doesNotMatch(result,/500\.00/);
+});
+
+function legacyForm(extraMocks={}){
+  return load('src/pages/Product/RequistiontemForm.jsx',{
+    'react-redux':{useSelector:fn=>fn({auth:{tenantDb:'synthetic'}})},
+    '../../actions/common':{API_PATH_SETTING:'local-fixture',axiosConfig:{}},
+    '../../hooks/useTanstackQuery':()=>({data:[{id:501,name:'Accessories',children:[{id:502,name:'Keyboard',category_id:501,text_1:'pieces'}]}],loadQuery:()=>{},isLoading:false}),
+    'react-datepicker':()=>React.createElement('input',{type:'date'}),
+    'react-datepicker/dist/react-datepicker.css':{},
+    ...extraMocks,
+  }).default;
+}
+const earlierItem={id:401,category_id:501,item_id:502,quantity:2,unit_price:100,total_price:200};
+test('The fallback form hides price inputs on an existing request but retains them for cash advances',()=>{
+  const Form=legacyForm();
+  const request=html(Form,{requisitionId:301,parent_row:{requisition_type:1},initialData:earlierItem});
+  assert.doesNotMatch(request,/name="unit_price"|name="total_price"|auto-calculate/);
+  const cash=html(Form,{requisitionId:301,parent_row:{requisition_type:3},initialData:earlierItem});
+  assert.match(cash,/name="unit_price"/);assert.match(cash,/name="total_price"/);
+});
+test('Editing historical request quantities does not submit or clear the stored old estimate',()=>{
+  let saved;
+  const hookReact={...React,useState:initial=>[typeof initial==='function'?initial():initial,()=>{}],useEffect:()=>{},useMemo:fn=>fn(),useCallback:fn=>fn,useRef:value=>({current:value})};
+  const Form=legacyForm({react:hookReact});
+  const form=Form({requisitionId:301,parent_row:{requisition_type:1},initialData:earlierItem,isEdit:true,onSave:values=>{saved=values;}});
+  form.props.onSubmit({preventDefault(){}});
+  assert.ok(saved);assert.equal(saved.quantity,2);assert.equal('unit_price' in saved,false);assert.equal('total_price' in saved,false);
+  assert.equal(earlierItem.total_price,200);
+});
 test('Purchase Order rows distinguish six request units from four extra store units', () => {
   const Page = page('src/pages/Product/PurchasingItems.jsx', {
     state: {

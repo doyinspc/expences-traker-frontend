@@ -671,13 +671,11 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
         return columnBuilder(
             {
                 table_action: TableActionDocument,
-                table_data: supportsBudget
-                    ? table_data
-                    : table_data.filter(({ name }) => name !== 'budget_id' && name !== 'budget_name')
+                table_data: table_data.filter(({name}) => (supportsBudget || !['budget_id','budget_name'].includes(name)) && (DOCUMENT_TYPE !== 1 || !['total_amount','total_amount_record','grand_total','unit_price','total_price'].includes(name)))
             },
             { onNext, onView, onActivate, onEdit, onDelete }
         );
-    }, [supportsBudget, onNext, onView, onActivate, onEdit, onDelete]);
+    }, [DOCUMENT_TYPE, supportsBudget, onNext, onView, onActivate, onEdit, onDelete]);
 
     // ==================== EFFECTS ====================
     useEffect(() => {
@@ -803,7 +801,7 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
                                             initialData={row}
                                             onCancel={() => setPage(0)}
                                             optionData={formattedSelectRows}
-                                            excludedFieldNames={supportsBudget ? [] : ['budget_id', 'budget_name']}
+                                            excludedFieldNames={DOCUMENT_TYPE === 1 ? ['budget_id','budget_name','total_amount','total_amount_record','grand_total','unit_price','total_price'] : supportsBudget ? [] : ['budget_id', 'budget_name']}
                                         />
                                     )}
                                 </div>

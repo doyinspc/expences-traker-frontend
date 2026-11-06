@@ -570,7 +570,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {hasBudgetData && (
+          {!priceFree && hasBudgetData && (
             <button
               onClick={toggleBudgetVisibility}
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
@@ -587,7 +587,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
         </div>
       </div>
 
-      {showBudget && ![2,3].includes(Number(documentTypeId)) && getBudgetPerformanceSummary() && (
+      {!priceFree && showBudget && ![2,3].includes(Number(documentTypeId)) && getBudgetPerformanceSummary() && (
         <div className="px-4 py-2 bg-gray-50/80 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700">
           {renderBudgetSummary()}
         </div>
@@ -653,7 +653,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                       <div className="text-gray-900 dark:text-gray-100">
                         {safeValue(item.category_name)}
                       </div>
-                      {showBudget && isPending && budget.hasBudgetData && budget.category.planned > 0 && (
+                      {!priceFree && showBudget && isPending && budget.hasBudgetData && budget.category.planned > 0 && (
                         <div className="flex items-center gap-1 mt-0.5">
                           <span className="text-[10px] text-blue-500 dark:text-blue-400">
                             {formatCurrency(budget.category.planned, currency)}
@@ -666,7 +666,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                       <div className="text-gray-900 dark:text-gray-100">
                         {safeValue(item.item_name)}
                       </div>
-                      {showBudget && isPending && budget.hasBudgetData && budget.item.planned > 0 && (
+                      {!priceFree && showBudget && isPending && budget.hasBudgetData && budget.item.planned > 0 && (
                         <div className="flex items-center gap-1 mt-0.5">
                           <span className="text-[10px] text-green-500 dark:text-green-400">
                             {formatCurrency(budget.item.planned, currency)}
@@ -885,7 +885,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                               </div>
                             )}
 
-                            {item.tax_amount && (
+                            {!priceFree && item.tax_amount && (
                               <div>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">Tax Amount</p>
                                 <p className="text-sm font-medium text-gray-900 dark:text-white">
@@ -908,7 +908,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                               </div>
                             )}
 
-                            {item.item_revision_history?.length > 0 && (
+                            {!priceFree && item.item_revision_history?.length > 0 && (
                               <details className="col-span-1 sm:col-span-2 lg:col-span-4 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
                                 <summary className="flex min-h-10 cursor-pointer items-center gap-2 text-sm font-medium text-brand-600 dark:text-brand-300">
                                   <History className="h-4 w-4" aria-hidden="true" />
@@ -938,7 +938,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                                 </ol>
                               </details>
                             )}
-                            {showBudget && renderBudgetInfo(item)}
+                            {!priceFree && showBudget && renderBudgetInfo(item)}
                             {stageEvidence && documentId ? <ItemEvidencePanel documentId={documentId} itemId={item.id} itemName={item.item_name} initiallyOpen /> : hasDoc && renderFilePreview(item)}
 
                             {item.created_at && formatDate && (
