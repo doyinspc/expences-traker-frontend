@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import useReduxApiData from "../../hooks/useTanstackQuery.js";
 import { moneyFunction } from "../../utils/functions/basci.jsx";
+import { transferAccountLabel } from '../../utils/functions/transferAccountLabel.js';
 
 // ==================== CONSTANTS ====================
 const TABLE_NAME = "requisitionitems";
@@ -454,8 +455,8 @@ const CashTransfers: React.FC = () => {
         uniqueList.push({
           ...primaryEntry,
           transfer_group_id: groupId,
-          from_account_name: debit?.account_name || "N/A",
-          to_account_name: credit?.account_name || "N/A",
+          from_account_name: transferAccountLabel(debit),
+          to_account_name: transferAccountLabel(credit),
           from_account_id: debit?.account_id || null,
           to_account_id: credit?.account_id || null,
           amount_display: debit?.amount_display || credit?.amount_display || 0,
@@ -545,7 +546,7 @@ const CashTransfers: React.FC = () => {
                 <option value="">Select Account</option>
                 {currentLocationAccounts.map((acc: any) => (
                   <option key={acc.id} value={acc.id}>
-                    {acc.name}
+                    {transferAccountLabel(acc, accountLocationLabel(acc))}
                   </option>
                 ))}
               </select>
@@ -578,7 +579,7 @@ const CashTransfers: React.FC = () => {
                 </option>
                 {availableToAccounts.map((acc: any) => (
                   <option key={acc.id} value={acc.id}>
-                    {acc.name} — {accountLocationLabel(acc)}
+                    {transferAccountLabel(acc, accountLocationLabel(acc))}
                   </option>
                 ))}
               </select>
@@ -673,7 +674,7 @@ const CashTransfers: React.FC = () => {
                 From Account
               </p>
               <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {debit?.account_name || "N/A"}
+                {transferAccountLabel(debit)}
               </p>
             </div>
             <div>
@@ -681,7 +682,7 @@ const CashTransfers: React.FC = () => {
                 To Account
               </p>
               <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {credit?.account_name || "N/A"}
+                {transferAccountLabel(credit)}
               </p>
             </div>
             <div>
@@ -969,8 +970,8 @@ const CashTransfers: React.FC = () => {
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {rows.map((row: any) => {
                   const otherAccount = isIncoming
-                    ? row.from_account_name
-                    : row.to_account_name;
+                    ? transferAccountLabel({ account_name: row.from_account_name, account_alias: row.from_account_alias })
+                    : transferAccountLabel({ account_name: row.to_account_name, account_alias: row.to_account_alias });
                   const otherLocation = isIncoming
                     ? row.from_location_name
                     : row.to_location_name;

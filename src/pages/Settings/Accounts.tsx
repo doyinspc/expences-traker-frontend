@@ -46,6 +46,7 @@ type TabType = 'table' | 'analysis';
 // ==================== COMPONENT ====================
 const Accounts: React.FC = () => {
     const nav = useNavigate();
+    const { location_id } = useSelector((state: any) => state.authReducer || {});
     // const userx = useSelector((state: any) => state.userReducer);
     
 
@@ -90,9 +91,9 @@ const Accounts: React.FC = () => {
     // ==================== HANDLERS ====================
     const onAdd = useCallback((): void => {
         setIsEdit(false);
-        setRow({});
+        setRow({ item_id1: location_id || null });
         setPage(1);
-    }, []);
+    }, [location_id]);
 
     const onEdit = useCallback((row: any): void => {
         setIsEdit(true);

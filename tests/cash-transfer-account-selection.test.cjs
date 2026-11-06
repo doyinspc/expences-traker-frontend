@@ -29,7 +29,7 @@ test("cash transfer destination labels include their location", () => {
   assert.match(source, /table: ["']locations["']/);
   assert.match(source, /account\.location_name \|\| account\.location\?\.name/);
   assert.match(source, /locationNames\.get\(String\(account\.location_id\)\)/);
-  assert.match(source, /\{acc\.name\} — \{accountLocationLabel\(acc\)\}/);
+  assert.match(source, /transferAccountLabel\(acc, accountLocationLabel\(acc\)\)/);
 });
 
 test("completed transfer register can be limited to a selected period", () => {

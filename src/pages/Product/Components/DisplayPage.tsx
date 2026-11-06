@@ -42,6 +42,8 @@ export interface RequisitionsPageProps {
     page_code: string;
     /** Column visibility configuration - optional, will use defaults if not provided */
     columnVisibility?: ColumnVisibility;
+    /** Additional content shown below the main list, outside the create/detail screens. */
+    renderListFooter?: () => React.ReactNode;
     /** Optional single-screen form for creating a document and its required first entries. */
     renderCreateForm?: (props: {
         onSave: (data: any) => Promise<any>;
@@ -144,6 +146,7 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
         page_size, 
         document_type, 
         page_code,
+        renderListFooter,
         renderCreateForm,
         columnVisibility = DEFAULT_COLUMN_VISIBILITY
     } = props;
@@ -781,6 +784,7 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
                                         pageSize={PAGE_SIZE}
                                         cV={columnVisibility}
                                     />
+                                    {renderListFooter?.()}
                                 </>
                             ) : null}
                             {page === 1 ? (

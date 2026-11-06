@@ -2,6 +2,7 @@
 import React from 'react';
 import DisplayPage from './Components/DisplayPage';
 import CashTransferCreateForm from './CashTransferCreateForm';
+import CashTransferRegister from './CashTransferRegister';
 
 const CashTransfersPage = () => {
     return (
@@ -11,6 +12,7 @@ const CashTransfersPage = () => {
             page_size={20}
             document_type={6}
             page_code="CTF"
+            renderListFooter={() => <CashTransferRegister />}
             renderCreateForm={({ onSave, onCancel, user, locationId }) => (
                 <CashTransferCreateForm
                     onSave={onSave}

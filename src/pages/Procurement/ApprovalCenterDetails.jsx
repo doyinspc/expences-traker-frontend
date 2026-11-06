@@ -1,4 +1,5 @@
 import { displayDocumentType, PROCUREMENT_DOCUMENT_LABEL } from '../../utils/functions/documentLabels';
+import { transferAccountLabel } from '../../utils/functions/transferAccountLabel.js';
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -27,7 +28,7 @@ const date = value => formatWorkflowDate(value, true);
 const amount = value => Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const card = 'min-w-0 rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900';
 const itemTitle = item => item.item_name || item.name || item.title || item.item_id || item.description || item.special_instructions || `Item ${item.id}`;
-const account = item => item.account_name || (item.account_id ? `Account ${item.account_id}` : 'Not assigned');
+const account = item => item.account_name ? transferAccountLabel(item) : (item.account_id ? `Account ${item.account_id}` : 'Not assigned');
 const flags = item => [['Approved', Number(item.approval_status)===2 ? 'Rejected' : Number(item.approved ?? item.is_approved) === 1 ? 'Yes' : 'No'], ['Fulfilled / Resolved', Number(item.resolved) === 1 ? 'Yes' : 'No']];
 /**
  * Purpose: keep document references, receipts and item history beside the existing item row.

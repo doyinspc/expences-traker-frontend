@@ -1,10 +1,13 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useReduxApiData from "../../hooks/useTanstackQuery.js";
+import { transferAccountLabel } from '../../utils/functions/transferAccountLabel.js';
 
 type Account = {
   id: number | string;
   name: string;
+  abbrv?: string;
+  text_1?: string;
   location_id?: number | string | null;
   location_name?: string;
   location?: { name?: string };
@@ -152,7 +155,7 @@ export default function CashTransferCreateForm({
       account.location?.name ||
       locationNames.get(String(account.location_id)) ||
       (account.location_id ? `Location ${account.location_id}` : "Company-wide");
-    return `${account.name} — ${locationName}`;
+    return transferAccountLabel(account, locationName);
   };
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -291,6 +294,7 @@ export default function CashTransferCreateForm({
             {sourceAccounts.map((account) => <option key={account.id} value={account.id}>{accountLabel(account)}</option>)}
           </select>
           <span className="mt-1 block text-xs font-normal text-gray-500 dark:text-gray-400">Only accounts assigned to this location are listed.</span>
+          {!accountsLoading && !sourceAccounts.length && <span role="status" className="mt-1 block text-xs text-amber-700 dark:text-amber-300">No accounts are assigned to this location. Set the account location in Settings → Accounts &amp; Banks first.</span>}
         </label>
         <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
           To account <span className="text-red-600">*</span>

@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux';
 import { Plus, Edit2, Trash2, Eye, Loader2, Upload, FileText, X, ChevronDown, ChevronRight } from 'lucide-react';
 import useReduxApiData from "../../../hooks/useTanstackQuery.js";
 import { moneyFunction } from "../../../utils/functions/basci.jsx";
+import { transferAccountLabel } from '../../../utils/functions/transferAccountLabel.js';
 
 // ==================== TYPES ====================
 interface MiniCashTransfersProps {
@@ -303,8 +304,8 @@ const MiniCashTransfers: React.FC<MiniCashTransfersProps> = ({
                 uniqueTransfers.push({
                     id: primary?.id,
                     special_instructions: groupId,
-                    from_account_name: debit?.account_name || 'N/A',
-                    to_account_name: credit?.account_name || 'N/A',
+                    from_account_name: transferAccountLabel(debit),
+                    to_account_name: transferAccountLabel(credit),
                     from_account_id: debit?.account_id || null,
                     to_account_id: credit?.account_id || null,
                     amount_display: amount,

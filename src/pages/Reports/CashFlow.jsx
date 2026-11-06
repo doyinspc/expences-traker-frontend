@@ -1,4 +1,5 @@
 import { buildReportCsv } from '../../utils/functions/reportExport';
+import CashFlowMonthly from './CashFlowMonthly';
 ﻿// components/CashFlowAnalysis/CashFlowAnalysis.js
 import React, { useState, useEffect, useMemo } from 'react';
 import CashFlowFilters from './CashFlowFilters';
@@ -253,4 +254,7 @@ const CashFlowAnalysis = () => {
   );
 };
 
-export default CashFlowAnalysis;
+export default function CashFlowReports() {
+  const [tab, setTab] = useState('monthly');
+  return <div className="space-y-5"><div role="group" aria-label="Cash-flow report view" className="flex flex-wrap gap-2">{[['monthly','Monthly cash flow'],['accounts','Account analysis']].map(([key,label])=><button key={key} type="button" aria-pressed={tab===key} onClick={()=>setTab(key)} className={`min-h-11 rounded-lg px-4 text-sm ${tab===key?'bg-brand-600 text-white':'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200'}`}>{label}</button>)}</div>{tab==='monthly'?<CashFlowMonthly/>:<CashFlowAnalysis/>}</div>;
+}
