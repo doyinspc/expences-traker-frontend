@@ -90,11 +90,11 @@ export const buildLeftFields = (helpers: DetailFieldsHelpers): DetailField[] => 
     { key: 'document_number', label: `${documentType} Number`, value: safeValue(document.document_number || document.id) },
     { key: 'title', label: 'Title', value: safeValue(document.title) },
     { key: 'description', label: 'Description', value: safeValue(document.description) },
-    { 
+    ...(Number(document.requisition_type) === 1 && Number(document.purchasing_version) === 2 ? [] : [{
       key: 'total_amount_record', 
       label: 'Total Amount', 
-      value: formatCurrency(document.total_amount_record || document.total_amount, currency) 
-    },
+      value: formatCurrency(document.total_amount_record || document.total_amount, currency)
+    }]),
     { key: 'currency_name', label: 'Currency', value: safeValue(currency) },
     { key: 'total_count_number', label: 'Total Items', value: safeValue(document.total_count_number) },
     { 
@@ -129,7 +129,7 @@ export const buildRightFields = (helpers: DetailFieldsHelpers): DetailField[] =>
   } = helpers;
 
   return [
-    { key: 'budget_name', label: 'Budget', value: safeValue(document.budget_name) },
+    ...([2, 3].includes(Number(document.requisition_type)) ? [{ key: 'budget_name', label: 'Budget', value: safeValue(document.budget_name) }] : []),
     { key: 'requester_name', label: 'Requester', value: safeValue(document.requester_name) },
     { key: 'department_name', label: 'Department', value: safeValue(document.department_name) },
     { key: 'vendor_name', label: 'Vendor', value: safeValue(document.vendor_name) },

@@ -1,3 +1,4 @@
+import BudgetComparison from './BudgetComparison';
 import React, { useRef, useState } from 'react';
 
 /**
@@ -93,7 +94,7 @@ export default function ItemRevisionPanel({ workflow, onSave, isLoading = false 
     [error, setError] = useState(''),
     [saving, setSaving] = useState(false);
   const submitting = useRef(false);
-  if (![2, 3].includes(Number(workflow.document_type_id))) return null;
+  if (![2, 3, 9].includes(Number(workflow.document_type_id))) return null;
   const revisions = workflow.item_revisions,
     canEdit = workflow.permissions?.can_revise_items;
   if (
@@ -182,68 +183,7 @@ export default function ItemRevisionPanel({ workflow, onSave, isLoading = false 
               history.
             </p>
           </div>
-          {workflow.budget_comparison && (
-            <details className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-              <summary className="flex min-h-10 cursor-pointer items-center justify-between gap-3 text-sm font-medium">
-                <span>
-                  Budget check
-                  {workflow.budget_comparison.name ? ` · ${workflow.budget_comparison.name}` : ''}
-                </span>
-                {workflow.budget_comparison.after_request != null && (
-                  <span
-                    className={
-                      Number(workflow.budget_comparison.after_request) < 0
-                        ? 'text-red-700 dark:text-red-300'
-                        : 'text-emerald-700 dark:text-emerald-300'
-                    }
-                  >
-                    {workflow.budget_comparison.unbudgeted_items?.length
-                      ? 'Review unbudgeted items'
-                      : Number(workflow.budget_comparison.after_request) < 0
-                        ? 'Over budget'
-                        : 'Within overall budget'}
-                  </span>
-                )}
-              </summary>
-              {workflow.budget_comparison.message ? (
-                <p className="mt-2 text-sm text-amber-800 dark:text-amber-200">
-                  {workflow.budget_comparison.message}
-                </p>
-              ) : (
-                <>
-                  <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-                    {[
-                      ['Approved budget', workflow.budget_comparison.allocated],
-                      ['Actual net spending', workflow.budget_comparison.spent],
-                      ['Budget balance now', workflow.budget_comparison.balance],
-                      ['This request: unpaid', workflow.budget_comparison.request_unpaid],
-                      ['Balance after remaining payment', workflow.budget_comparison.after_request],
-                    ].map(([label, value]) => (
-                      <div key={label}>
-                        <dt className="text-xs text-gray-500 dark:text-gray-400">{label}</dt>
-                        <dd className="mt-1 font-medium tabular-nums">
-                          {currency} {money(value)}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                  {workflow.budget_comparison.unbudgeted_items?.length > 0 && (
-                    <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
-                      No approved allocation for these items or their categories:{' '}
-                      {workflow.budget_comparison.unbudgeted_items.join(', ')}. This is guidance; it
-                      does not block your decision.
-                    </p>
-                  )}
-                  <p className="mt-3 text-xs leading-5 text-gray-500 dark:text-gray-400">
-                    {workflow.budget_comparison.start_date} to {workflow.budget_comparison.end_date}
-                    . Actual spending already includes payments for this request, less recorded
-                    returns. The projection adds only its unpaid amount. Other pending requests are
-                    not reserved here.
-                  </p>
-                </>
-              )}
-            </details>
-          )}
+          <BudgetComparison comparison={workflow.budget_comparison} currency={currency}/>
           {revisions?.reapproval && (
             <p
               role="status"

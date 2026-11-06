@@ -1,3 +1,4 @@
+import ItemEvidencePanel from '../../../components/procurement/ItemEvidencePanel';
 // src/components/common/ItemsTable.tsx
 
 import React, { useState } from 'react';
@@ -77,6 +78,9 @@ export interface ItemsTableProps {
   currency: string;
   statusData: any[];
   documentTypeId:any;
+  documentId?: number;
+  stageEvidence?: boolean;
+  priceFree?: boolean;
   budgetCategories?: BudgetCategory[];
   budgetCategoryItems?: BudgetItem[];
   formatCurrency: (amount: number | string | undefined, currency: string) => string;
@@ -142,6 +146,9 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
   showApproveReject = true,
   showBudgetInfo = false,
   documentTypeId,
+  documentId,
+  stageEvidence = false,
+  priceFree = false,
 }) => {
   const [expandedRowId, setExpandedRowId] = useState<string | number | null>(null);
   const [imageLoading, setImageLoading] = useState<Record<string | number, boolean>>({});
@@ -602,12 +609,14 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
               <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Qty
               </th>
+              {!priceFree && <>
               <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Unit Price
               </th>
               <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Total
               </th>
+              </>}
               <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 {parseInt(documentTypeId) == 1 ? "Approved" : "Resolved"}
               </th>
@@ -670,12 +679,14 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                       {Number(documentTypeId)===2?(item.procurement_quantity??item.quantity??0):(item.quantity||0)} {item.unit_of_measure || item.unit || ''}
                       {(Number(item.stock_received_quantity)>0||Number(item.stock_issued_quantity)>0)&&<span className="mt-1 block text-[10px] text-blue-600 dark:text-blue-300">Recorded: {item.stock_received_quantity||0} received · {item.stock_issued_quantity||0} issued</span>}
                     </td>
+                    {!priceFree && <>
                     <td className="px-3 py-2 whitespace-nowrap text-xs text-right text-gray-900 dark:text-gray-100">
                       {formatCurrency(item.unit_price, currency)}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap text-xs text-right font-medium text-gray-900 dark:text-gray-100">
                       {formatCurrency(item.total_price, currency)}
                     </td>
+                    </>}
                     <td className="px-3 py-2 whitespace-nowrap text-center">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${resolvedStatus.bg} ${resolvedStatus.color}`}>
                         {resolvedStatus.label}
@@ -720,7 +731,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                         )}
 
                         {/* Upload Icon */}
-                        {showUpload && onUploadItem && (
+                        {!stageEvidence && showUpload && onUploadItem && (
                           <button
                             onClick={() => onUploadItem(item)}
                             className="p-1 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 transition-colors"
@@ -781,7 +792,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                       isRejected ? 'border-l-4 border-red-500' : 
                       'border-l-4 border-yellow-500'
                     }`}>
-                      <td colSpan={9} className="px-4 py-4">
+                      <td colSpan={priceFree?7:9} className="px-4 py-4">
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
                             <div>
@@ -801,7 +812,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              {showUpload && onUploadItem && (
+                              {!stageEvidence && showUpload && onUploadItem && (
                                 <button
                                   onClick={() => onUploadItem(item)}
                                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-md transition-colors dark:text-purple-400 dark:bg-purple-900/20 dark:hover:bg-purple-900/30"
@@ -849,6 +860,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                               </p>
                             </div>
 
+                            {!priceFree && <>
                             <div>
                               <p className="text-xs text-gray-500 dark:text-gray-400">Unit Price</p>
                               <p className="text-sm font-medium text-gray-900 dark:text-white">
@@ -863,7 +875,8 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                               </p>
                             </div>
 
-                            {item.discount && (
+                            </>}
+                            {!priceFree && item.discount && (
                               <div>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">Discount</p>
                                 <p className="text-sm font-medium text-gray-900 dark:text-white">
@@ -926,7 +939,7 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                               </details>
                             )}
                             {showBudget && renderBudgetInfo(item)}
-                            {hasDoc && renderFilePreview(item)}
+                            {stageEvidence && documentId ? <ItemEvidencePanel documentId={documentId} itemId={item.id} itemName={item.item_name} initiallyOpen /> : hasDoc && renderFilePreview(item)}
 
                             {item.created_at && formatDate && (
                               <div>

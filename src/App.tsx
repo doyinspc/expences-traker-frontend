@@ -28,9 +28,10 @@ const ApprovalCenter = lazy(() => import("./pages/Procurement/ApprovalCenter.jsx
 const ApprovalCenterDetails = lazy(() => import("./pages/Procurement/ApprovalCenterDetails.jsx"));
 const ControlCenter = lazy(() => import("./pages/Procurement/ControlCenter.jsx"));
 const Requisitions = lazy(() => import("./pages/Product/Requisition"));
-const RequisitionItems = lazy(() => import("./pages/Product/RequisitionItems.tsx"));
+const RequisitionItems = lazy(() => import("./pages/Product/RequisitionDemandItems"));
 const PurchaseOrders = lazy(() => import("./pages/Product/PurchaseOrder"));
-const PurchaseOrderRequisitions = lazy(() => import("./pages/Product/PurchaseOrderRequisitions"));
+const PurchaseOrderRequisitions = lazy(() => import("./pages/Product/PurchasingItems"));
+const ProcurementPage = lazy(() => import("./pages/Product/Procurement"));
 const CashTransfer = lazy(() => import("./pages/Product/CashTransfer.jsx"));
 const CashTransferItems = lazy(() => import("./pages/Product/CashTransferItems.tsx"));
 const Incomes = lazy(() => import("./pages/Product/Income.jsx"));
@@ -125,6 +126,8 @@ export default function App() {
             <Route path="/procurement/stock/:id" element={<StockItems />} />
             <Route path="/procurement/purchaseorder" element={<PurchaseOrders />} />
             <Route path="/procurement/purchaseorder/:id" element={<PurchaseOrderRequisitions />} />
+            <Route path="/procurement/procurement" element={<ProcurementPage />} />
+            <Route path="/procurement/procurement/:id" element={<PurchaseOrderRequisitions type={9} />} />
             <Route path="/procurement/cashtransfer" element={<CashTransfer />} />
             <Route path="/procurement/cashtransfer/:id" element={<CashTransferItems />} />
             <Route path="/procurement/budgets" element={<BudgetList />} />

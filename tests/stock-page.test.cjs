@@ -7,6 +7,7 @@ function markup(data,props={}){
  'react-redux':{useSelector:()=>({user:{id:21},location_id:41,role_id:110})},
  '../../actions/common':{tokenHelpers:{getTenantDb:()=> 'fixture',getToken:()=> 'fixture'}},
  '../../components/ui/Loader':()=>null,
+ '../../components/procurement/ItemEvidencePanel':()=>null,
  '../Reports/StockReportCharts':()=>React.createElement('section',null,'Stock charts'),
  };
  vm.runInNewContext(code,{module,exports:module.exports,console,require:id=>id in mocks?mocks[id]:require(require.resolve(id,{paths:[root]}))});

@@ -211,6 +211,9 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
   if (documentTypeId == 2) {
     mainParam.purchaseorder_id = document?.id || 0;
   }
+  else if (documentTypeId == 9) {
+    mainParam.procurement_id = documentId;
+  }
   else if (documentTypeId == 8) {
     mainParam.sku_id = document?.id || 0;
   }
@@ -722,7 +725,7 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
               leftFields={leftFields}
               rightFields={rightFields}
             />
-            {[1,2].includes(Number(documentTypeId))&&<details onToggle={event=>setShowStockMovements(event.currentTarget.open)} className="m-4 rounded-lg border border-gray-200 p-3 dark:border-gray-700"><summary className="cursor-pointer py-2 text-sm font-medium text-blue-700 dark:text-blue-300">Stock receipts & requisition fulfilment</summary>{showStockMovements&&<div className="pt-3"><StockLedgerPanel documentId={documentId} documentType={Number(documentTypeId)} onChanged={()=>loadQuery()}/></div>}</details>}
+            {[1,2,9].includes(Number(documentTypeId))&&<details onToggle={event=>setShowStockMovements(event.currentTarget.open)} className="m-4 rounded-lg border border-gray-200 p-3 dark:border-gray-700"><summary className="cursor-pointer py-2 text-sm font-medium text-blue-700 dark:text-blue-300">Stock receipts & requisition fulfilment</summary>{showStockMovements&&<div className="pt-3"><StockLedgerPanel documentId={documentId} documentType={Number(documentTypeId)} onChanged={()=>loadQuery()}/></div>}</details>}
             {documentTypeId === 6 ? (
               <MiniCashTransfers
                 items={documentItems}
@@ -744,6 +747,8 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
                 title={`${documentType} Items`}
                 emptyMessage={`No items found for this ${documentType.toLowerCase()}`}
                 documentId={documentId}
+                stageEvidence={Boolean(Number(document?.stage_evidence_enabled))}
+                priceFree={Number(documentTypeId)===1&&Number(document?.purchasing_version)===2}
                 documentTypeId={documentTypeId}
               />
             ) : (
@@ -768,6 +773,9 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
                 showBudgetInfo={true}
                 processingItemId={processingItemId}
                 title={`${documentType} Items`}
+                documentId={documentId}
+                stageEvidence={Boolean(Number(document?.stage_evidence_enabled))}
+                priceFree={Number(documentTypeId)===1&&Number(document?.purchasing_version)===2}
                 documentTypeId={documentTypeId}
                 emptyMessage={`No items found for this ${documentType.toLowerCase()}`}
               />
@@ -777,15 +785,15 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
             <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/80">
               <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-200 dark:divide-gray-700">
                 <div className="px-4 py-2 text-center">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Total Amount</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{Number(documentTypeId)===1&&Number(document?.purchasing_version)===2?'Requested items':'Total Amount'}</p>
                   <p className="text-sm font-bold text-gray-900 dark:text-white">
-                    {formatCurrency(totalAmount, currency)}
+                    {Number(documentTypeId)===1&&Number(document?.purchasing_version)===2?totalItems:formatCurrency(totalAmount, currency)}
                   </p>
                 </div>
                 <div className="px-4 py-2 text-center">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Total Approved</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{Number(documentTypeId)===1&&Number(document?.purchasing_version)===2?'Approved items':'Total Approved'}</p>
                   <p className="text-sm font-bold text-green-600 dark:text-green-400">
-                    {formatCurrency(totalApproved, currency)}
+                    {Number(documentTypeId)===1&&Number(document?.purchasing_version)===2?documentItems.filter(item=>Number(item.approved)===1&&Number(item.approval_status)!==2).length:formatCurrency(totalApproved, currency)}
                   </p>
                 </div>
                 <div className="px-4 py-2 text-center">

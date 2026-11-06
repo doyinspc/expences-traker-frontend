@@ -492,7 +492,7 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
 
     useEffect(() => {
         const approvalId = routeLocation.state?.openApprovalId;
-        if (DOCUMENT_TYPE !== 6 || !approvalId) return;
+        if (!approvalId) return;
         const createdTransfer = processedRows.find(
             (candidate: any) => String(candidate.id) === String(approvalId)
         );

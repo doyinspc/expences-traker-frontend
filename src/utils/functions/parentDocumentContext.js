@@ -3,6 +3,7 @@ import { PROCUREMENT_DOCUMENT_LABEL } from './documentLabels.js';
 const documents = {
   requisition: ['Requisition', 'REQ', 1],
   purchaseorder: [PROCUREMENT_DOCUMENT_LABEL, 'PO', 2],
+  procurement: ['Procurement', 'PRC', 9],
   cashadvance: ['Cash advance', 'CA', 3],
   income: ['Income', 'INC', 7],
   cashtransfer: ['Cash transfer', 'TRF', 6],

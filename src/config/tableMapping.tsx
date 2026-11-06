@@ -48,6 +48,7 @@ import requisitionitems from "./purchase_requisitions/requisitionitems.js";
 import budgets from "./purchase_requisitions/budgets";
 import budgetitems from "./purchase_requisitions/budgetitems";
 import purchaseOrders from "./purchase_requisitions/purchaseorders.js";
+import procurements from "./purchase_requisitions/procurements.js";
 import fixedAssets from "./purchase_requisitions/fixedAssets";
 import invoices from "./purchase_requisitions/invoices";
 import payments from "./purchase_requisitions/payments";
@@ -113,6 +114,7 @@ export const tableMapping = {
     budgets,
     budgetitems,
     purchaseorders: purchaseOrders,
+    procurements,
     fixed_assets: fixedAssets,
     invoices,
     payments,

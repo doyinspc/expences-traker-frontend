@@ -1,5 +1,5 @@
 import { PROCUREMENT_DOCUMENT_LABEL } from './documentLabels.js';
-export const financialDocumentNames={2:PROCUREMENT_DOCUMENT_LABEL,3:'Cash advance',7:'Income'};
+export const financialDocumentNames={2:'Procurement / Purchase Order',3:'Cash advance',7:'Income',9:'Procurement'};
 
 export function reportCents(value) {
   const text=String(value??'').trim();
@@ -23,7 +23,7 @@ export function incomeExpenseGroups(data=[]) {
   const groups=new Map();
   for(const row of data){
     const type=Number(row.document_type);
-    if(![2,3,7].includes(type)||row.resolved!==undefined&&Number(row.resolved)!==1)continue;
+    if(![2,3,7,9].includes(type)||row.resolved!==undefined&&Number(row.resolved)!==1)continue;
     const currency=String(row.currency_code||'').trim().toUpperCase();
     const currencyId=Number(row.currency_id)||0;
     const key=currencyId>0?`id:${currencyId}`:/^[A-Z]{3}$/.test(currency)?`code:${currency}`:'unassigned';
@@ -32,7 +32,7 @@ export function incomeExpenseGroups(data=[]) {
     (type===7?group.income:group.expenses).push(row);
     const value=reportCents(type===7?(row.income_amount??row.credit_amount):(row.expense_amount??row.total_amount));
     if(value===null){group.invalidAmounts++;continue;}
-    const field=type===7?'incomeCents':type===2?'procurementCents':'advanceCents';
+    const field=type===7?'incomeCents':[2,9].includes(type)?'procurementCents':'advanceCents';
     if(!Number.isSafeInteger(group[field]+value)){group.invalidAmounts++;continue;}
     group[field]+=value;
   }
@@ -52,7 +52,7 @@ export function incomeExpenseMonthlyReconciliation(rows=[]) {
   const months=new Map();
   for(const row of rows){
     const type=Number(row.document_type);
-    if(![2,3,7].includes(type)||row.resolved!==undefined&&Number(row.resolved)!==1)continue;
+    if(![2,3,7,9].includes(type)||row.resolved!==undefined&&Number(row.resolved)!==1)continue;
     const date=String(row.resolved_date||'').slice(0,10);
     const key=/^\d{4}-\d{2}-\d{2}$/.test(date)?date.slice(0,7):'undated';
     if(!months.has(key))months.set(key,{key,label:key==='undated'?'Date not recorded':new Date(`${key}-01T00:00:00`).toLocaleDateString(undefined,{year:'numeric',month:'long'}),incomeCents:0,expenseCents:0,count:0,invalidAmounts:0});
@@ -72,7 +72,7 @@ export function incomeExpenseMonthlyReconciliation(rows=[]) {
 }
 
 export function incomeExpenseCsvRows(rows=[]) {
-  return rows.filter(row=>[2,3,7].includes(Number(row.document_type))).map(row=>{
+  return rows.filter(row=>[2,3,7,9].includes(Number(row.document_type))).map(row=>{
     const income=Number(row.document_type)===7;
     const cents=reportCents(income?(row.income_amount??row.credit_amount):(row.expense_amount??row.total_amount));
     const amount=reportDecimal(cents);

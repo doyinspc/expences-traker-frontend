@@ -1,5 +1,6 @@
 /** Shared display wording only; transaction IDs, API tables and routes stay unchanged. */
-export const PROCUREMENT_DOCUMENT_LABEL = 'Procurement / Purchase Order';
+export const PROCUREMENT_DOCUMENT_LABEL = 'Purchase Order';
+export const PROCUREMENT_STAGE_LABEL = 'Procurement';
 
 /**
  * Purpose: identify document type 2 consistently in frontend labels and exports.
@@ -7,5 +8,5 @@ export const PROCUREMENT_DOCUMENT_LABEL = 'Procurement / Purchase Order';
  * otherwise preserve the caller's existing display fallback. No record is modified.
  */
 export function displayDocumentType(type, fallback = 'Document') {
-  return Number(type) === 2 ? PROCUREMENT_DOCUMENT_LABEL : fallback;
+  return Number(type) === 2 ? PROCUREMENT_DOCUMENT_LABEL : Number(type) === 9 ? PROCUREMENT_STAGE_LABEL : fallback;
 }

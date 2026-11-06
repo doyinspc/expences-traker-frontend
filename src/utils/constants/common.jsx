@@ -8,10 +8,14 @@ export const REQUISITION_TYPES = {
     4: 'BUDGET', // data in  requisitions table with requisition_type 1
     5: 'USER', //data in users table
     6: 'CASH TRANSFERS', // data in requisitions table with requisition_type 3
+    7: 'INCOME',
+    8: 'STOCK',
+    9: 'PROCUREMENT',
 };
 // src/config/documentTypes.js
 
 export const DOCUMENT_TYPE_CONFIG = {
+    9: { id: 9, code: 'PROCUREMENT', name: 'Procurement', table: 'requisitions', number_column: 'id', title_column: 'title', amount_column: 'total_amount', currency_column: 'currency_id', status_column: 'status', icon: 'ShoppingCart', view_component: 'ProcurementViewWithDetails' },
     1: {
         id: 1,
         code: 'REQUISITION',

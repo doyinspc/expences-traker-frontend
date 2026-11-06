@@ -121,6 +121,13 @@ const navItems: NavItem[] = [
         child_path_number: 2,
       },
       {
+        id: 309,
+        name: "Procurement",
+        path: "/procurement/procurement",
+        parent_path_number: 3,
+        child_path_number: 9,
+      },
+      {
         id: 303,
         name: "Advance Requests",
         path: "/procurement/cashadvance",

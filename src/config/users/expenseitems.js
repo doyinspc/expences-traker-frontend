@@ -82,6 +82,15 @@ const expenseitems = {
             filterType: 'text',
             analyzable: false,
         },
+    stockable: {
+            label: 'Stockable item',
+            type: 'select',
+            defaultValue: null,
+            options: [{value: '', label: 'Existing rule: saved unit determines stock eligibility'}, {value: 1, label: 'Yes — receive into stock'}, {value: 0, label: 'No — service / non-stock item'}],
+            description: 'Stockable goods need a saved unit. Services do not create physical stock. Keep this choice unchanged after stock movements exist.',
+            showInTable: true,
+            tableFormat: value => value === null || value === undefined || value === '' ? 'By saved unit' : Number(value) === 1 ? 'Stockable' : 'Non-stock',
+        },
     text_1: {
             label: 'Unit of Measure',
             placeholder: 'Enter unit of measure...',
