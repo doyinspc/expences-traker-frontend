@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import EvidenceDropzone from './EvidenceDropzone';
-import { prepareEvidenceUpload } from '../../utils/functions/evidenceUpload';
+import React, { useState } from "react";
+import EvidenceDropzone from "./EvidenceDropzone";
+import { prepareEvidenceUpload } from "../../utils/functions/evidenceUpload";
 
 /**
  * Purpose: retain drag-and-drop and preview/name rows while an older server uses doc_path.
@@ -13,20 +13,24 @@ export default function LegacyItemEvidence({
   fileUrl,
   onUpload,
   uploading = false,
+  embedded = false,
 }) {
   const [busy, setBusy] = useState(false),
-    [error, setError] = useState('');
-  const filename = String(item.doc_path || '')
-    .replaceAll('\\', '/')
-    .split('/')
+    [error, setError] = useState("");
+  const filename = String(item.doc_path || "")
+    .replaceAll("\\", "/")
+    .split("/")
     .pop();
-  const image = /\.(jpe?g|png|webp)$/i.test(filename || '');
+  const image = /\.(jpe?g|png|webp)$/i.test(filename || "");
   if (!fileUrl && !onUpload) return null;
+  const Container = embedded ? "section" : "details";
   return (
-    <details className="w-full text-gray-700 dark:text-gray-200">
-      <summary className="min-h-10 cursor-pointer font-medium text-brand-600 dark:text-brand-300">
-        Invoice / image · view or upload
-      </summary>
+    <Container className="w-full text-gray-700 dark:text-gray-200">
+      {!embedded && (
+        <summary className="min-h-10 cursor-pointer font-medium text-brand-600 dark:text-brand-300">
+          Invoice / image · view or upload
+        </summary>
+      )}
       <div className="space-y-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
         {onUpload && (
           <EvidenceDropzone
@@ -36,7 +40,7 @@ export default function LegacyItemEvidence({
             onFile={async (file) => {
               if (busy || uploading) return;
               setBusy(true);
-              setError('');
+              setError("");
               try {
                 const prepared = await prepareEvidenceUpload(file);
                 await onUpload(item, prepared.file);
@@ -96,6 +100,6 @@ export default function LegacyItemEvidence({
           </p>
         )}
       </div>
-    </details>
+    </Container>
   );
 }

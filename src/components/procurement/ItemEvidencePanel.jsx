@@ -1,18 +1,18 @@
-import EvidenceDropzone from './EvidenceDropzone';
-import React, { useEffect, useRef, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSelector } from 'react-redux';
-import axios from 'axios';
+import EvidenceDropzone from "./EvidenceDropzone";
+import React, { useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSelector } from "react-redux";
+import axios from "axios";
 import {
   API_PATH_SETTING,
   axiosConfig,
   axiosConfig1,
   tokenHelpers,
-} from '../../actions/common';
+} from "../../actions/common";
 import {
   evidenceStageNames,
   prepareEvidenceUpload,
-} from '../../utils/functions/evidenceUpload';
+} from "../../utils/functions/evidenceUpload";
 
 async function readEvidence(
   operation,
@@ -22,9 +22,9 @@ async function readEvidence(
   binary = false,
 ) {
   const response = await axios.get(API_PATH_SETTING, {
-    ...(binary ? { ...axiosConfig, responseType: 'blob' } : axiosConfig),
+    ...(binary ? { ...axiosConfig, responseType: "blob" } : axiosConfig),
     params: {
-      table: 'itemevidence',
+      table: "itemevidence",
       cat: operation,
       tenant_db: tokenHelpers.getTenantDb(),
       data: JSON.stringify({
@@ -36,10 +36,10 @@ async function readEvidence(
   });
   if (
     !binary &&
-    (response.data?.status === 'error' || response.data?.success === false)
+    (response.data?.status === "error" || response.data?.success === false)
   )
     throw new Error(
-      response.data.message || 'Item evidence could not be loaded.',
+      response.data.message || "Item evidence could not be loaded.",
     );
   return binary ? response.data : response.data.data;
 }
@@ -80,7 +80,7 @@ function EvidenceDialog({ view, onClose }) {
             </button>
           </div>
         </div>
-        {view.mime.startsWith('image/') ? (
+        {view.mime.startsWith("image/") ? (
           <img
             src={view.url}
             alt={view.name}
@@ -99,10 +99,10 @@ function EvidenceDialog({ view, onClose }) {
 }
 
 function EvidencePreview({ attachment, documentId, itemId, scope }) {
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState("");
   const preview = useQuery({
     queryKey: [
-      'item-evidence-preview',
+      "item-evidence-preview",
       ...scope,
       documentId,
       itemId,
@@ -110,12 +110,12 @@ function EvidencePreview({ attachment, documentId, itemId, scope }) {
     ],
     enabled: Boolean(
       Number(attachment.has_preview) ||
-      attachment.mime_type?.startsWith('image/') ||
-      /\.(jpe?g|png|webp)$/i.test(attachment.original_name || ''),
+        attachment.mime_type?.startsWith("image/") ||
+        /\.(jpe?g|png|webp)$/i.test(attachment.original_name || ""),
     ),
     queryFn: () =>
       readEvidence(
-        'file',
+        "file",
         documentId,
         itemId,
         { attachment_id: attachment.id, preview: 1 },
@@ -137,7 +137,7 @@ function EvidencePreview({ attachment, documentId, itemId, scope }) {
     />
   ) : (
     <span className="flex h-20 w-24 items-center justify-center rounded-lg bg-gray-100 text-xs text-gray-500 dark:bg-gray-800">
-      {attachment.mime_type === 'application/pdf' ? 'PDF' : 'Image / file'}
+      {attachment.mime_type === "application/pdf" ? "PDF" : "Image / file"}
     </span>
   );
 }
@@ -153,19 +153,20 @@ function EvidencePreview({ attachment, documentId, itemId, scope }) {
 export default function ItemEvidencePanel({
   documentId,
   itemId,
-  itemName = '',
+  itemName = "",
   expectedVersion,
   onChanged,
   stockMode = false,
   onUploaded,
   initiallyOpen = false,
+  embedded = false,
 }) {
   const auth = useSelector((state) => state.authReducer || state.auth || {});
   const client = useQueryClient();
-  const [open, setOpen] = useState(initiallyOpen);
-  const [stage, setStage] = useState('');
+  const [open, setOpen] = useState(initiallyOpen || embedded);
+  const [stage, setStage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [view, setView] = useState(null);
   const uploading = useRef(false);
   const scope = [
@@ -175,16 +176,16 @@ export default function ItemEvidencePanel({
     auth.role_id,
   ];
   const query = useQuery({
-    queryKey: ['item-evidence', ...scope, documentId, itemId],
+    queryKey: ["item-evidence", ...scope, documentId, itemId],
     enabled: Boolean(open && documentId && itemId),
-    queryFn: () => readEvidence('list', documentId, itemId),
+    queryFn: () => readEvidence("list", documentId, itemId),
   });
   const stages = stockMode
     ? query.data?.stock_upload_allowed
-      ? ['stock_receipt']
+      ? ["stock_receipt"]
       : []
     : query.data?.upload_stages || [];
-  const chosenStage = stages.includes(stage) ? stage : stages[0] || '';
+  const chosenStage = stages.includes(stage) ? stage : stages[0] || "";
   const attachments = query.data?.attachments || [];
   const groups = Object.keys(evidenceStageNames)
     .map((key) => [key, attachments.filter((row) => row.stage === key)])
@@ -197,10 +198,10 @@ export default function ItemEvidencePanel({
   );
 
   async function show(attachment) {
-    setError('');
+    setError("");
     try {
       const blob = await readEvidence(
-        'file',
+        "file",
         documentId,
         itemId,
         { attachment_id: attachment.id },
@@ -213,7 +214,7 @@ export default function ItemEvidencePanel({
       });
     } catch {
       setError(
-        'This evidence could not be opened. Refresh the item and try again.',
+        "This evidence could not be opened. Refresh the item and try again.",
       );
     }
   }
@@ -222,33 +223,33 @@ export default function ItemEvidencePanel({
     if (!chosenStage || busy || uploading.current) return;
     uploading.current = true;
     setBusy(true);
-    setError('');
+    setError("");
     try {
       const prepared = await prepareEvidenceUpload(file);
       const body = new FormData();
       for (const [key, value] of Object.entries({
-        table: 'itemevidence',
-        cat: 'upload',
+        table: "itemevidence",
+        cat: "upload",
         tenant_db: tokenHelpers.getTenantDb(),
         document_id: documentId,
         item_id: itemId,
         stage: chosenStage,
       }))
         body.append(key, String(value));
-      if (expectedVersion) body.append('expected_version', expectedVersion);
-      body.append('file', prepared.file);
-      if (prepared.preview) body.append('preview', prepared.preview);
+      if (expectedVersion) body.append("expected_version", expectedVersion);
+      body.append("file", prepared.file);
+      if (prepared.preview) body.append("preview", prepared.preview);
       const response = await axios.post(API_PATH_SETTING, body, axiosConfig1);
-      if (response.data?.status === 'error' || response.data?.success === false)
-        throw new Error(response.data.message || 'The evidence was not saved.');
+      if (response.data?.status === "error" || response.data?.success === false)
+        throw new Error(response.data.message || "The evidence was not saved.");
       onUploaded?.(response.data.data.attachment_id);
       await Promise.all(
         [
-          'item-evidence',
-          'approvalcenter',
-          'controlcenter',
-          'requisitionitems',
-          'purchasing-state',
+          "item-evidence",
+          "approvalcenter",
+          "controlcenter",
+          "requisitionitems",
+          "purchasing-state",
         ].map((key) => client.invalidateQueries({ queryKey: [key] })),
       );
       await onChanged?.();
@@ -256,7 +257,7 @@ export default function ItemEvidencePanel({
       setError(
         failure.response?.data?.message ||
           failure.message ||
-          'The evidence was not saved.',
+          "The evidence was not saved.",
       );
     } finally {
       uploading.current = false;
@@ -264,15 +265,20 @@ export default function ItemEvidencePanel({
     }
   }
 
+  const Container = embedded ? "section" : "details";
   return (
-    <details
-      open={open}
-      onToggle={(event) => setOpen(event.currentTarget.open)}
+    <Container
+      open={embedded ? undefined : open}
+      onToggle={
+        embedded ? undefined : (event) => setOpen(event.currentTarget.open)
+      }
       className="w-full text-sm text-gray-700 dark:text-gray-200"
     >
-      <summary className="min-h-10 cursor-pointer content-center text-xs font-medium text-brand-600 dark:text-brand-300">
-        Images and documents by stage{itemName ? ` · ${itemName}` : ''}
-      </summary>
+      {!embedded && (
+        <summary className="min-h-10 cursor-pointer content-center text-xs font-medium text-brand-600 dark:text-brand-300">
+          Images and documents by stage{itemName ? ` · ${itemName}` : ""}
+        </summary>
+      )}
       <div className="space-y-4 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
         {query.isPending ? (
           <p role="status" className="min-h-24 py-4 text-xs">
@@ -370,23 +376,23 @@ export default function ItemEvidencePanel({
                               {attachment.original_name}
                             </button>
                             <p>
-                              {attachment.uploader_name || 'User not recorded'}
+                              {attachment.uploader_name || "User not recorded"}
                             </p>
                             <p className="text-gray-500 dark:text-gray-400">
                               {attachment.uploaded_at ||
-                                'Upload date not recorded'}
+                                "Upload date not recorded"}
                             </p>
                             {attachment.file_size && (
                               <p>
-                                {Math.ceil(Number(attachment.file_size) / 1024)}{' '}
+                                {Math.ceil(Number(attachment.file_size) / 1024)}{" "}
                                 KB
                               </p>
                             )}
-                            {key === 'stock_receipt' && (
+                            {key === "stock_receipt" && (
                               <p className="mt-1">
                                 {attachment.stock_movement_id
                                   ? `Receipt movement #${attachment.stock_movement_id}`
-                                  : 'Pending stock receipt confirmation'}
+                                  : "Pending stock receipt confirmation"}
                               </p>
                             )}
                           </td>
@@ -418,6 +424,6 @@ export default function ItemEvidencePanel({
         )}
       </div>
       {view && <EvidenceDialog view={view} onClose={() => setView(null)} />}
-    </details>
+    </Container>
   );
 }
