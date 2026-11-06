@@ -1,3 +1,5 @@
+import { approvalItemLabel } from "../../utils/functions/approvalItemLabel";
+import ItemBudgetComparison from "../../components/approvals/ItemBudgetComparison";
 import ApprovalItemsTable from "../../components/approvals/ApprovalItemsTable";
 import LegacyItemEvidence from "../../components/procurement/LegacyItemEvidence";
 import ItemEvidencePanel from "../../components/procurement/ItemEvidencePanel";
@@ -54,14 +56,7 @@ const amount = (value) =>
   });
 const card =
   "min-w-0 rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900";
-const itemTitle = (item) =>
-  item.item_name ||
-  item.name ||
-  item.title ||
-  item.item_id ||
-  item.description ||
-  item.special_instructions ||
-  `Item ${item.id}`;
+const itemTitle = approvalItemLabel;
 /**
  * Purpose: keep document references, receipts and item history beside the existing item row.
  *
@@ -237,6 +232,8 @@ function RequestedItems({
   onChanged,
   priceFree,
   onEditItem,
+  budgetComparison,
+  currency,
 }) {
   return (
     <ApprovalItemsTable
@@ -246,17 +243,26 @@ function RequestedItems({
       priceFree={priceFree}
       onEditItem={onEditItem}
       renderDetails={(item) => (
-        <ItemLinks
-          item={item}
-          onUpload={onUpload}
-          uploading={uploading}
-          revisions={revisions}
-          documentId={documentId}
-          stageEvidence={stageEvidence}
-          expectedVersion={expectedVersion}
-          onChanged={onChanged}
-          priceFree={priceFree}
-        />
+        <>
+          {!priceFree && (
+            <ItemBudgetComparison
+              comparison={budgetComparison}
+              item={item}
+              currency={currency}
+            />
+          )}
+          <ItemLinks
+            item={item}
+            onUpload={onUpload}
+            uploading={uploading}
+            revisions={revisions}
+            documentId={documentId}
+            stageEvidence={stageEvidence}
+            expectedVersion={expectedVersion}
+            onChanged={onChanged}
+            priceFree={priceFree}
+          />
+        </>
       )}
     />
   );
@@ -369,14 +375,14 @@ export default function ApprovalCenterDetails() {
     },
   });
   const receiptUpload = useMutation({
-    mutationFn: async ({ item, file }) => {
+    mutationFn: async ({ item, file, expectedVersion }) => {
       const form = new FormData();
       for (const [key, value] of Object.entries({
         table: "approvalcenter",
         cat: "upload_item_receipt",
         workflow_id,
         item_id: item.id,
-        expected_version: query.data.action_version,
+        expected_version: expectedVersion ?? query.data.action_version,
       }))
         form.append(key, String(value));
       form.append("file", file);
@@ -438,7 +444,8 @@ export default function ApprovalCenterDetails() {
           table: "approvalcenter",
           cat: "revise_approval_item",
           workflow_id,
-          expected_version: query.data.action_version,
+          expected_version:
+            values.expected_version ?? query.data.action_version,
         },
         axiosConfig,
       );
@@ -652,11 +659,17 @@ export default function ApprovalCenterDetails() {
             </WorkflowDrawer>
             <RequestedItems
               items={workflow.document_items || []}
+              budgetComparison={workflow.budget_comparison}
+              currency={document.currency_code || ""}
               documentType={workflow.document_type_id}
               revisions={workflow.item_revisions}
               onEditItem={
                 workflow.permissions?.can_revise_items
-                  ? (item) => setEditRequest({ itemId: item.id })
+                  ? (item) =>
+                      setEditRequest({
+                        itemId: item.id,
+                        expectedVersion: workflow.action_version,
+                      })
                   : undefined
               }
               documentId={workflow.document_id}
@@ -682,7 +695,48 @@ export default function ApprovalCenterDetails() {
               <DemandReviewPanel
                 onClose={() => setEditRequest(null)}
                 editRequest={editRequest}
-                key={`demand-${workflow.id}-${workflow.action_version}`}
+                renderEvidence={(
+                  item,
+                  { expectedVersion, onBusyChange, onVersionChange },
+                ) =>
+                  workflow.stage_evidence_enabled ? (
+                    <ItemEvidencePanel
+                      embedded
+                      documentId={workflow.document_id}
+                      itemId={item.id}
+                      itemName={itemTitle(item)}
+                      expectedVersion={expectedVersion}
+                      onBusyChange={onBusyChange}
+                      onChanged={async () => {
+                        const fresh = await query.refetch();
+                        if (fresh.error) throw fresh.error;
+                        onVersionChange(fresh.data.action_version);
+                      }}
+                    />
+                  ) : (
+                    <LegacyItemEvidence
+                      embedded
+                      item={item}
+                      fileUrl={item.doc_path ? receiptUrl(item.doc_path) : null}
+                      onBusyChange={onBusyChange}
+                      onUpload={
+                        workflow.permissions?.can_upload_receipt
+                          ? async (line, file) => {
+                              await receiptUpload.mutateAsync({
+                                item: line,
+                                file,
+                                expectedVersion,
+                              });
+                              const fresh = await query.refetch();
+                              if (fresh.error) throw fresh.error;
+                              onVersionChange(fresh.data.action_version);
+                            }
+                          : undefined
+                      }
+                    />
+                  )
+                }
+                key={`demand-${workflow.id}-${auth.location_id}-${auth.role_id}`}
                 workflow={workflow}
                 isLoading={itemRevision.isPending}
                 onSave={(values) => itemRevision.mutateAsync(values)}
@@ -691,7 +745,48 @@ export default function ApprovalCenterDetails() {
               <ItemRevisionPanel
                 onClose={() => setEditRequest(null)}
                 editRequest={editRequest}
-                key={`items-${workflow.id}-${workflow.action_version}`}
+                renderEvidence={(
+                  item,
+                  { expectedVersion, onBusyChange, onVersionChange },
+                ) =>
+                  workflow.stage_evidence_enabled ? (
+                    <ItemEvidencePanel
+                      embedded
+                      documentId={workflow.document_id}
+                      itemId={item.id}
+                      itemName={itemTitle(item)}
+                      expectedVersion={expectedVersion}
+                      onBusyChange={onBusyChange}
+                      onChanged={async () => {
+                        const fresh = await query.refetch();
+                        if (fresh.error) throw fresh.error;
+                        onVersionChange(fresh.data.action_version);
+                      }}
+                    />
+                  ) : (
+                    <LegacyItemEvidence
+                      embedded
+                      item={item}
+                      fileUrl={item.doc_path ? receiptUrl(item.doc_path) : null}
+                      onBusyChange={onBusyChange}
+                      onUpload={
+                        workflow.permissions?.can_upload_receipt
+                          ? async (line, file) => {
+                              await receiptUpload.mutateAsync({
+                                item: line,
+                                file,
+                                expectedVersion,
+                              });
+                              const fresh = await query.refetch();
+                              if (fresh.error) throw fresh.error;
+                              onVersionChange(fresh.data.action_version);
+                            }
+                          : undefined
+                      }
+                    />
+                  )
+                }
+                key={`items-${workflow.id}-${auth.location_id}-${auth.role_id}`}
                 workflow={workflow}
                 isLoading={itemRevision.isPending}
                 onSave={(values) => itemRevision.mutateAsync(values)}

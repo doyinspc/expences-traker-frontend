@@ -160,6 +160,7 @@ export default function ItemEvidencePanel({
   onUploaded,
   initiallyOpen = false,
   embedded = false,
+  onBusyChange,
 }) {
   const auth = useSelector((state) => state.authReducer || state.auth || {});
   const client = useQueryClient();
@@ -169,6 +170,9 @@ export default function ItemEvidencePanel({
   const [error, setError] = useState("");
   const [view, setView] = useState(null);
   const uploading = useRef(false);
+  useEffect(() => {
+    onBusyChange?.(busy);
+  }, [busy, onBusyChange]);
   const scope = [
     tokenHelpers.getTenantDb(),
     tokenHelpers.getToken(),

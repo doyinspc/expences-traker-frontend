@@ -497,3 +497,232 @@ test("Rejected lines remain editable only as a reasoned restoration", () => {
   assert.match(result, /Restore rejected item/);
   assert.doesNotMatch(result, /name="approval-unit-price"/);
 });
+
+test("Catalogue descriptions are shown without turning database row IDs into names", () => {
+  const { approvalItemLabel } = bundled(
+    "src/utils/functions/approvalItemLabel.js",
+  );
+  assert.equal(
+    approvalItemLabel({
+      id: 41,
+      item_id: 100,
+      item_name: "Hardware equipment",
+    }),
+    "Hardware equipment",
+  );
+  assert.equal(
+    approvalItemLabel({
+      id: 41,
+      item_name: "Item #41",
+      description: "Replacement keyboard",
+    }),
+    "Replacement keyboard",
+  );
+  assert.equal(
+    approvalItemLabel({ id: 41, item_id: 100 }),
+    "Description unavailable",
+  );
+});
+
+test("An older backend shows the saved quantity and explains why it cannot be edited", () => {
+  const result = html(Panel, {
+    workflow: { ...workflow, item_edit_capabilities: undefined },
+    editRequest: { itemId: 401 },
+  });
+  assert.match(
+    result,
+    /<input(?=[^>]*name="approval-quantity")(?=[^>]*disabled)[^>]*>/,
+  );
+  assert.match(
+    result,
+    /Quantity editing is not enabled by the connected backend/,
+  );
+});
+
+const { default: ItemBudget, findItemBudget } = bundled(
+  "src/components/approvals/ItemBudgetComparison.jsx",
+);
+const mappedBudget = {
+  name: "Equipment budget",
+  items: [
+    {
+      line_id: 401,
+      item_id: 502,
+      current_amount: "500.00",
+      item: {
+        allocated: "2000.00",
+        spent: "300.00",
+        balance: "1700.00",
+        after_request: "1100.00",
+      },
+      category: {
+        allocated: "3000.00",
+        spent: "500.00",
+        balance: "2500.00",
+        after_request: "1900.00",
+      },
+    },
+  ],
+};
+test("The editor compares the mapped item and category separately and projects a price change", () => {
+  const result = html(ItemBudget, {
+    comparison: mappedBudget,
+    item,
+    proposedAmount: 700,
+    currency: "NGN",
+  });
+  assert.match(result, /Item budget/);
+  assert.match(result, /Category budget/);
+  assert.match(result, /900.00/);
+  assert.match(result, /1,700.00/);
+  assert.equal(findItemBudget({ groups: [mappedBudget] }, 401).item_id, 502);
+  assert.equal(findItemBudget(mappedBudget, 502), null);
+});
+test("Missing allocations remain guidance and paid lines do not repeat a budget comparison", () => {
+  const missing = {
+    ...mappedBudget,
+    items: [
+      { line_id: 401, current_amount: "500", item: null, category: null },
+    ],
+  };
+  assert.match(
+    html(ItemBudget, { comparison: missing, item }),
+    /No approved allocation/,
+  );
+  assert.equal(
+    html(ItemBudget, {
+      comparison: mappedBudget,
+      item: { ...item, resolved: 1 },
+    }),
+    "",
+  );
+  assert.equal(
+    html(ItemBudget, {
+      comparison: mappedBudget,
+      item: { ...item, approval_status: 2 },
+    }),
+    "",
+  );
+});
+
+function interactiveEditor(props) {
+  let cursor = 0,
+    refCursor = 0,
+    states = [],
+    refs = [],
+    effects = [];
+  const hooked = {
+    ...React,
+    useState(initial) {
+      const index = cursor++;
+      if (!(index in states))
+        states[index] = typeof initial === "function" ? initial() : initial;
+      return [
+        states[index],
+        (value) => {
+          states[index] =
+            typeof value === "function" ? value(states[index]) : value;
+        },
+      ];
+    },
+    useRef(initial) {
+      const index = refCursor++;
+      return refs[index] ?? (refs[index] = { current: initial });
+    },
+    useEffect(fn) {
+      effects.push(fn);
+    },
+  };
+  const Editor = bundled("src/components/approvals/ItemRevisionPanel.jsx", {
+    react: hooked,
+  }).default;
+  return () => {
+    cursor = 0;
+    refCursor = 0;
+    effects = [];
+    let tree = Editor(props);
+    for (const effect of effects) effect();
+    cursor = 0;
+    refCursor = 0;
+    effects = [];
+    tree = Editor(props);
+    return tree;
+  };
+}
+test("Uploading inside the dialog preserves entered terms/reason and advances only its own saved version", async () => {
+  let saved, upload;
+  const props = {
+    workflow: { ...workflow, action_version: "v1" },
+    editRequest: { itemId: 401, expectedVersion: "v1" },
+    renderEvidence: (line, callbacks) => {
+      upload = callbacks;
+      return React.createElement(
+        "div",
+        { "aria-label": "Invoice uploader" },
+        line.item_name,
+      );
+    },
+    onSave: async (values) => {
+      saved = values;
+    },
+  };
+  const render = interactiveEditor(props);
+  let tree = render();
+  nodes(tree)
+    .find((n) => n.props?.name === "approval-quantity")
+    .props.onChange({ target: { value: "7" } });
+  tree = render();
+  nodes(tree)
+    .find((n) => n.props?.name === "approval-unit-price")
+    .props.onChange({ target: { value: "120.00" } });
+  tree = render();
+  nodes(tree)
+    .find((n) => n.type === "textarea")
+    .props.onChange({ target: { value: "Quotation and invoice attached" } });
+  tree = render();
+  upload.onBusyChange(true);
+  tree = render();
+  await nodes(tree)
+    .find((n) => n.type === "form")
+    .props.onSubmit({ preventDefault() {} });
+  assert.equal(saved, undefined);
+  upload.onVersionChange("v2");
+  upload.onBusyChange(false);
+  props.workflow = { ...props.workflow, action_version: "v2" };
+  tree = render();
+  assert.equal(
+    nodes(tree).find((n) => n.props?.name === "approval-quantity").props.value,
+    "7",
+  );
+  assert.equal(
+    nodes(tree).find((n) => n.type === "textarea").props.value,
+    "Quotation and invoice attached",
+  );
+  await nodes(tree)
+    .find((n) => n.type === "form")
+    .props.onSubmit({ preventDefault() {} });
+  assert.equal(saved.expected_version, "v2");
+  assert.equal(saved.quantity, "7");
+  assert.equal(saved.unit_price, "120.00");
+});
+test("An unrelated refresh cannot silently authorise overwriting a different revision", async () => {
+  let saved;
+  const props = {
+    workflow: { ...workflow, action_version: "v1" },
+    editRequest: { itemId: 401, expectedVersion: "v1" },
+    onSave: async (values) => {
+      saved = values;
+    },
+  };
+  const render = interactiveEditor(props);
+  let tree = render();
+  nodes(tree)
+    .find((n) => n.type === "textarea")
+    .props.onChange({ target: { value: "Review quotation" } });
+  props.workflow = { ...props.workflow, action_version: "someone-else-v2" };
+  tree = render();
+  await nodes(tree)
+    .find((n) => n.type === "form")
+    .props.onSubmit({ preventDefault() {} });
+  assert.equal(saved.expected_version, "v1");
+});

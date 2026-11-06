@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import EvidenceDropzone from "./EvidenceDropzone";
 import { prepareEvidenceUpload } from "../../utils/functions/evidenceUpload";
 
@@ -14,9 +14,13 @@ export default function LegacyItemEvidence({
   onUpload,
   uploading = false,
   embedded = false,
+  onBusyChange,
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  useEffect(() => {
+    onBusyChange?.(busy);
+  }, [busy, onBusyChange]);
   const filename = String(item.doc_path || "")
     .replaceAll("\\", "/")
     .split("/")

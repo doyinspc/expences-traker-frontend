@@ -1,14 +1,14 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSelector } from 'react-redux';
-import { useNavigate, useParams } from 'react-router-dom';
-import ParentDocumentContext from '../../components/common/ParentDocumentContext';
-import useParentDocumentContext from '../../hooks/useParentDocumentContext';
-import useReduxApiData from '../../hooks/useTanstackQuery';
-import { tokenHelpers } from '../../actions/common';
-import { purchasingRequest } from '../../utils/functions/purchasingApi';
-import ItemEvidencePanel from '../../components/procurement/ItemEvidencePanel';
-import LegacyPurchaseOrderItems from './PurchaseOrderRequisitions';
+import React, { useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSelector } from "react-redux";
+import { useNavigate, useParams } from "react-router-dom";
+import ParentDocumentContext from "../../components/common/ParentDocumentContext";
+import useParentDocumentContext from "../../hooks/useParentDocumentContext";
+import useReduxApiData from "../../hooks/useTanstackQuery";
+import { tokenHelpers } from "../../actions/common";
+import { purchasingRequest } from "../../utils/functions/purchasingApi";
+import ItemEvidencePanel from "../../components/procurement/ItemEvidencePanel";
+import LegacyPurchaseOrderItems from "./PurchaseOrderRequisitions";
 
 const EMPTY_ROWS = [];
 const rows = (value) =>
@@ -19,7 +19,7 @@ const money = (value) =>
     maximumFractionDigits: 2,
   });
 const control =
-  'mt-1 min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white';
+  "mt-1 min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white";
 
 /**
  * Purpose: edit the new Purchase Order/Procurement stages while retaining the legacy screen.
@@ -40,7 +40,7 @@ export default function PurchasingItems({ type = 2 }) {
   const editor = useRef(null);
   const [selected, setSelected] = useState({});
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const scope = [
     tokenHelpers.getTenantDb(),
     tokenHelpers.getToken(),
@@ -51,28 +51,28 @@ export default function PurchasingItems({ type = 2 }) {
   const modern =
     Number(parent.document?.purchasing_version || 1) === 2 || type === 9;
   const query = useQuery({
-    queryKey: ['purchasing-state', ...scope],
+    queryKey: ["purchasing-state", ...scope],
     enabled: Boolean(documentId && parent.document && modern),
-    queryFn: () => purchasingRequest('state', { document_id: documentId }),
+    queryFn: () => purchasingRequest("state", { document_id: documentId }),
   });
   const catalogue = useReduxApiData({
-    table: 'commons',
-    uniqueKey: 'purchasing-catalogue',
-    queryType: 'gets',
+    table: "commons",
+    uniqueKey: "purchasing-catalogue",
+    queryType: "gets",
     mainParam: { grp: 51, is_active: 1 },
     enabled: modern && type === 2,
   });
   const accounts = useReduxApiData({
-    table: 'commons',
-    uniqueKey: 'purchasing-accounts',
-    queryType: 'gets',
+    table: "commons",
+    uniqueKey: "purchasing-accounts",
+    queryType: "gets",
     mainParam: { grp: 7, is_active: 1 },
     enabled: modern && type === 2,
   });
   const state = query.data;
   const candidates = state?.candidates || EMPTY_ROWS;
-  const name = type === 9 ? 'Procurement' : 'Purchase Order';
-  const path = type === 9 ? 'procurement' : 'purchaseorder';
+  const name = type === 9 ? "Procurement" : "Purchase Order";
+  const path = type === 9 ? "procurement" : "purchaseorder";
   const catalogueRows = rows(catalogue.data);
   const sourceRows = useMemo(() => {
     const eligible = new Map(
@@ -101,10 +101,10 @@ export default function PurchasingItems({ type = 2 }) {
   async function refresh() {
     await Promise.all(
       [
-        'purchasing-state',
-        'requisitions',
-        'requisitionitems',
-        'approvalcenter',
+        "purchasing-state",
+        "requisitions",
+        "requisitionitems",
+        "approvalcenter",
       ].map((key) => client.invalidateQueries({ queryKey: [key] })),
     );
     setSelected({});
@@ -112,7 +112,7 @@ export default function PurchasingItems({ type = 2 }) {
   async function mutate(operation, values) {
     if (busy) return;
     setBusy(true);
-    setError('');
+    setError("");
     try {
       await purchasingRequest(
         operation,
@@ -132,10 +132,10 @@ export default function PurchasingItems({ type = 2 }) {
     setForm({
       sources: line?.request_allocations || [],
       line_id: line?.id || 0,
-      item_id: String(line?.item_id || ''),
-      account_id: String(line?.account_id || ''),
+      item_id: String(line?.item_id || ""),
+      account_id: String(line?.account_id || ""),
       quantity: line?.quantity || 1,
-      unit_price: String(line?.unit_price ?? ''),
+      unit_price: String(line?.unit_price ?? ""),
       allocations: Object.fromEntries(
         (line?.request_allocations || []).map((row) => [
           row.request_item_id,
@@ -143,10 +143,10 @@ export default function PurchasingItems({ type = 2 }) {
         ]),
       ),
     });
-    setError('');
+    setError("");
     requestAnimationFrame(() => {
-      editor.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      editor.current?.querySelector('select')?.focus();
+      editor.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      editor.current?.querySelector("select")?.focus();
     });
   }
   function allocate(source, value) {
@@ -163,7 +163,14 @@ export default function PurchasingItems({ type = 2 }) {
       };
     });
   }
-  if (parent.isPending || (modern && query.isPending))
+  if (parent.canRead === false)
+    return (
+      <p role="status" className="min-h-32 p-6">
+        Sign in and select your working location to load this document.
+      </p>
+    );
+  if (parent.error) return <p role="alert">{parent.error.message}</p>;
+  if (parent.isPending || (modern && parent.document && query.isPending))
     return (
       <p role="status" className="min-h-48 p-6">
         Loading {name} items…
@@ -179,8 +186,8 @@ export default function PurchasingItems({ type = 2 }) {
           <h1 className="text-xl font-semibold">{name} items</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {type === 2
-              ? 'Combine outstanding requisitions here, enter prices, and add any extra stock quantity.'
-              : 'Combine approved Purchase Orders from this location. Each source budget and agreed price is retained.'}
+              ? "Combine outstanding requisitions here, enter prices, and add any extra stock quantity."
+              : "Combine approved Purchase Orders from this location. Each source budget and agreed price is retained."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -246,12 +253,12 @@ export default function PurchasingItems({ type = 2 }) {
               <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
                   {[
-                    'Item / unit',
-                    'Quantity',
-                    'Unit price',
-                    'Total',
-                    'Source / extra stock',
-                    'Actions',
+                    "Item / unit",
+                    "Quantity",
+                    "Unit price",
+                    "Total",
+                    "Source / extra stock",
+                    "Actions",
                   ].map((label) => (
                     <th
                       key={label}
@@ -269,7 +276,7 @@ export default function PurchasingItems({ type = 2 }) {
                       <td className="p-3">
                         <p className="font-medium">{line.item_name}</p>
                         <p className="text-xs text-gray-500">
-                          {line.unit || 'Service / amount'}
+                          {line.unit || "Service / amount"}
                         </p>
                         {Number(line.approval_status) === 2 && (
                           <span className="text-xs text-red-600">
@@ -283,7 +290,7 @@ export default function PurchasingItems({ type = 2 }) {
                       </td>
                       <td className="p-3 tabular-nums">
                         {Number(line.approval_status) === 2
-                          ? 'Excluded'
+                          ? "Excluded"
                           : money(line.total_price)}
                       </td>
                       <td className="p-3 text-xs">
@@ -294,7 +301,7 @@ export default function PurchasingItems({ type = 2 }) {
                               item(s)
                             </p>
                             <p className="mt-1 font-medium text-blue-700 dark:text-blue-300">
-                              Extra for store: {line.extra_stock_quantity}{' '}
+                              Extra for store: {line.extra_stock_quantity}{" "}
                               {line.unit}
                             </p>
                           </>
@@ -302,13 +309,13 @@ export default function PurchasingItems({ type = 2 }) {
                           <>
                             {line.order_allocations.map((allocation) => (
                               <p key={allocation.id}>
-                                PO-{allocation.purchaseorder_id} ·{' '}
-                                {allocation.order_title} · {allocation.quantity}{' '}
+                                PO-{allocation.purchaseorder_id} ·{" "}
+                                {allocation.order_title} · {allocation.quantity}{" "}
                                 {line.unit}
                               </p>
                             ))}
                             <p className="mt-1 text-gray-500">
-                              {line.budget_name || 'No budget assigned'}
+                              {line.budget_name || "No budget assigned"}
                             </p>
                           </>
                         )}
@@ -330,7 +337,7 @@ export default function PurchasingItems({ type = 2 }) {
                                 type="button"
                                 disabled={busy}
                                 onClick={() =>
-                                  mutate('remove_line', { line_id: line.id })
+                                  mutate("remove_line", { line_id: line.id })
                                 }
                                 className="min-h-11 text-red-600 dark:text-red-300"
                               >
@@ -375,6 +382,25 @@ export default function PurchasingItems({ type = 2 }) {
                 Only approved outstanding quantities in this Procurement's
                 location and currency are listed.
               </p>
+              {state.excluded_orders?.length > 0 && (
+                <details className="rounded-lg border border-amber-200 p-3 text-xs dark:border-amber-900">
+                  <summary className="cursor-pointer font-medium">
+                    Why some Purchase Order quantities are unavailable
+                  </summary>
+                  <ul className="mt-3 space-y-3">
+                    {state.excluded_orders.map((order, index) => (
+                      <li key={`${order.order_id}-${index}`}>
+                        <strong>
+                          PO-{order.order_id} · {order.title}
+                        </strong>
+                        <p className="mt-1 text-gray-500 dark:text-gray-400">
+                          {order.reason}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
               {!candidates.length ? (
                 <p className="text-sm">
                   No eligible Purchase Order quantities are available.
@@ -386,11 +412,12 @@ export default function PurchasingItems({ type = 2 }) {
                       <thead>
                         <tr>
                           {[
-                            'Purchase Order',
-                            'Item',
-                            'Available',
-                            'Quantity to procure',
-                            'Unit price',
+                            "Purchase Order",
+                            "Item",
+                            "Available",
+                            "Quantity to procure",
+                            "Agreed unit price",
+                            "Selected total",
                           ].map((label) => (
                             <th key={label} className="p-2">
                               {label}
@@ -421,7 +448,7 @@ export default function PurchasingItems({ type = 2 }) {
                                 min="0"
                                 max={row.available_quantity}
                                 step="1"
-                                value={selected[row.id] ?? ''}
+                                value={selected[row.id] ?? ""}
                                 onChange={(event) =>
                                   setSelected((previous) => ({
                                     ...previous,
@@ -432,6 +459,12 @@ export default function PurchasingItems({ type = 2 }) {
                               />
                             </td>
                             <td className="p-2">{money(row.unit_price)}</td>
+                            <td className="p-2 font-medium tabular-nums">
+                              {money(
+                                Number(selected[row.id] || 0) *
+                                  Number(row.unit_price || 0),
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -446,7 +479,7 @@ export default function PurchasingItems({ type = 2 }) {
                       )
                     }
                     onClick={() =>
-                      mutate('import_orders', {
+                      mutate("import_orders", {
                         items: Object.entries(selected)
                           .filter(([, quantity]) => Number(quantity) > 0)
                           .map(([order_item_id, quantity]) => ({
@@ -458,8 +491,8 @@ export default function PurchasingItems({ type = 2 }) {
                     className="min-h-11 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white disabled:opacity-50"
                   >
                     {busy
-                      ? 'Adding…'
-                      : 'Add selected quantities to Procurement'}
+                      ? "Adding…"
+                      : "Add selected quantities to Procurement"}
                   </button>
                 </>
               )}
@@ -477,7 +510,7 @@ export default function PurchasingItems({ type = 2 }) {
             className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
-              void mutate('save_order_line', {
+              void mutate("save_order_line", {
                 ...form,
                 item_id: Number(form.item_id),
                 account_id: Number(form.account_id),
@@ -493,7 +526,7 @@ export default function PurchasingItems({ type = 2 }) {
           >
             <fieldset disabled={busy} className="space-y-4">
               <h2 className="font-semibold">
-                {form.line_id ? 'Edit ordered item' : 'Add ordered item'}
+                {form.line_id ? "Edit ordered item" : "Add ordered item"}
               </h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="text-sm">
@@ -514,7 +547,7 @@ export default function PurchasingItems({ type = 2 }) {
                     <option value="">Choose catalogue item</option>
                     {catalogueRows.map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.name} · {item.text_1 || 'Service'}
+                        {item.name} · {item.text_1 || "Service"}
                       </option>
                     ))}
                   </select>
@@ -578,8 +611,8 @@ export default function PurchasingItems({ type = 2 }) {
                 </label>
               </div>
               <div className="rounded-lg bg-blue-50 p-3 text-xs text-blue-900 dark:bg-blue-950 dark:text-blue-100">
-                For requisitions: {allocated} · Extra for store:{' '}
-                {Math.max(0, Number(form.quantity) - allocated)} · Line amount:{' '}
+                For requisitions: {allocated} · Extra for store:{" "}
+                {Math.max(0, Number(form.quantity) - allocated)} · Line amount:{" "}
                 {money(Number(form.quantity) * Number(form.unit_price))}
               </div>
               <section>
@@ -607,7 +640,7 @@ export default function PurchasingItems({ type = 2 }) {
                       min="0"
                       max={source.available_quantity}
                       step="1"
-                      value={form.allocations[source.id] || ''}
+                      value={form.allocations[source.id] || ""}
                       onChange={(event) => allocate(source, event.target.value)}
                       className="min-h-11 w-24 rounded-lg border bg-white px-2 dark:border-gray-700 dark:bg-gray-950"
                     />
@@ -626,7 +659,7 @@ export default function PurchasingItems({ type = 2 }) {
                   type="submit"
                   className="min-h-11 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white"
                 >
-                  {busy ? 'Saving…' : 'Save item and allocations'}
+                  {busy ? "Saving…" : "Save item and allocations"}
                 </button>
                 <button
                   type="button"

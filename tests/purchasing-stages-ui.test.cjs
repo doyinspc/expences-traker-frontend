@@ -46,6 +46,27 @@ const document = {
   purchasing_version: 2,
   location_id: 41,
 };
+
+test("Procurement explains why completed Purchase Order quantities were excluded", () => {
+  const Page = page("src/pages/Product/PurchasingItems.jsx", {
+    parent: { ...document, id: 91, requisition_type: 9 },
+    state: {
+      excluded_orders: [
+        {
+          order_id: 90,
+          title: "Branch equipment",
+          reason: "The order currency differs from this Procurement.",
+        },
+      ],
+    },
+  });
+  const result = html(Page, { type: 9 });
+  assert.match(result, /Why some Purchase Order quantities are unavailable/);
+  assert.match(result, /PO-90/);
+  assert.match(result, /The order currency differs/);
+  assert.match(result, /No eligible Purchase Order quantities/);
+});
+
 function page(file, { parent = document, state = {}, extra = {} } = {}) {
   return load(file, {
     "react-redux": {

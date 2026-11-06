@@ -1,3 +1,4 @@
+import { approvalItemLabel } from "../../utils/functions/approvalItemLabel";
 import React, { useState } from "react";
 import {
   ChevronDown,
@@ -13,13 +14,7 @@ const money = (value) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-const name = (item) =>
-  item.item_name ||
-  item.name ||
-  item.title ||
-  item.description ||
-  item.special_instructions ||
-  `Item ${item.id}`;
+const name = approvalItemLabel;
 const quantity = (item, type) =>
   Number(type) === 2
     ? (item.procurement_quantity ?? item.quantity ?? "—")

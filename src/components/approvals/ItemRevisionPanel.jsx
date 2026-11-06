@@ -1,3 +1,5 @@
+import ItemBudgetComparison from "./ItemBudgetComparison";
+import { approvalItemLabel } from "../../utils/functions/approvalItemLabel";
 import ApprovalItemDialog from "./ApprovalItemDialog";
 import BudgetComparison from "./BudgetComparison";
 import React, { useEffect, useRef, useState } from "react";
@@ -22,8 +24,7 @@ const control =
  * Algorithm: prefer the supplied item name, then stored name/description, and finally an
  * explicit Item #ID fallback. Return text; React performs the HTML escaping when displayed.
  */
-const title = (item) =>
-  item.item_name || item.name || item.description || `Item #${item.id}`;
+const title = approvalItemLabel;
 /**
  * Purpose: preview the effective item amount before a reasoned change is submitted.
  *
@@ -108,6 +109,7 @@ export default function ItemRevisionPanel({
   isLoading = false,
   editRequest = null,
   onClose = () => {},
+  renderEvidence,
 }) {
   const canEdit = workflow.permissions?.can_revise_items;
   const supportsQuantity = Boolean(workflow.item_edit_capabilities?.quantity);
@@ -141,14 +143,23 @@ export default function ItemRevisionPanel({
   );
   const [reviewOpen, setReviewOpen] = useState(false),
     [editorOpen, setEditorOpen] = useState(Boolean(selectedItem));
+  const [evidenceBusy, setEvidenceBusy] = useState(false);
+  const [expectedVersion, setExpectedVersion] = useState(
+    editRequest?.expectedVersion ?? workflow.action_version,
+  );
   const lastRequest = useRef(null);
   useEffect(() => {
-    if (!canEdit || !editRequest || lastRequest.current === editRequest) return;
+    if (!editRequest) {
+      setEditorOpen(false);
+      return;
+    }
+    if (!canEdit || lastRequest.current === editRequest) return;
     const line = (workflow.document_items || []).find(
       (row) => Number(row.id) === Number(editRequest.itemId),
     );
     if (!line) return;
     lastRequest.current = editRequest;
+    setExpectedVersion(editRequest.expectedVersion ?? workflow.action_version);
     setItemId(String(line.id));
     setChange(supportsQuantity ? "terms" : "price");
     setReason("");
@@ -179,6 +190,7 @@ export default function ItemRevisionPanel({
     workflow.document_items,
     workflow.document_type_id,
     supportsQuantity,
+    workflow.action_version,
   ]);
   const [itemId, setItemId] = useState(() =>
       selectedItem ? String(selectedItem.id) : "",
@@ -228,7 +240,7 @@ export default function ItemRevisionPanel({
     newTotal = preview
       ? currentTotal - preview.before + preview.after
       : currentTotal;
-  const busy = saving || isLoading;
+  const busy = saving || isLoading || evidenceBusy;
   /**
    * Purpose: send one complete item adjustment while preventing repeated UI submissions.
    *
@@ -245,7 +257,7 @@ export default function ItemRevisionPanel({
    */
   const submit = async (event) => {
     event.preventDefault();
-    if (submitting.current || isLoading) return;
+    if (submitting.current || isLoading || evidenceBusy) return;
     setError("");
     if (!item || !preview || !reason.trim()) {
       setError(
@@ -258,6 +270,7 @@ export default function ItemRevisionPanel({
     try {
       await onSave({
         item_id: itemId,
+        expected_version: expectedVersion,
         change: action,
         unit_price: price,
         reason: reason.trim(),
@@ -513,12 +526,13 @@ export default function ItemRevisionPanel({
                 </label>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                {item && ["quantity", "terms"].includes(action) && (
+                {item && ["price", "quantity", "terms"].includes(action) && (
                   <label className="block text-sm">
                     Quantity * (
                     {item.unit_of_measure || item.unit || "saved item unit"})
                     <input
                       name="approval-quantity"
+                      disabled={!supportsQuantity || action === "price"}
                       required
                       type="number"
                       min="1"
@@ -532,6 +546,22 @@ export default function ItemRevisionPanel({
                       Current: {effectiveQuantity(item)}. Requested quantities
                       are preserved.
                     </span>
+                    {!supportsQuantity && (
+                      <span
+                        role="status"
+                        className="mt-2 block text-xs text-amber-800 dark:text-amber-200"
+                      >
+                        Quantity editing is not enabled by the connected
+                        backend. Apply the matching backend update and prepare
+                        the purchasing update. Unit prices can still be saved.
+                      </span>
+                    )}
+                    {supportsQuantity && action === "price" && (
+                      <span className="mt-2 block text-xs text-gray-500">
+                        Choose “Edit quantity and unit price” above to adjust
+                        quantity too.
+                      </span>
+                    )}
                   </label>
                 )}
                 {item && ["price", "terms"].includes(action) && (
@@ -650,6 +680,31 @@ export default function ItemRevisionPanel({
                       )}
                   </div>
                 </details>
+              )}
+              <ItemBudgetComparison
+                comparison={workflow.budget_comparison}
+                item={item}
+                proposedAmount={preview?.after}
+                currency={currency}
+              />
+              {renderEvidence && (
+                <section
+                  aria-label="Invoice and supporting images"
+                  className="space-y-2"
+                >
+                  <h3 className="text-sm font-semibold">
+                    Invoice / supporting image
+                  </h3>
+                  {renderEvidence(item, {
+                    expectedVersion,
+                    onBusyChange: setEvidenceBusy,
+                    onVersionChange: setExpectedVersion,
+                  })}
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Files save when uploaded. Your entered quantity, price and
+                    reason stay here; use Save change to apply them.
+                  </p>
+                </section>
               )}
               {preview && (
                 <div className="rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">

@@ -33,6 +33,7 @@ const lint = new ESLint({
 
 const results = await lint.lintFiles([
   "src/components/approvals/ItemRevisionPanel.jsx",
+  "src/components/approvals/ItemBudgetComparison.jsx",
   "src/components/approvals/ApprovalItemsTable.jsx",
   "src/components/approvals/ApprovalItemDialog.jsx",
   "src/components/approvals/DemandReviewPanel.jsx",
