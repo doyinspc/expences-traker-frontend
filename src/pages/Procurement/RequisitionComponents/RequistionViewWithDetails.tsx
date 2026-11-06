@@ -5,6 +5,7 @@ import { X, ArrowLeft, Power, Loader2, CheckCircle, XCircle, Package, Eye, Send,
 import useReduxApiData from '../../../hooks/useTanstackQuery';
 import { useSelector } from 'react-redux';
 import ApprovalSubmitModal from '../../../components/ApprovalSubmitting';
+import { documentItemTotals } from '../../../utils/functions/documentItemTotals.js';
 
 // ==================== TYPES ====================
 interface Requisition {
@@ -317,24 +318,7 @@ const RequisitionViewWithDetails: React.FC<RequisitionViewWithDetailsProps> = ({
   };
 
   const calculateTotals = () => {
-    let totalAmount = 0;
-    let totalApproved = 0;
-    let totalItems = 0;
-
-    if (requisitionItems && Array.isArray(requisitionItems)) {
-      requisitionItems.forEach(item => {
-        const amount = parseFloat(String(item.total_price || item.total_amount || 0));
-        if (!isNaN(amount)) {
-          totalAmount += amount;
-          totalItems++;
-          if (item.approval_status === 'approved' || item.resolved) {
-            totalApproved += amount;
-          }
-        }
-      });
-    }
-
-    return { totalAmount, totalApproved, totalItems };
+    return documentItemTotals(requisitionItems);
   };
 
   const { totalAmount, totalApproved, totalItems } = calculateTotals();

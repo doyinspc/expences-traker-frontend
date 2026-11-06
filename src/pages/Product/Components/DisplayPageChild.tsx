@@ -13,6 +13,7 @@ import UploadReceiptModal from '../../../components/UploadReceiptModal';
 import ViewAttachmentsModal from '../../../components/ViewAttachementsDocuments';
 import MiniCashTransfers from './MiniTransfer';
 import StockLedgerPanel from '../../Inventory/StockLedgerPanel';
+import { documentItemTotals } from '../../../utils/functions/documentItemTotals.js';
 
 // ==================== TYPES ====================
 export interface DocumentData {
@@ -527,24 +528,7 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
   };
 
   const calculateTotals = () => {
-    let totalAmount = 0;
-    let totalApproved = 0;
-    let totalItems = 0;
-
-    if (documentItems && Array.isArray(documentItems)) {
-      documentItems.forEach(item => {
-        const amount = Number(item.approval_status)===2 ? 0 : parseFloat(String(item.total_price ?? item.total_amount ?? 0));
-        if (!isNaN(amount)) {
-          totalAmount += amount;
-          totalItems++;
-          if (item.approval_status === 'approved' || item.resolved) {
-            totalApproved += amount;
-          }
-        }
-      });
-    }
-
-    return { totalAmount, totalApproved, totalItems };
+    return documentItemTotals(documentItems);
   };
 
   const { totalAmount, totalApproved, totalItems } = calculateTotals();
