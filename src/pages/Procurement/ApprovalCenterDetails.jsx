@@ -11,7 +11,7 @@ import {
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useLocation, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { ArrowLeft, History, CheckCircle2, Info } from "lucide-react";
@@ -292,6 +292,7 @@ function RequestedItems({
 export default function ApprovalCenterDetails() {
   const { workflow_id } = useParams();
   const route = useLocation();
+  const navigate = useNavigate();
   const back =
     route.state?.from === "/procurement/controls"
       ? "/procurement/controls"
@@ -455,6 +456,10 @@ export default function ApprovalCenterDetails() {
     onSuccess: async (result) => {
       setEditRequest(null);
       setFailure("");
+      if (result.replaced_instance_id && result.data?.id) {
+        toast.success("Approval restarted from the first step. The saved item details are retained.");
+        navigate(`/procurement/approvals/${result.data.id}`, { replace: true, state: route.state });
+      }
       setSaved(
         result.data?.item_revisions?.reapproval
           ? "Item change saved. The request has returned to earlier approvers; further payments are paused."
@@ -528,6 +533,12 @@ export default function ApprovalCenterDetails() {
           >
             {failure}
           </p>
+        )}
+        {(workflow.previous_workflow_instance_id || workflow.replacement_workflow_instance_id) && (
+          <Link className="text-sm font-medium text-brand-600 dark:text-brand-300" state={route.state}
+            to={`/procurement/approvals/${workflow.replacement_workflow_instance_id || workflow.previous_workflow_instance_id}`}>
+            {workflow.replacement_workflow_instance_id ? 'View current approval' : 'View previous approval history'}
+          </Link>
         )}
         <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="min-w-0 space-y-5">

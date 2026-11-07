@@ -43,6 +43,8 @@ const ApprovalSubmitModal: React.FC<ApprovalSubmitModalProps> = ({
   const [selectedWorkflow, setSelectedWorkflow] = useState<string>('');
   const [selectedPriority, setSelectedPriority] = useState<string>('');
   const [comment, setComment] = useState<string>('');
+  const requisition = Number(workflowParams.document_type ?? workflowParams.requisition_type) === 1;
+  const workflowAmount = requisition ? 0 : Number(workflowParams.amount ?? maxAmount) || 0;
 
   // ============================================
   // LOAD DATA INTERNALLY
@@ -74,9 +76,9 @@ const ApprovalSubmitModal: React.FC<ApprovalSubmitModalProps> = ({
     mainParam: { 
       is_active: 1, 
       grp: 20,
-      amount: maxAmount || 0,
       requisition_type: workflowParams?.requisition_type || null,
-      ...workflowParams
+      ...workflowParams,
+      amount: workflowAmount,
     },
     narration: 'get workflows',
     autoLoad: false,
@@ -186,10 +188,10 @@ const ApprovalSubmitModal: React.FC<ApprovalSubmitModalProps> = ({
         </div>
 
         {/* Document Info */}
-        {maxAmount > 0 && (
+        {workflowAmount > 0 && (
           <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              <span className="font-medium">Amount:</span> {formatCurrency(maxAmount)}
+              <span className="font-medium">Amount:</span> {formatCurrency(workflowAmount)}
             </p>
             <p className="text-xs text-gray-400 dark:text-gray-400">
               {documentType} will use the selected workflow

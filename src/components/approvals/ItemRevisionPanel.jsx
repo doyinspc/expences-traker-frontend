@@ -144,6 +144,7 @@ export default function ItemRevisionPanel({
   const [reviewOpen, setReviewOpen] = useState(false),
     [editorOpen, setEditorOpen] = useState(Boolean(selectedItem));
   const [evidenceBusy, setEvidenceBusy] = useState(false);
+  const [replacementId, setReplacementId] = useState("");
   const [expectedVersion, setExpectedVersion] = useState(
     editRequest?.expectedVersion ?? workflow.action_version,
   );
@@ -161,6 +162,7 @@ export default function ItemRevisionPanel({
     lastRequest.current = editRequest;
     setExpectedVersion(editRequest.expectedVersion ?? workflow.action_version);
     setItemId(String(line.id));
+    setReplacementId("");
     setChange(supportsQuantity ? "terms" : "price");
     setReason("");
     setPrice(Number(line.unit_price) > 0 ? String(line.unit_price) : "");
@@ -240,6 +242,13 @@ export default function ItemRevisionPanel({
     newTotal = preview
       ? currentTotal - preview.before + preview.after
       : currentTotal;
+  const routing = workflow.purchase_order_routing;
+  const exceedsLimit = (limit) => Number(limit) > 0 &&
+    Math.round(newTotal * 100) > Math.round(Number(limit) * 100);
+  const needsReplacement = Boolean(preview && routing && exceedsLimit(routing.max_amount));
+  const workflowOptions = (routing?.workflows || []).filter(option => !exceedsLimit(option.max_amount));
+  const replacement = workflowOptions.find(option => String(option.id) === replacementId);
+  const routingBlocked = (needsReplacement || Boolean(replacementId)) && !replacement;
   const busy = saving || isLoading || evidenceBusy;
   /**
    * Purpose: send one complete item adjustment while preventing repeated UI submissions.
@@ -257,7 +266,7 @@ export default function ItemRevisionPanel({
    */
   const submit = async (event) => {
     event.preventDefault();
-    if (submitting.current || isLoading || evidenceBusy) return;
+    if (submitting.current || isLoading || evidenceBusy || routingBlocked) return;
     setError("");
     if (!item || !preview || !reason.trim()) {
       setError(
@@ -274,6 +283,7 @@ export default function ItemRevisionPanel({
         change: action,
         unit_price: price,
         reason: reason.trim(),
+        ...(replacement ? { replacement_workflow_id: Number(replacement.id) } : {}),
         ...(["quantity", "terms"].includes(action) ? { quantity } : {}),
         ...(action === "terms" && accountId
           ? { account_id: Number(accountId) }
@@ -716,11 +726,41 @@ export default function ItemRevisionPanel({
                     {money(newTotal)}
                   </p>
                   <p className="mt-2 text-xs leading-5">
-                    {preview.increases
-                      ? "Any earlier approval steps must approve this revision again before further payment."
-                      : "Earlier approvers and the submitter will be notified. The remaining workflow continues."}
+                    {replacement
+                      ? "Saving starts the selected workflow at its first step. The previous approvals stay in history."
+                      : preview.increases
+                        ? "Any earlier approval steps must approve this revision again before further payment."
+                        : "Earlier approvers and the submitter will be notified. The remaining workflow continues."}
                   </p>
                 </div>
+              )}
+              {preview && routing && (routing.can_replace || needsReplacement) && (
+                <details open={needsReplacement || Boolean(replacementId)}
+                  className="rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-700">
+                  <summary className="cursor-pointer font-medium">
+                    {needsReplacement ? 'Choose a workflow for the revised total' : 'Change Purchase Order workflow'}
+                  </summary>
+                  {needsReplacement && <p className="mt-2 text-xs">
+                    The revised total exceeds this workflow’s limit of {currency} {money(routing.max_amount)}.
+                  </p>}
+                  {routing.can_replace && workflowOptions.length > 0 ? (
+                    <label className="mt-3 block text-sm">Replacement workflow
+                      <select className={control} name="replacement-workflow" value={replacementId} required={needsReplacement}
+                        onChange={(event) => setReplacementId(event.target.value)}>
+                        <option value="">{needsReplacement ? 'Select a workflow' : 'Keep current workflow'}</option>
+                        {workflowOptions.map((option, index) => (
+                          <option key={option.id} value={option.id}>
+                            {option.name} · {Number(option.max_amount) > 0 ? `up to ${currency} ${money(option.max_amount)}` : 'No amount limit'}
+                            {Number(option.records_payment) === 1 ? ' · Final PO payment' : ''}
+                            {index === 0 ? ' · Suggested' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : <p className="mt-2 text-xs">
+                    {routing.can_replace ? 'No configured replacement covers this total.' : 'An approver with Full Purchase Order access must make this change.'}
+                  </p>}
+                </details>
               )}
               <label className="block text-sm">
                 {Number(workflow.document_type_id) === 2
@@ -769,10 +809,10 @@ export default function ItemRevisionPanel({
                   Cancel
                 </button>
                 <button
-                  disabled={busy || !preview}
+                  disabled={busy || !preview || routingBlocked}
                   className="min-h-11 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white disabled:opacity-50"
                 >
-                  {busy ? "Saving change…" : "Save change and notify"}
+                  {busy ? "Saving change…" : replacement ? "Save and restart approval" : "Save change and notify"}
                 </button>
               </div>
             </fieldset>

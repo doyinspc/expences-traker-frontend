@@ -726,3 +726,40 @@ test("An unrelated refresh cannot silently authorise overwriting a different rev
     .props.onSubmit({ preventDefault() {} });
   assert.equal(saved.expected_version, "v1");
 });
+
+test("An over-limit Purchase Order price requires a suitable workflow in the same editor", async () => {
+  let saved;
+  const render = interactiveEditor({
+    workflow: {
+      ...workflow,
+      purchase_order_routing: {
+        max_amount: "600.00",
+        can_replace: true,
+        workflows: [
+          { id: 210, name: "Lower-value orders", max_amount: "650.00" },
+          { id: 220, name: "Higher-value orders", max_amount: "1000.00" },
+          { id: 230, name: "Unlimited orders", max_amount: "0.00" },
+        ],
+      },
+    },
+    editRequest: { itemId: 401 },
+    onSave: async values => { saved = values; },
+  });
+  let tree = render();
+  nodes(tree).find(node => node.props?.name === "approval-unit-price")
+    .props.onChange({ target: { value: "150.00" } });
+  tree = render();
+  nodes(tree).find(node => node.type === "textarea")
+    .props.onChange({ target: { value: "Updated supplier quotation" } });
+  tree = render();
+  const select = nodes(tree).find(node => node.props?.name === "replacement-workflow");
+  assert.equal(select.props.required, true);
+  assert.deepEqual(Array.from(nodes(select).filter(node => node.type === "option").map(node => node.props.value)), ["", 220, 230]);
+  await nodes(tree).find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
+  assert.equal(saved, undefined);
+  select.props.onChange({ target: { value: "220" } });
+  tree = render();
+  await nodes(tree).find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
+  assert.equal(saved.unit_price, "150.00");
+  assert.equal(saved.replacement_workflow_id, 220);
+});
