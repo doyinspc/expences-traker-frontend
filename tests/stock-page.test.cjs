@@ -33,8 +33,9 @@ test('Approved Goods can be reviewed before opening without showing a verified s
      quantity:6,requested_quantity:5,remaining_quantity:6,stock_review_id:4,stock_review_stage_id:10}]});
  assert.match(html,/Approved stock requisitions/);
  assert.match(html,/IT equipment/);
- assert.match(html,/>Review Keyboards<\/button>/);
- assert.doesNotMatch(html,/disabled=""[^>]*>Review Keyboards/);
+ assert.match(html,/aria-label="Review Keyboards"[^>]*>Review<\/button>/);
+ assert.doesNotMatch(html,/<button[^>]*disabled=""[^>]*aria-label="Review Keyboards"/);
+ assert.match(html,/<dialog[^>]*aria-label="Stock confirmation"/);
  assert.match(html,/Requested 5/);
  assert.match(html,/Opening stock unconfirmed/);
  assert.match(html,/>Opening stock<\/button>/);
@@ -54,7 +55,7 @@ test('Opening stock offers a category filter and uses the child item ID and unit
 });
 test('A confirmed stock year exposes balance, receipt, issue and history views',()=>{
  const html=markup({schema_ready:true,period,active_period:{closed_at:null},years:[],can_write:true,balances:[],as_of:'2026-11-04'});
- for(const label of ['Balance report','Receive procurement','Issue to requisition','Movement history'])assert.ok(html.includes(label),label);
+ for(const label of ['Stock balances','Receive goods','Requisition queue','Movement history'])assert.ok(html.includes(label),label);
 });
 
 test('Stock menu opens stock operations without the unused document-creation form',()=>{
