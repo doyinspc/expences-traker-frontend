@@ -4,20 +4,17 @@ export function workflowStepPayload(values, documentType) {
   return allowsCashDisbursement(documentType) ? values : {...values, text_4: 'approval'};
 }
 
-export const WORKFLOW_STEP_GROUP = 21;
-
-/** Keep only real steps and older unclassified step rows under this workflow. */
+/** List the children of the workflow opened in Settings. */
 export function workflowStepRows(value, workflowId) {
   const rows = Array.isArray(value) ? value : Array.isArray(value?.data) ? value.data : [];
   if (!Number.isSafeInteger(Number(workflowId)) || Number(workflowId) < 1) return [];
   return rows
-    .filter(row => Number(row.parent_id) === Number(workflowId) &&
-      [0, WORKFLOW_STEP_GROUP].includes(Number(row.grp ?? 0)))
+    .filter(row => Number(row.parent_id) === Number(workflowId))
     .sort((a, b) => Number(a.item_id2) - Number(b.item_id2) || Number(a.id) - Number(b.id));
 }
 
 export function isActiveWorkflowStep(row) {
-  return Number(row.grp) === WORKFLOW_STEP_GROUP && Number(row.is_active) === 1;
+  return Number(row.is_active) === 1;
 }
 
 /**
@@ -34,9 +31,11 @@ export function workflowStepWrite(values, workflow) {
   const serial = Number(values.item_id2);
   if (!Number.isSafeInteger(role) || role < 1) throw new Error('Choose an approver role.');
   if (!Number.isSafeInteger(serial) || serial < 1) throw new Error('Enter a positive whole number for the approval order.');
+  const fields = { ...values };
+  delete fields.grp;
   return workflowStepPayload({
-    ...values,
-    grp: WORKFLOW_STEP_GROUP,
+    ...fields,
+    ...(!fields.id ? { grp: 0 } : {}),
     parent_id: workflowId,
     item_id1: role,
     item_id2: serial,

@@ -4,12 +4,10 @@ const workflowsteps = {
     description: 'Configure individual steps within workflows',
     form: 'WorkflowStepForm',
     tableName: 'commons',
-    groupid: 21,
-    grp: 21,
     displayName: 'Workflow Steps',
     icon: 'StepForward',
     defaultSort: { field: 'item_id2', direction: 'ASC' },
-    defaultFilters: { grp: 21, is_active: true },
+    defaultFilters: { is_active: true },
     fields: {
         id: {
             label: 'ID',

@@ -8,12 +8,12 @@ const bundle=require('esbuild').buildSync({entryPoints:[path.join(root,'src/conf
 const moduleConfig={exports:{}};vm.runInNewContext(bundle.outputFiles[0].text,{module:moduleConfig,exports:moduleConfig.exports,require,console});
 const configurations=moduleConfig.exports;
 const helpers=import(pathToFileURL(path.join(root,'src/utils/functions/formDefaults.js')).href);
-const sections=['roles','departments','locations','expenses','expenseitems','currencys','accounts','vendors','documenttypes','workflowstatus','approvalactions','documentstatus','prioritylevels','workflowtypes','notificationtypes','escalationreasons','rejectionreasons','documentcategories','workflows','workflowsteps','rooms','roomitems','services','serviceitems'];
+const sections=['roles','departments','locations','expenses','expenseitems','currencys','accounts','vendors','documenttypes','workflowstatus','approvalactions','documentstatus','prioritylevels','workflowtypes','notificationtypes','escalationreasons','rejectionreasons','documentcategories','workflows','rooms','roomitems','services','serviceitems'];
 for(const section of sections)test(`${section}: a new Settings form submits its configured group without an empty record ID`,async()=>{
   const {initialFormValues,formSubmitPayload}=await helpers;
   const config=configurations.getTableMapping(section),fields=configurations.getFormFields(section);
   assert.ok(config&&fields,'Settings form configuration missing');
-  const initial=['expenseitems','roomitems','serviceitems','workflowsteps'].includes(section)?{parent_id:901}:{};
+  const initial=['expenseitems','roomitems','serviceitems'].includes(section)?{parent_id:901}:{};
   const values=initialFormValues(fields,initial,config.grp),payload=formSubmitPayload(values);
   assert.equal(Number(payload.grp),config.grp,'New record would disappear into another Settings group');
   assert.equal(Object.hasOwn(payload,'id'),false,'Blank ID would be rejected as an existing record');

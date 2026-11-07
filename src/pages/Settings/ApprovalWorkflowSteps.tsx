@@ -29,7 +29,7 @@ import {
     getTableDisplayName
 } from '../../utils/functions/tableBuilder.js';
 import { getTableMapping } from '../../config/tableMapping.js';
-import { allowsCashDisbursement, isActiveWorkflowStep, WORKFLOW_STEP_GROUP, workflowStepRows, workflowStepWrite } from '../../utils/functions/workflowStepSettings';
+import { allowsCashDisbursement, isActiveWorkflowStep, workflowStepRows, workflowStepWrite } from '../../utils/functions/workflowStepSettings';
 import Swal from 'sweetalert2';
 
 import { 
@@ -66,7 +66,7 @@ const ApprovalWorkflowSteps: React.FC = () => {
     const parentContext = useParentDocumentContext();
     const parent_id = parentContext.id;
     const parent = parentContext.document;
-    const workflow = Number(parent?.grp) === 20 && Number(parent?.id) === parent_id ? parent : null;
+    const workflow = Number(parent?.grp) === 20 && !Number(parent?.parent_id) && Number(parent?.id) === parent_id ? parent : null;
     const workflowType = workflow?.item_id1;
     const hiddenStepFields = useMemo(() => allowsCashDisbursement(workflowType) ? [] : ['text_4'], [workflowType]);
 
@@ -126,7 +126,6 @@ const ApprovalWorkflowSteps: React.FC = () => {
 
     const stepRows = useMemo(() => workflowStepRows(data, parent_id), [data, parent_id]);
     const activeStepCount = stepRows.filter(isActiveWorkflowStep).length;
-    const repairCount = stepRows.filter(step => Number(step.grp) !== WORKFLOW_STEP_GROUP).length;
 
     const hasConflictingOrder = useCallback((id: unknown, order: number) => stepRows.some(step =>
         isActiveWorkflowStep(step) && Number(step.id) !== Number(id) && Number(step.item_id2) === order
@@ -135,11 +134,6 @@ const ApprovalWorkflowSteps: React.FC = () => {
     const onActivate = useCallback(async (record: any) => {
         const step = stepRows.find(candidate => Number(candidate.id) === Number(record.id));
         if (!step) return;
-        if (Number(step.grp) !== WORKFLOW_STEP_GROUP) {
-            await Swal.fire({ icon: 'info', title: 'Review this older step',
-                text: 'Edit and save the step to confirm its role and order, then choose Activate from the row.' });
-            return;
-        }
         const is_active = isActiveWorkflowStep(step) ? 0 : 1;
         if (is_active && hasConflictingOrder(step.id, Number(step.item_id2))) {
             await Swal.fire({ icon: 'warning', title: 'Approval order already in use',
@@ -282,7 +276,6 @@ const ApprovalWorkflowSteps: React.FC = () => {
                 <div className="mb-4 rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-700">
                     <p className="font-medium">{activeStepCount} active approval {activeStepCount === 1 ? 'step' : 'steps'}</p>
                     {activeStepCount === 0 && <p className="mt-1">Add or activate a step before submitting a document to this workflow.</p>}
-                    {repairCount > 0 && <p className="mt-1">{repairCount} older {repairCount === 1 ? 'step needs' : 'steps need'} review. Edit and save each older step to confirm its role and order. Then use Activate beside Edit and Delete.</p>}
                 </div>
             )}
             
@@ -422,7 +415,7 @@ const ApprovalWorkflowSteps: React.FC = () => {
                                         title={isEdit ? `Edit ${displayName}` : `Create ${displayName}`}
                                         submitLabel={isEdit ? `Update ${displayName}` : `Create ${displayName}`}
                                         onSave={handleSave}
-                                        initialData={isEdit ? row : { parent_id, grp: WORKFLOW_STEP_GROUP,
+                                        initialData={isEdit ? row : { parent_id,
                                             item_id2: Math.max(0, ...stepRows.map(step => Number(step.item_id2) || 0)) + 1 }}
                                         onCancel={() => setPage(0)}
                                         optionData={{...formattedSelectRows}}

@@ -51,7 +51,7 @@ interface UseCommonsDataReturn {
  * const { data: steps } = useCommonsData({ parent_id: 123 });
  * 
  * // Fetch steps for a specific workflow and grp
- * const { data: steps } = useCommonsData({ grp: 21, parent_id: 123 });
+ * const { data: steps } = useCommonsData({ parent_id: 123, is_active: true });
  * 
  * // Fetch a single item by ID
  * const { data: item } = useCommonsData({ id: 456, queryType: 'get' });
@@ -126,7 +126,6 @@ export const useCommonsData = (options: UseCommonsDataOptions): UseCommonsDataRe
  */
 export const useWorkflowSteps = (workflowId: number, options?: Omit<UseCommonsDataOptions, 'grp' | 'parent_id'>) => {
     return useCommonsData({
-        grp: 21, // Workflow Steps
         parent_id: workflowId,
         ...options,
     });

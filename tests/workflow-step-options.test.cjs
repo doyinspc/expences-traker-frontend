@@ -36,29 +36,30 @@ test('Actual Settings form keeps Active out of the form and hides payment contro
 });
 
 
-test('New steps are active and always use the verified workflow and step group', async () => {
+test('New steps are active and take their identity from the verified workflow', async () => {
  const {workflowStepWrite}=await helpers;
  const result=workflowStepWrite({grp:0,parent_id:999,item_id1:'110',item_id2:'2'}, {grp:20,id:304,item_id1:1});
- assert.deepEqual(result,{grp:21,parent_id:304,item_id1:110,item_id2:2,is_active:1,text_4:'approval'});
+ assert.deepEqual(result,{grp:0,parent_id:304,item_id1:110,item_id2:2,is_active:1,text_4:'approval'});
  assert.throws(()=>workflowStepWrite(result,{grp:21,id:304}),/Open the workflow/);
  assert.throws(()=>workflowStepWrite({...result,item_id2:0},{grp:20,id:304}),/approval order/);
 });
 
-test('Repair keeps an older step inactive until explicitly enabled and preserves its ID', async () => {
+test('Editing an older step keeps it inactive and leaves its group untouched', async () => {
  const {workflowStepWrite}=await helpers;
  const workflow={grp:20,id:304,item_id1:1};
  const old={id:306,grp:0,parent_id:304,item_id1:110,item_id2:1,is_active:'0'};
- assert.deepEqual(workflowStepWrite(old,workflow),{...old,grp:21,is_active:0,text_4:'approval'});
+ const {grp, ...fields}=old;
+ assert.deepEqual(workflowStepWrite(old,workflow),{...fields,is_active:0,text_4:'approval'});
  assert.equal(workflowStepWrite({...old,is_active:true},workflow).is_active,1);
- assert.equal(old.grp,0);
+ assert.equal(grp,0);
 });
 
 test('The steps table keeps only this workflow and counts the same active steps used for submission', async () => {
  const {workflowStepRows,isActiveWorkflowStep}=await helpers;
  const rows=[{id:2,grp:21,parent_id:304,item_id2:2,is_active:1},{id:1,grp:0,parent_id:304,item_id2:1,is_active:0},{id:3,grp:21,parent_id:305,item_id2:1,is_active:1},{id:4,grp:51,parent_id:304,item_id2:1,is_active:1}];
  const shown=workflowStepRows({data:rows},304);
- assert.deepEqual(shown.map(row=>row.id),[1,2]);
- assert.deepEqual(shown.filter(isActiveWorkflowStep).map(row=>row.id),[2]);
+ assert.deepEqual(shown.map(row=>row.id),[1,4,2]);
+ assert.deepEqual(shown.filter(isActiveWorkflowStep).map(row=>row.id),[4,2]);
  assert.deepEqual(workflowStepRows(rows,0),[]);
 });
 
