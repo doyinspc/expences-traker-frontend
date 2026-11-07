@@ -145,6 +145,7 @@ const workflowsteps = {
         },
         is_active: {
             label: 'Active',
+            hidden: true,
             type: 'toggle',
             default: true,
             description: 'Include this step in future submissions to this workflow.',

@@ -12,9 +12,10 @@ test('Saving a requisition step clears an old invalid payment setting without ch
  assert.deepEqual(workflowStepPayload(old,1),{...old,text_4:'approval'});assert.equal(old.text_4,'cash_disbursement');
  for(const type of [3,9])assert.equal(workflowStepPayload(old,type).text_4,'cash_disbursement');
 });
-test('Actual Settings form hides payment controls while preserving ordinary workflow fields',()=>{
+test('Actual Settings form keeps Active out of the form and hides payment controls when requested',async()=>{
  const React=require(path.join(root,'node_modules/react')),{renderToStaticMarkup}=require(path.join(root,'node_modules/react-dom/server'));
- const fields={name:{label:'Step name',type:'text'},text_4:{label:'Cash disbursement',type:'select',options:'payment'}};
+ const {default:config}=await import(pathToFileURL(path.join(root,'src/config/users/workflowsteps.js')).href);
+ const fields={name:{label:'Step name',type:'text'},text_4:{label:'Cash disbursement',type:'select',options:'payment'},is_active:config.fields.is_active};
  const mocks={
   '../../config/tableMapping':{getFormFields:()=>fields,getTableMapping:()=>({grp:21})},
   '../../utils/functions/formGuidance':{fieldGuidance:{},validateFieldValue:()=>null},
@@ -31,7 +32,7 @@ test('Actual Settings form hides payment controls while preserving ordinary work
  }});
  const Form=module.exports.default;
  const render=hidden=>renderToStaticMarkup(React.createElement(Form,{tableName:'workflowsteps',hiddenFieldNames:hidden,optionData:{payment:[]}}));
- assert.match(render([]),/Cash disbursement/);assert.doesNotMatch(render(['text_4']),/Cash disbursement/);assert.match(render(['text_4']),/Step name/);
+ assert.match(render([]),/Cash disbursement/);assert.doesNotMatch(render(['text_4']),/Cash disbursement/);assert.match(render(['text_4']),/Step name/);assert.doesNotMatch(render([]),/role="switch"|>Active</);
 });
 
 
@@ -66,5 +67,5 @@ test('Step rows keep role names and omit the workflow name already in the header
  assert.equal(config.fields.parent_id.showInTable,false);
  assert.equal(config.fields.parent_name,undefined);
  assert.equal(config.fields.item_name1.showInTable,true);
- assert.equal(config.fields.is_active.type,'toggle');
+ assert.equal(config.fields.is_active.hidden,true);
 });

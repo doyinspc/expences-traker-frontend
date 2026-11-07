@@ -21,10 +21,9 @@ export function isActiveWorkflowStep(row) {
 }
 
 /**
- * Save a step under the verified workflow opened in Settings. The form can set
- * its role, order and active state, but cannot choose another group or parent.
- * Editing an older unclassified step repairs its group; it stays inactive unless
- * the administrator explicitly turns on Active. New steps default to Active.
+ * Save the role and order under the verified workflow opened in Settings.
+ * The caller supplies the active state. The Settings form preserves that state
+ * on edits and the row action controls activation. New steps default to active.
  */
 export function workflowStepWrite(values, workflow) {
   const workflowId = Number(workflow?.id);

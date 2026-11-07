@@ -10,7 +10,7 @@ import PageBreadcrumb from "../../components/common/PageBreadCrumb.js";
 import Tables from '../../components/table/index.jsx';
 import Loader from '../../components/ui/Loader.js';
 import DynamicForm from "../../components/ui/DynamicForm.js";
-import { EditDeleteSettingAction } from '../../components/ui/TableActionSetting.js';
+import { FullSettingAction } from '../../components/ui/TableActionSetting.js';
 import { InfoPanel } from '../../components/ui/InfoPanel.js';
 import { FilterSection } from '../../components/ui/FilterSection.js';
 import { TabNavigation } from '../../components/ui/TabNavigation.js';
@@ -128,18 +128,43 @@ const ApprovalWorkflowSteps: React.FC = () => {
     const activeStepCount = stepRows.filter(isActiveWorkflowStep).length;
     const repairCount = stepRows.filter(step => Number(step.grp) !== WORKFLOW_STEP_GROUP).length;
 
-    const handleSave = useCallback(async (formData: any) => {
-        if (isEdit && !stepRows.some(step => Number(step.id) === Number(row.id))) {
-            throw new Error('Open the step again from the correct workflow.');
+    const hasConflictingOrder = useCallback((id: unknown, order: number) => stepRows.some(step =>
+        isActiveWorkflowStep(step) && Number(step.id) !== Number(id) && Number(step.item_id2) === order
+    ), [stepRows]);
+
+    const onActivate = useCallback(async (record: any) => {
+        const step = stepRows.find(candidate => Number(candidate.id) === Number(record.id));
+        if (!step) return;
+        if (Number(step.grp) !== WORKFLOW_STEP_GROUP) {
+            await Swal.fire({ icon: 'info', title: 'Review this older step',
+                text: 'Edit and save the step to confirm its role and order, then choose Activate from the row.' });
+            return;
         }
-        const payload = workflowStepWrite({ ...formData, id: isEdit ? row.id : undefined }, workflow);
-        if (payload.is_active === 1 && stepRows.some(step => isActiveWorkflowStep(step) &&
-            Number(step.id) !== Number(payload.id) && Number(step.item_id2) === payload.item_id2)) {
+        const is_active = isActiveWorkflowStep(step) ? 0 : 1;
+        if (is_active && hasConflictingOrder(step.id, Number(step.item_id2))) {
+            await Swal.fire({ icon: 'warning', title: 'Approval order already in use',
+                text: 'Edit the step and give it a different order before activating it.' });
+            return;
+        }
+        try {
+            await loadUpdate({ id: step.id, cat: 'insert', is_active });
+        } catch { /* The shared mutation displays the server error. */ }
+    }, [stepRows, hasConflictingOrder, loadUpdate]);
+
+    const handleSave = useCallback(async (formData: any) => {
+        const savedStep = isEdit ? stepRows.find(step => Number(step.id) === Number(row.id)) : null;
+        if (isEdit && !savedStep) throw new Error('Open the step again from the correct workflow.');
+        const payload = workflowStepWrite({
+            ...formData,
+            id: savedStep?.id,
+            is_active: savedStep ? Number(isActiveWorkflowStep(savedStep)) : 1,
+        }, workflow);
+        if (payload.is_active === 1 && hasConflictingOrder(payload.id, payload.item_id2)) {
             throw new Error('Another active step already uses this approval order.');
         }
         await loadUpdate(payload);
         setPage(0);
-    }, [isEdit, row.id, stepRows, workflow, loadUpdate]);
+    }, [isEdit, row.id, stepRows, workflow, hasConflictingOrder, loadUpdate]);
 
     const handleReload = useCallback((): void => {
         if (!workflow) return;
@@ -181,6 +206,7 @@ const ApprovalWorkflowSteps: React.FC = () => {
         const names = new Map((Array.isArray(roleData) ? roleData : []).map(role => [Number(role.id), role.name]));
         return processRows(stepRows.map(step => ({
             ...step,
+            is_active: Number(isActiveWorkflowStep(step)),
             item_name1: step.item_name1 || names.get(Number(step.item_id1)) || 'Role unavailable',
         })), TABLE_NAME);
     }, [stepRows, roleData]);
@@ -224,10 +250,10 @@ const ApprovalWorkflowSteps: React.FC = () => {
     // ==================== COLUMNS ====================
     const columns = useMemo(() => {
         return columnBuilder(
-            { table_action: EditDeleteSettingAction, table_data: tableData },
-            { onEdit, onDelete }
+            { table_action: FullSettingAction, table_data: tableData },
+            { onEdit, onDelete, onActivate }
         );
-    }, [tableData, onEdit, onDelete]);
+    }, [tableData, onEdit, onDelete, onActivate]);
 
     const formattedSelectRows = useMemo(() => {
             const safeData = (data: unknown): any[] => Array.isArray(data) ? data : [];
@@ -256,7 +282,7 @@ const ApprovalWorkflowSteps: React.FC = () => {
                 <div className="mb-4 rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-700">
                     <p className="font-medium">{activeStepCount} active approval {activeStepCount === 1 ? 'step' : 'steps'}</p>
                     {activeStepCount === 0 && <p className="mt-1">Add or activate a step before submitting a document to this workflow.</p>}
-                    {repairCount > 0 && <p className="mt-1">{repairCount} older {repairCount === 1 ? 'step needs' : 'steps need'} review. Edit each step, check its role and order, then turn on Active and save if it should be used.</p>}
+                    {repairCount > 0 && <p className="mt-1">{repairCount} older {repairCount === 1 ? 'step needs' : 'steps need'} review. Edit and save each older step to confirm its role and order. Then use Activate beside Edit and Delete.</p>}
                 </div>
             )}
             
@@ -396,7 +422,7 @@ const ApprovalWorkflowSteps: React.FC = () => {
                                         title={isEdit ? `Edit ${displayName}` : `Create ${displayName}`}
                                         submitLabel={isEdit ? `Update ${displayName}` : `Create ${displayName}`}
                                         onSave={handleSave}
-                                        initialData={isEdit ? { ...row, is_active: Number(row.is_active) === 1 } : { parent_id, grp: WORKFLOW_STEP_GROUP, is_active: 1,
+                                        initialData={isEdit ? row : { parent_id, grp: WORKFLOW_STEP_GROUP,
                                             item_id2: Math.max(0, ...stepRows.map(step => Number(step.item_id2) || 0)) + 1 }}
                                         onCancel={() => setPage(0)}
                                         optionData={{...formattedSelectRows}}
