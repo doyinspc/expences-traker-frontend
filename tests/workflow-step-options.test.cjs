@@ -33,3 +33,38 @@ test('Actual Settings form hides payment controls while preserving ordinary work
  const render=hidden=>renderToStaticMarkup(React.createElement(Form,{tableName:'workflowsteps',hiddenFieldNames:hidden,optionData:{payment:[]}}));
  assert.match(render([]),/Cash disbursement/);assert.doesNotMatch(render(['text_4']),/Cash disbursement/);assert.match(render(['text_4']),/Step name/);
 });
+
+
+test('New steps are active and always use the verified workflow and step group', async () => {
+ const {workflowStepWrite}=await helpers;
+ const result=workflowStepWrite({grp:0,parent_id:999,item_id1:'110',item_id2:'2'}, {grp:20,id:304,item_id1:1});
+ assert.deepEqual(result,{grp:21,parent_id:304,item_id1:110,item_id2:2,is_active:1,text_4:'approval'});
+ assert.throws(()=>workflowStepWrite(result,{grp:21,id:304}),/Open the workflow/);
+ assert.throws(()=>workflowStepWrite({...result,item_id2:0},{grp:20,id:304}),/approval order/);
+});
+
+test('Repair keeps an older step inactive until explicitly enabled and preserves its ID', async () => {
+ const {workflowStepWrite}=await helpers;
+ const workflow={grp:20,id:304,item_id1:1};
+ const old={id:306,grp:0,parent_id:304,item_id1:110,item_id2:1,is_active:'0'};
+ assert.deepEqual(workflowStepWrite(old,workflow),{...old,grp:21,is_active:0,text_4:'approval'});
+ assert.equal(workflowStepWrite({...old,is_active:true},workflow).is_active,1);
+ assert.equal(old.grp,0);
+});
+
+test('The steps table keeps only this workflow and counts the same active steps used for submission', async () => {
+ const {workflowStepRows,isActiveWorkflowStep}=await helpers;
+ const rows=[{id:2,grp:21,parent_id:304,item_id2:2,is_active:1},{id:1,grp:0,parent_id:304,item_id2:1,is_active:0},{id:3,grp:21,parent_id:305,item_id2:1,is_active:1},{id:4,grp:51,parent_id:304,item_id2:1,is_active:1}];
+ const shown=workflowStepRows({data:rows},304);
+ assert.deepEqual(shown.map(row=>row.id),[1,2]);
+ assert.deepEqual(shown.filter(isActiveWorkflowStep).map(row=>row.id),[2]);
+ assert.deepEqual(workflowStepRows(rows,0),[]);
+});
+
+test('Step rows keep role names and omit the workflow name already in the header', async () => {
+ const {default:config}=await import(pathToFileURL(path.join(root,'src/config/users/workflowsteps.js')).href);
+ assert.equal(config.fields.parent_id.showInTable,false);
+ assert.equal(config.fields.parent_name,undefined);
+ assert.equal(config.fields.item_name1.showInTable,true);
+ assert.equal(config.fields.is_active.type,'toggle');
+});

@@ -29,7 +29,7 @@ import {
     getTableDisplayName
 } from '../../utils/functions/tableBuilder.js';
 import { getTableMapping } from '../../config/tableMapping.js';
-import {allowsCashDisbursement, workflowStepPayload} from '../../utils/functions/workflowStepSettings';
+import { allowsCashDisbursement, isActiveWorkflowStep, WORKFLOW_STEP_GROUP, workflowStepRows, workflowStepWrite } from '../../utils/functions/workflowStepSettings';
 import Swal from 'sweetalert2';
 
 import { 
@@ -64,15 +64,11 @@ const ApprovalWorkflowSteps: React.FC = () => {
     const displayName = useMemo(() => getTableDisplayName(TABLE_NAME), []);
     
     const parentContext = useParentDocumentContext();
-    const titleHeaders = parentContext.document || {};
     const parent_id = parentContext.id;
-    const parent_name = titleHeaders?.name;
-    const initialData = {parent_id}
-    const workflowType = titleHeaders?.item_id1;
+    const parent = parentContext.document;
+    const workflow = Number(parent?.grp) === 20 && Number(parent?.id) === parent_id ? parent : null;
+    const workflowType = workflow?.item_id1;
     const hiddenStepFields = useMemo(() => allowsCashDisbursement(workflowType) ? [] : ['text_4'], [workflowType]);
-    
-
-
 
     // ==================== STATE ====================
     const [page, setPage] = useState<number>(0);
@@ -87,12 +83,13 @@ const ApprovalWorkflowSteps: React.FC = () => {
     const [analysisMetric, setAnalysisMetric] = useState<string>('');
 
     // ==================== API HOOKS ====================
-    const { data, loadQuery, loadUpdate, isLoading } = useReduxApiData({
+    const { data, loadQuery, loadUpdate, isLoading, error: stepsError } = useReduxApiData({
         table: 'commons',
         uniqueKey: TABLE_PATH,
         queryType: 'gets',
         mainParam: {parent_id},
-        narration: 'get all expense items',
+        narration: 'get steps for this approval workflow',
+        enabled: Boolean(workflow),
     });
 
     const { data:roleData, loadQuery:loadRoles } = useReduxApiData({
@@ -100,7 +97,8 @@ const ApprovalWorkflowSteps: React.FC = () => {
         uniqueKey: 'roles',
         queryType: 'gets',
         mainParam: {grp:1},
-        narration: 'get all roles items',
+        narration: 'get approval roles',
+        enabled: Boolean(workflow),
     });
     
 
@@ -126,35 +124,28 @@ const ApprovalWorkflowSteps: React.FC = () => {
         } catch { /* The existing notification shows the server refusal; no false success. */ }
     }, [loadUpdate]);
 
-    const onActivate = useCallback((row: any): void => {
-        const { id, is_active } = row;
-        void loadUpdate({ id, cat: 'insert', is_active: Number(is_active) === 1 ? 0 : 1 }).catch(()=>{});
-    }, []);
-
-    const onNext = useCallback((row: any): void => {
-        nav(`/procurement/requisition/${row.id}`);
-    }, [nav]);
-
-    const onView = useCallback((row: any): void => {
-        setRow(row);
-        setIsEdit(false);
-        setPage(1);
-    }, []);
+    const stepRows = useMemo(() => workflowStepRows(data, parent_id), [data, parent_id]);
+    const activeStepCount = stepRows.filter(isActiveWorkflowStep).length;
+    const repairCount = stepRows.filter(step => Number(step.grp) !== WORKFLOW_STEP_GROUP).length;
 
     const handleSave = useCallback(async (formData: any) => {
-        await loadUpdate(workflowStepPayload(formData, workflowType));
+        if (isEdit && !stepRows.some(step => Number(step.id) === Number(row.id))) {
+            throw new Error('Open the step again from the correct workflow.');
+        }
+        const payload = workflowStepWrite({ ...formData, id: isEdit ? row.id : undefined }, workflow);
+        if (payload.is_active === 1 && stepRows.some(step => isActiveWorkflowStep(step) &&
+            Number(step.id) !== Number(payload.id) && Number(step.item_id2) === payload.item_id2)) {
+            throw new Error('Another active step already uses this approval order.');
+        }
+        await loadUpdate(payload);
         setPage(0);
-    }, [loadUpdate, workflowType]);
-
-    const handleUpdate = useCallback(async (formData: any) => {
-        await loadUpdate(workflowStepPayload(formData, workflowType));
-        setPage(0);
-    }, [loadUpdate, workflowType]);
+    }, [isEdit, row.id, stepRows, workflow, loadUpdate]);
 
     const handleReload = useCallback((): void => {
-        loadQuery(initialData);
-        loadRoles()
-    }, []);
+        if (!workflow) return;
+        loadQuery();
+        loadRoles();
+    }, [workflow, loadQuery, loadRoles]);
 
     const handleFilterChange = useCallback((filterName: string, value: any): void => {
         setFilters(prev => ({ ...prev, [filterName]: value }));
@@ -180,19 +171,19 @@ const ApprovalWorkflowSteps: React.FC = () => {
     const toggleInfo = useCallback((): void => {
         setShowInfo(prev => !prev);
     }, []);
-    const reload = useCallback((): void => {
-        loadQuery(initialData);
-    }, []);
-    const addData = useCallback((): void => {
-        onAdd()
-    }, []);
     const goBack = useCallback((): void => {
         nav(-1);
     }, []);
 
     
     // ==================== DATA PROCESSING ====================
-    const processedRows = useMemo(() => processRows(data as Array<any>, TABLE_NAME), [data]);
+    const processedRows = useMemo(() => {
+        const names = new Map((Array.isArray(roleData) ? roleData : []).map(role => [Number(role.id), role.name]));
+        return processRows(stepRows.map(step => ({
+            ...step,
+            item_name1: step.item_name1 || names.get(Number(step.item_id1)) || 'Role unavailable',
+        })), TABLE_NAME);
+    }, [stepRows, roleData]);
     const filteredRows = useMemo(() => 
         filterData(processedRows, filters, searchTerm, filterConfig), 
         [processedRows, filters, searchTerm, filterConfig]
@@ -218,8 +209,10 @@ const ApprovalWorkflowSteps: React.FC = () => {
 
     // ==================== EFFECTS ====================
     useEffect(() => {
-        loadQuery(initialData);
-    }, []);
+        setPage(0);
+        setIsEdit(false);
+        setRow({});
+    }, [parent_id]);
 
     useEffect(() => {
         if (analysisConfig) {
@@ -232,9 +225,9 @@ const ApprovalWorkflowSteps: React.FC = () => {
     const columns = useMemo(() => {
         return columnBuilder(
             { table_action: EditDeleteSettingAction, table_data: tableData },
-            { onNext, onView, onActivate, onEdit, onDelete }
+            { onEdit, onDelete }
         );
-    }, [tableData, onNext, onView, onActivate, onEdit, onDelete]);
+    }, [tableData, onEdit, onDelete]);
 
     const formattedSelectRows = useMemo(() => {
             const safeData = (data: unknown): any[] => Array.isArray(data) ? data : [];
@@ -256,8 +249,16 @@ const ApprovalWorkflowSteps: React.FC = () => {
     // ==================== RENDER ====================
     return (
         <>
-            <PageBreadcrumb pageTitle={displayName + `: ${parent_name || '-'}`} />
+            <PageBreadcrumb pageTitle={displayName} />
             <ParentDocumentContext context={parentContext} />
+            {parent && !workflow && <p role="alert">Open a workflow from Settings to manage its steps.</p>}
+            {workflow && !isLoading && !stepsError && page === 0 && (
+                <div className="mb-4 rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-700">
+                    <p className="font-medium">{activeStepCount} active approval {activeStepCount === 1 ? 'step' : 'steps'}</p>
+                    {activeStepCount === 0 && <p className="mt-1">Add or activate a step before submitting a document to this workflow.</p>}
+                    {repairCount > 0 && <p className="mt-1">{repairCount} older {repairCount === 1 ? 'step needs' : 'steps need'} review. Edit each step, check its role and order, then turn on Active and save if it should be used.</p>}
+                </div>
+            )}
             
             {/* Header */}
             <div className="flex items-center justify-end gap-2 mb-4">
@@ -294,18 +295,20 @@ const ApprovalWorkflowSteps: React.FC = () => {
                     <BackIcon />
                 </button>
                 <button
-                    onClick={addData}
+                    onClick={onAdd}
+                    disabled={!workflow || isLoading || Boolean(stepsError)}
                     className={`p-2 rounded-lg transition-colors ${
                         showInfo
                             ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
                             : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
-                    title="Add New Record"
+                    title="Add approval step"
                 >
                     <AddIcon />
                 </button>
                 <button
-                    onClick={reload}
+                    onClick={handleReload}
+                    disabled={!workflow}
                     className={`p-2 rounded-lg transition-colors ${
                         showInfo
                             ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
@@ -341,7 +344,9 @@ const ApprovalWorkflowSteps: React.FC = () => {
 
             <div className="space-y-6">
                 <div className="p-1">
-                    {!isLoading ? (
+                    {workflow && stepsError ? (
+                        <p role="alert" className="text-sm text-red-600 dark:text-red-300">Could not load approval steps. Use Reload Data to try again.</p>
+                    ) : workflow && !isLoading ? (
                         <>
                             {page === 0 ? (
                                 <>
@@ -390,17 +395,18 @@ const ApprovalWorkflowSteps: React.FC = () => {
                                         hiddenFieldNames={hiddenStepFields}
                                         title={isEdit ? `Edit ${displayName}` : `Create ${displayName}`}
                                         submitLabel={isEdit ? `Update ${displayName}` : `Create ${displayName}`}
-                                        onSave={isEdit ? handleUpdate : handleSave}
-                                        initialData={ isEdit ? row  : initialData }
+                                        onSave={handleSave}
+                                        initialData={isEdit ? { ...row, is_active: Number(row.is_active) === 1 } : { parent_id, grp: WORKFLOW_STEP_GROUP, is_active: 1,
+                                            item_id2: Math.max(0, ...stepRows.map(step => Number(step.item_id2) || 0)) + 1 }}
                                         onCancel={() => setPage(0)}
                                         optionData={{...formattedSelectRows}}
                                     />
                                 </div>
                             )}
                         </>
-                    ) : (
+                    ) : workflow && isLoading ? (
                         <Loader scope="panel" variant="skeleton" text={`Loading ${displayName.toLowerCase()}…`} />
-                    )}
+                    ) : null}
                 </div>
             </div>
         </>
