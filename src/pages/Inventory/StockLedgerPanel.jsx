@@ -155,8 +155,12 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
   const query=useQuery({queryKey:['stock-ledger',scope,year,asof,tab==='issue'?'issue':'receipt',documentId],queryFn:()=>stockRequest('state',{year_offset:year,...(documentId?{document_id:documentId}:{}),...(asof?{as_of:asof}:{}),candidate_type:tab==='issue'?'issue':'receipt'}),staleTime:0});
   const data=query.data,period=data?.active_period,range=data?.period;
   // Opening controls physical movements. The approval queue can be reviewed before opening.
-  const view = !period && tab !== 'issue' ? 'opening' : period && tab === 'opening' ? initialTab : tab;
-  const views = period
+  const mainStock = !reportOnly && !documentId;
+  const view = mainStock ? tab : !period && tab !== 'issue' ? 'opening' : period && tab === 'opening' ? initialTab : tab;
+  const views = mainStock
+    ? [['issue', 'Requisition queue'], ['receipt', 'Receive goods'], ['balance', 'Stock balances'],
+      ['history', 'Movement history'], ['opening', 'Opening stock']]
+    : period
     ? (reportOnly
       ? [['balance', 'Balance report'], ['history', 'Movement history']]
       : [['issue', 'Requisition queue'], ['receipt', 'Receive goods'], ['balance', 'Stock balances'], ['history', 'Movement history']])
@@ -214,16 +218,7 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
     if (itemBalances.some(row => Number(row.unit_mismatch) || Number(row.closing_quantity) < 0)) return null;
     return Number(itemBalances.find(row => row.unit === item.unit)?.closing_quantity || 0);
   }
-  const errorNotice = error&&<p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">{error}</p>;
-  return <section aria-label="Stock balances and movements" aria-busy={busy} className="mb-6 space-y-4 rounded-xl border border-gray-200 bg-white p-4 text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white sm:p-5">
-    <p className="text-sm font-medium">{locationLabel}</p>
-    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">{reportOnly?'Stock balance report':'Stock balances & movements'}</h2><p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Review approved Goods for the selected location. Confirm the accounting year’s opening balance before recording physical receipts or issues. Each quantity uses the item’s saved unit.</p></div><button className={control} disabled={busy||query.isFetching} onClick={()=>{setReview(null);query.refetch();}}>Refresh stock</button></div>
-    {query.isPending?<div className="relative min-h-48"><Loader text="Loading stock balances…"/></div>:query.error?<p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">{query.error.response?.data?.message||query.error.message} <button className="underline" onClick={()=>query.refetch()}>Retry</button></p>:data&&<>
-      {!data.schema_ready?<div role="alert" className="space-y-3 rounded-lg bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100"><p>The stock quantity history has not been prepared on this server. No stock balance can be verified yet.</p>{!reportOnly&&data.can_prepare?<><p>Keep a current database backup before preparing stock tracking. This adds quantity history and a procurement quantity field; it retains existing users, settings, documents and workflows.</p><button disabled={busy} className={button} onClick={()=>setReview({operation:'prepare',label:'Prepare stock tracking while retaining existing records',payload:{}})}>Review stock setup</button></>:<p>A Super Admin with Full Stock access can prepare stock tracking here.</p>}</div>:!range?<p role="alert" className="rounded-lg bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">Set the accounting-year start in Company Profile before opening stock.</p>:<>
-        <div className="flex flex-wrap items-end gap-3"><label className="grid gap-1 text-sm">Accounting year<select aria-label="Stock accounting year" value={year} disabled={busy} className={control} onChange={e=>changeYear(e.target.value)}>{data.years.map(r=><option key={r.offset} value={r.offset}>{r.label} · {r.start_date} to {r.end_date}</option>)}</select></label><label className="grid gap-1 text-sm">Find an item<input aria-label="Find stock item" className={control} value={search} onChange={e=>setSearch(e.target.value)} placeholder={view === 'issue' ? 'Requisition or item' : view === 'receipt' ? 'Procurement or item' : 'Item, category or reference'}/></label>{period&&<span className={`rounded-full px-3 py-1 text-xs font-medium ${period.closed_at?'bg-gray-100 dark:bg-gray-700':'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200'}`}>{period.closed_at?'Closed stock year':'Open stock year'}</span>}</div>
-
-        {Number(data.unverified_legacy_lines)>0&&<p role="status" className="rounded-lg border border-amber-300 p-3 text-sm text-amber-800 dark:border-amber-700 dark:text-amber-200">{data.unverified_legacy_lines} older stock-linked line(s) are retained for reference. Their old links do not prove physical receipts or issues. This report uses confirmed opening quantities and evidenced movements; avoid entering goods already included in the opening balance as another receipt.</p>}
-        {(!reportOnly || period) && (
+  const stockTabs = (
           <div className="flex flex-wrap gap-2" aria-label="Stock views">
             {views.map(([value, label]) => (
               <button key={value} disabled={busy} aria-pressed={view === value}
@@ -231,8 +226,30 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
                 onClick={() => changeTab(value)}>{label}</button>
             ))}
           </div>
-        )}
-        {view === 'opening' ? <div className="space-y-3 rounded-lg border border-blue-200 bg-blue-50/40 p-4 dark:border-blue-900 dark:bg-blue-950/20"><h3 className="font-semibold">Opening balance required</h3><p className="text-sm leading-6">Confirm quantities held at the start of this accounting year. Opening balances do not create purchases or expenses. Once confirmed, quantities are protected from direct editing.</p>
+  );
+  const errorNotice = error&&<p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">{error}</p>;
+  return <section aria-label="Stock balances and movements" aria-busy={busy} className="mb-6 space-y-4 rounded-xl border border-gray-200 bg-white p-4 text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white sm:p-5">
+    <p className="text-sm font-medium">{locationLabel}</p>
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">{reportOnly?'Stock balance report':'Stock balances & movements'}</h2><p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Review approved Goods for the selected location. Confirm the accounting year’s opening balance before recording physical receipts or issues. Each quantity uses the item’s saved unit.</p></div><button className={control} disabled={busy||query.isFetching} onClick={()=>{setReview(null);query.refetch();}}>Refresh stock</button></div>
+    {mainStock && stockTabs}
+    {query.isPending?<div className="relative min-h-48"><Loader text="Loading stock balances…"/></div>:query.error?<p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">{query.error.response?.data?.message||query.error.message} <button className="underline" onClick={()=>query.refetch()}>Retry</button></p>:data&&<>
+      {!data.schema_ready?<div role="alert" className="space-y-3 rounded-lg bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100"><p>The stock quantity history has not been prepared on this server. No stock balance can be verified yet.</p>{!reportOnly&&data.can_prepare?<><p>Keep a current database backup before preparing stock tracking. This adds quantity history and a procurement quantity field; it retains existing users, settings, documents and workflows.</p><button disabled={busy} className={button} onClick={()=>setReview({operation:'prepare',label:'Prepare stock tracking while retaining existing records',payload:{}})}>Review stock setup</button></>:<p>A Super Admin with Full Stock access can prepare stock tracking here.</p>}</div>:!range?<p role="alert" className="rounded-lg bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">Set the accounting-year start in Company Profile before opening stock.</p>:<>
+        <div className="flex flex-wrap items-end gap-3"><label className="grid gap-1 text-sm">Accounting year<select aria-label="Stock accounting year" value={year} disabled={busy} className={control} onChange={e=>changeYear(e.target.value)}>{data.years.map(r=><option key={r.offset} value={r.offset}>{r.label} · {r.start_date} to {r.end_date}</option>)}</select></label><label className="grid gap-1 text-sm">Find an item<input aria-label="Find stock item" className={control} value={search} onChange={e=>setSearch(e.target.value)} placeholder={view === 'issue' ? 'Requisition or item' : view === 'receipt' ? 'Procurement or item' : 'Item, category or reference'}/></label>{period&&<span className={`rounded-full px-3 py-1 text-xs font-medium ${period.closed_at?'bg-gray-100 dark:bg-gray-700':'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200'}`}>{period.closed_at?'Closed stock year':'Open stock year'}</span>}</div>
+
+        {Number(data.unverified_legacy_lines)>0&&<p role="status" className="rounded-lg border border-amber-300 p-3 text-sm text-amber-800 dark:border-amber-700 dark:text-amber-200">{data.unverified_legacy_lines} older stock-linked line(s) are retained for reference. Their old links do not prove physical receipts or issues. This report uses confirmed opening quantities and evidenced movements; avoid entering goods already included in the opening balance as another receipt.</p>}
+        {!mainStock && (!reportOnly || period) && stockTabs}
+        {mainStock && !period && !['issue', 'opening'].includes(view) ? (
+          <div className="space-y-2 rounded-lg bg-gray-50 p-4 dark:bg-gray-900">
+            <p className="text-sm">Confirm this location’s opening stock to use this tab.</p>
+            <button className={control} onClick={() => changeTab('opening')}>Set opening stock</button>
+          </div>
+        ) : view === 'opening' && period ? (
+          <div className="space-y-2 rounded-lg bg-gray-50 p-4 dark:bg-gray-900">
+            <h3 className="font-semibold">Opening stock confirmed</h3>
+            <p className="text-sm">See each item’s opening quantity in Stock balances.</p>
+            <button className={control} onClick={() => changeTab('balance')}>View stock balances</button>
+          </div>
+        ) : view === 'opening' ? <div className="space-y-3 rounded-lg border border-blue-200 bg-blue-50/40 p-4 dark:border-blue-900 dark:bg-blue-950/20"><h3 className="font-semibold">Opening balance required</h3><p className="text-sm leading-6">Confirm quantities held at the start of this accounting year. Opening balances do not create purchases or expenses. Once confirmed, quantities are protected from direct editing.</p>
           {reportOnly?<p className="text-sm">Open Stock under Requests &amp; Documents to confirm this location’s opening balance before generating a stock report.</p>:!data.can_open?<p className="text-sm">A staff member with Full Stock access must confirm this location’s opening balance.</p>:data.previous_period?<><p className="text-sm">The preceding stock year is available. Review its closing report before carrying it forward. Carrying closes that year and prevents later postings to it.</p><button disabled={busy} className={button} onClick={()=>reviewOpening('carry')}>Review carry forward</button></>:data.has_history?<p role="alert" className="text-sm text-amber-700 dark:text-amber-200">Stock history already exists at this location. Select and carry forward each consecutive accounting year; a second manual opening is not allowed.</p>:<>
             <p className="text-sm">For first-time setup, enter the counted stock at {range.start_date}. Choose a previous year above if you need to start there. Do not include receipts that you will record separately.</p>
             <OpeningStockPicker key={year} items={data.items} itemId={itemId} amount={openingAmount} disabled={busy}

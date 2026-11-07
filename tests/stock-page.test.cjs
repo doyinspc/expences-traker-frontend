@@ -9,7 +9,7 @@ function markup(data,props={},activeView){
  const mocks={
  react:{...React,useState:initial=>React.useState(activeView&&initial==='issue'?activeView:initial)},
  '@tanstack/react-query':{useQuery:options=>{
-   if(activeView==='opening')assert.equal(options.queryKey[4],'receipt');
+   if(activeView && activeView!=='issue')assert.equal(options.queryKey[4],'receipt');
    else if(!props.reportOnly)assert.equal(options.queryKey[4],'issue');
    return {data,isPending:false,isFetching:false};
  }},
@@ -25,7 +25,7 @@ function markup(data,props={},activeView){
 }
 const period={label:'FY 2026',start_date:'2026-01-01',end_date:'2026-12-31'};
 test('Stock setup tells an administrator what to do before movement buttons become available',()=>{
- const html=markup({schema_ready:false,can_prepare:true});assert.match(html,/Review stock setup/);assert.match(html,/opening balance/);assert.doesNotMatch(html,/aria-label="Stock views"/);
+ const html=markup({schema_ready:false,can_prepare:true});assert.match(html,/Review stock setup/);assert.match(html,/opening balance/);assert.match(html,/aria-label="Stock views"/);
 });
 test('Approved Goods can be reviewed before opening without showing a verified stock balance',()=>{
  const html=markup({schema_ready:true,period,years:[],can_open:true,can_write:true,can_review:true,rows:[],
@@ -38,8 +38,14 @@ test('Approved Goods can be reviewed before opening without showing a verified s
  assert.match(html,/<dialog[^>]*aria-label="Stock confirmation"/);
  assert.match(html,/Requested 5/);
  assert.match(html,/Opening stock unconfirmed/);
- assert.match(html,/>Opening stock<\/button>/);
+ for (const label of ['Requisition queue','Receive goods','Stock balances','Movement history','Opening stock']) assert.ok(html.includes('>'+label+'</button>'),label);
  assert.doesNotMatch(html,/0 on hand|Review stock issue/);
+});
+test('Receive goods explains the opening requirement without hiding the tabs',()=>{
+ const html=markup({schema_ready:true,period,years:[],items:[]},{},'receipt');
+ assert.match(html,/Confirm this location’s opening stock to use this tab/);
+ assert.match(html,/>Set opening stock<\/button>/);
+ assert.match(html,/>Movement history<\/button>/);
 });
 test('Opening stock offers a category filter and uses the child item ID and unit for entries',()=>{
  const html=markup({schema_ready:true,period,years:[],can_open:true,items:[
