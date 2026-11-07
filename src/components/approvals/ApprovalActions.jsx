@@ -23,7 +23,7 @@ export default function ApprovalActions({ workflow, onSubmit, isLoading }) {
   const [errors, setErrors] = useState({});
   const [error, setError] = useState('');
   const [settleUnpaid, setSettleUnpaid] = useState(false);
-  const needsSettlement = workflow.cash_movements?.entries?.length > 0 && Number(workflow.cash_movements?.unpaid) > 0 && !(workflow.steps||[]).some(step=>Number(step.step_serial_number)>Number(workflow.current_serial_number)&&Number(step.is_active)===0);
+  const needsSettlement = !workflow.finance?.funded_by_purchase_orders && workflow.cash_movements?.entries?.length > 0 && Number(workflow.cash_movements?.unpaid) > 0 && !(workflow.steps||[]).some(step=>Number(step.step_serial_number)>Number(workflow.current_serial_number)&&Number(step.is_active)===0);
   const [confirmDisbursement, setConfirmDisbursement] = useState(false);
   const needsDisbursement = workflow.finance?.requires_confirmation && action === 'approve_instance';
   const [saving, setSaving] = useState(false);

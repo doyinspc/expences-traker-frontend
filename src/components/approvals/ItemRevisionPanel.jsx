@@ -113,6 +113,7 @@ export default function ItemRevisionPanel({
 }) {
   const canEdit = workflow.permissions?.can_revise_items;
   const supportsQuantity = Boolean(workflow.item_edit_capabilities?.quantity);
+  const canEditAccount = workflow.item_edit_capabilities?.account_classification !== false;
   // Open only the row explicitly selected by the reviewer; never auto-open on load.
   const selectedItem =
     (workflow.document_items || []).find(
@@ -285,7 +286,7 @@ export default function ItemRevisionPanel({
         reason: reason.trim(),
         ...(replacement ? { replacement_workflow_id: Number(replacement.id) } : {}),
         ...(["quantity", "terms"].includes(action) ? { quantity } : {}),
-        ...(action === "terms" && accountId
+        ...(action === "terms" && canEditAccount && accountId
           ? { account_id: Number(accountId) }
           : {}),
         ...(action === "terms" && item.request_allocations?.length
@@ -380,9 +381,10 @@ export default function ItemRevisionPanel({
                 className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
               >
                 Money due for return: {currency}{" "}
-                {money(workflow.cash_movements.refund_due)}. Record the actual
-                return in Payments and money returned before approving or making
-                further payments.
+                {money(workflow.cash_movements.refund_due)}.
+                {workflow.finance?.funded_by_purchase_orders
+                  ? " Record the return in PO payment adjustments before final approval."
+                  : " Record the return in Payments and money returned before approving or making further payments."}
               </p>
             )}
             {canEdit && (
@@ -594,7 +596,12 @@ export default function ItemRevisionPanel({
                   </label>
                 )}
               </div>
-              {action === "terms" && (
+              {action === "terms" && item && !canEditAccount && (
+                <p className="text-xs text-gray-600 dark:text-gray-300">
+                  Account from the paid Purchase Order{item.account_name ? ` · ${item.account_name}` : ''}.
+                </p>
+              )}
+              {action === "terms" && (canEditAccount || Boolean(item?.request_allocations?.length)) && (
                 <details
                   open={
                     !accountId ||
@@ -609,7 +616,7 @@ export default function ItemRevisionPanel({
                     Account and requisition allocation details
                   </summary>
                   <div className="mt-3 space-y-3">
-                    {item && action === "terms" && (
+                    {item && action === "terms" && canEditAccount && (
                       <label className="block text-sm">
                         Account classification{Number(workflow.document_type_id) !== 2 ? ' *' : ''}
                         <select

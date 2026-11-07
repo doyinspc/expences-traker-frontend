@@ -26,10 +26,24 @@ export default function CashMovementPanel({workflow,onSave,isLoading=false}) {
   const requestKey=useRef(''),saving=useRef(false);
   if(!cash||!workflow.finance?.enabled)return null;
   const currency=workflow.document_data?.currency_code||'';
-  const options=[...(cash.can_pay&&Number(cash.unpaid)>0?[['payment','Record payment']]:[]),...(cash.can_refund&&Number(cash.net_paid)>0?[['refund','Record money returned']]:[])];
+  const funded = Boolean(cash.funded_by_purchase_orders);
+  const permittedItems = new Set(cash.reconcilable_item_ids || []);
+  const availableFor = (item, action) => {
+    const line = cash.lines?.[item];
+    if (!line || (funded && !permittedItems.has(Number(item)))) return 0;
+    if (funded) return action === 'payment' ? line.additional_due : line.return_due;
+    return action === 'payment' ? line.planned-line.paid : line.paid-line.returned;
+  };
+  const documentItems = workflow.document_items || [];
+  const options = [
+    ...(cash.can_pay && documentItems.some(item=>availableFor(item.id,'payment')>0)
+      ? [['payment',funded?'Record additional payment':'Record payment']] : []),
+    ...(cash.can_refund && documentItems.some(item=>availableFor(item.id,'refund')>0)
+      ? [['refund',funded?'Record item refund':'Record money returned']] : []),
+  ];
   const action=options.some(([value])=>value===kind)?kind:options[0]?.[0];
-  const items=(workflow.document_items||[]).filter(item=>{const value=cash.lines?.[item.id];return value&&(action==='payment'?value.planned-value.paid:value.paid-value.returned)>0;});
-  const selected=cash.lines?.[itemId],available=selected?(action==='payment'?selected.planned-selected.paid:selected.paid-selected.returned):0;
+  const items=documentItems.filter(item=>availableFor(item.id,action)>0);
+  const available=availableFor(itemId,action);
   const busy=isLoading||saving.current;
   /**
    * Purpose: submit one confirmed actual cash event with a retry-safe UI request key.
@@ -42,7 +56,7 @@ export default function CashMovementPanel({workflow,onSave,isLoading=false}) {
    */
   const submit=async event=>{
     event.preventDefault();if(saving.current||isLoading)return;setError('');
-    if(!itemId||!/^\d+(?:\.\d{1,2})?$/.test(amount)||Number(amount)<=0||!date||!reference.trim()||!confirmed){setError('Choose the item, amount, actual date and reference, then confirm the cash movement.');return;}
+    if(!itemId||available<=0||!/^\d+(?:\.\d{1,2})?$/.test(amount)||Number(amount)<=0||!date||!reference.trim()||!confirmed){setError('Choose the item, amount, actual date and reference, then confirm the cash movement.');return;}
     if(!requestKey.current)requestKey.current=globalThis.crypto.randomUUID().replaceAll('-','');
     saving.current=true;
     try{await onSave({kind:action,item_id:itemId,amount,movement_date:date,reference:reference.trim(),confirmation:'RECORD_CASH',request_key:requestKey.current});requestKey.current='';setAmount('');setReference('');setConfirmed(false);}
@@ -51,16 +65,16 @@ export default function CashMovementPanel({workflow,onSave,isLoading=false}) {
   };
   const names=new Map((workflow.document_items||[]).map(item=>[String(item.id),item.item_name||item.name||item.description||`Item ${item.id}`]));
   return <section className="space-y-4 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900" aria-label="Payments and refunds">
-    <div><h2 className="font-semibold">Payments and money returned</h2><p className="mt-1 text-sm leading-6 text-gray-500 dark:text-gray-400">Record the actual amount against each item. Returns reduce spending and budget usage on their recorded date. These entries record cash already moved; they do not send a bank payment.</p></div>
-    <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">{[['Approved amount',cash.planned],['Paid',cash.paid],['Returned',cash.refunded],['Net paid',cash.net_paid],...(Number(cash.refund_due)>0?[['Money due for return',cash.refund_due]]:[]),[cash.unpaid_cancelled?'Unpaid balance closed':'Not yet disbursed',cash.unpaid]].map(([label,value])=><div key={label} className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800"><dt className="text-xs text-gray-500 dark:text-gray-400">{label}</dt><dd className="mt-1 font-semibold tabular-nums">{formatReportMoney(value,currency)}</dd></div>)}</dl>
+    <div><h2 className="font-semibold">{funded?'PO payment adjustments':'Payments and money returned'}</h2><p className="mt-1 text-sm leading-6 text-gray-500 dark:text-gray-400">{funded?'The original payment stays on the Purchase Order. Record the actual refund or additional payment against the Procurement item. It uses the source PO’s account and budget.':'Record the actual amount against each item. Returns reduce spending and budget usage on their recorded date. These entries record cash already moved; they do not send a bank payment.'}</p></div>
+    <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">{[['Approved amount',cash.planned],...(funded?[['Paid on Purchase Orders',cash.original_paid]]:[]),['Paid',cash.paid],['Returned',cash.refunded],['Net paid',cash.net_paid],...(Number(cash.refund_due)>0?[['Money due for return',cash.refund_due]]:[]),[funded?'Additional payment due':cash.unpaid_cancelled?'Unpaid balance closed':'Not yet disbursed',cash.unpaid]].map(([label,value])=><div key={label} className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800"><dt className="text-xs text-gray-500 dark:text-gray-400">{label}</dt><dd className="mt-1 font-semibold tabular-nums">{formatReportMoney(value,currency)}</dd></div>)}</dl>
     {options.length>0?<form onSubmit={submit} className="space-y-3 border-t border-gray-100 pt-4 dark:border-gray-800"><fieldset disabled={busy} className="space-y-3 disabled:opacity-60">
-      <div className="grid gap-3 sm:grid-cols-2"><label className="text-sm">Action<select className={control} value={action} onChange={event=>{setKind(event.target.value);setItemId('');setAmount('');setConfirmed(false);requestKey.current='';}}>{options.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><label className="text-sm">Item *<select required className={control} value={itemId} onChange={event=>{setItemId(event.target.value);setAmount('');setConfirmed(false);requestKey.current='';}}><option value="">Choose item</option>{items.map(item=><option key={item.id} value={item.id}>{names.get(String(item.id))}</option>)}</select></label></div>
+      <div className="grid gap-3 sm:grid-cols-2"><label className="text-sm">Action<select className={control} value={action} onChange={event=>{setKind(event.target.value);setItemId('');setAmount('');setConfirmed(false);requestKey.current='';}}>{options.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><label className="text-sm">Item *<select required className={control} value={itemId} onChange={event=>{setItemId(event.target.value);setAmount('');setConfirmed(false);requestKey.current='';}}><option value="">Choose item</option>{items.map(item=><option key={item.id} value={item.id}>{names.get(String(item.id))}{funded && cash.lines?.[item.id]?.source_order_id ? ` · PO-${cash.lines[item.id].source_order_id}` : ''}</option>)}</select></label></div>
       <div className="grid gap-3 sm:grid-cols-2"><label className="text-sm">Amount *<input required inputMode="decimal" type="number" min="0.01" step="0.01" max={reportDecimal(available)||undefined} value={amount} onChange={event=>setAmount(event.target.value)} className={control}/>{itemId&&<span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">Maximum: {formatReportMoney(reportDecimal(available),currency)}</span>}</label><label className="text-sm">Actual payment / return date *<input required type="date" max={cash.today} value={date} onChange={event=>setDate(event.target.value)} className={control}/></label></div>
       <label className="block text-sm">Payment / return reference or explanation *<input required maxLength={200} value={reference} onChange={event=>setReference(event.target.value)} className={control}/></label>
       <label className="flex min-h-11 items-start gap-2 text-sm"><input required type="checkbox" className="mt-1" checked={confirmed} onChange={event=>setConfirmed(event.target.checked)}/><span>I confirm this money has actually been {action==='refund'?'returned':'paid'}. The entry will update spending and budget usage.</span></label>
       {error&&<p role="alert" className="text-sm text-red-700 dark:text-red-300">{error}</p>}
-      <button className="min-h-11 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white disabled:opacity-50" disabled={busy}>{busy?'Saving…':action==='refund'?'Record return':'Record payment'}</button>
-    </fieldset></form>:<p className="text-xs text-gray-500 dark:text-gray-400">Payments require the configured disbursement role. That role or the current reconciliation approver can record returns. After closure, the disbursement role can record a financial return.</p>}
+      <button className="min-h-11 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white disabled:opacity-50" disabled={busy}>{busy?'Saving…':action==='refund'?(funded?'Record refund':'Record return'):(funded?'Record additional payment':'Record payment')}</button>
+    </fieldset></form>:<p className="text-xs text-gray-500 dark:text-gray-400">{funded?'Any remaining item adjustments can be recorded by the source PO’s payment role at the final Procurement step.':'Payments require the configured disbursement role. That role or the current reconciliation approver can record returns. After closure, the disbursement role can record a financial return.'}</p>}
     {cash.entries.length>0&&<div className="overflow-x-auto"><table className="w-full text-left text-sm"><caption className="py-2 text-left font-medium">Payment and return history</caption><thead><tr>{['Date','Entry','Item','Amount','Reference','Recorded by'].map(label=><th key={label} className="whitespace-nowrap px-2 py-2 text-xs text-gray-500 dark:text-gray-400">{label}</th>)}</tr></thead><tbody>{cash.entries.flatMap(entry=>entry.lines.map(line=><tr key={`${entry.key}:${line.id}`} className="border-t border-gray-100 dark:border-gray-800"><td className="whitespace-nowrap px-2 py-3">{entry.at}</td><td className="px-2 py-3">{entry.kind==='refund'?'Return':'Payment'}</td><td className="px-2 py-3">{names.get(String(line.id))||`Item ${line.id}`}</td><td className="whitespace-nowrap px-2 py-3 tabular-nums">{entry.kind==='refund'?'−':''}{formatReportMoney(line.amount,currency)}</td><td className="px-2 py-3">{entry.reference}</td><td className="px-2 py-3">{entry.actor_name||`Staff ${entry.by}`}</td></tr>))}</tbody></table></div>}
   </section>;
 }

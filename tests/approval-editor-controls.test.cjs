@@ -763,3 +763,34 @@ test("An over-limit Purchase Order price requires a suitable workflow in the sam
   assert.equal(saved.unit_price, "150.00");
   assert.equal(saved.replacement_workflow_id, 220);
 });
+
+test("A PO-funded Procurement item keeps the account read-only and shows refund and top-up choices", () => {
+  const funded = {
+    ...workflow,
+    document_type_id: 9,
+    finance: { enabled: true, funded_by_purchase_orders: true },
+    item_edit_capabilities: { quantity: true, account_classification: false },
+    document_items: [
+      { ...item, account_name: "Stationery account" },
+      { ...item, id: 402, item_name: "Lower price item", account_name: "Stationery account" },
+    ],
+    cash_movements: {
+      funded_by_purchase_orders: true, can_pay: true, can_refund: true,
+      reconcilable_item_ids: [401, 402], entries: [], today: "2026-11-07",
+      original_paid: "600.00", planned: "610.00", paid: "600.00", net_paid: "600.00", refunded: "0.00", unpaid: "50.00", refund_due: "40.00",
+      lines: {
+        401: { original_paid: 20000, additional_due: 5000, return_due: 0, source_order_id: 7000 },
+        402: { original_paid: 40000, additional_due: 0, return_due: 4000, source_order_id: 7000 },
+      },
+    },
+  };
+  const details = html(Panel, { workflow: funded, editRequest: { itemId: 401 } });
+  assert.match(details, /Account from the paid Purchase Order.*Stationery account/);
+  assert.doesNotMatch(details, /Choose account classification/);
+  const CashPanel = bundled("src/components/approvals/CashMovementPanel.jsx").default;
+  const cash = html(CashPanel, { workflow: funded });
+  assert.match(cash, /PO payment adjustments/);
+  assert.match(cash, /Record additional payment/);
+  assert.match(cash, /Record item refund/);
+  assert.match(cash, /PO-7000/);
+});
