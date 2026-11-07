@@ -601,10 +601,10 @@ export default function ItemRevisionPanel({
                   <div className="mt-3 space-y-3">
                     {item && action === "terms" && (
                       <label className="block text-sm">
-                        Account classification *
+                        Account classification{Number(workflow.document_type_id) !== 2 ? ' *' : ''}
                         <select
                           className={control}
-                          required
+                          required={Number(workflow.document_type_id) !== 2}
                           value={accountId}
                           disabled={Boolean(workflow.finance?.disbursement)}
                           onChange={(event) => setAccountId(event.target.value)}

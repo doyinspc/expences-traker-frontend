@@ -83,7 +83,7 @@ const expenseitems = {
             analyzable: false,
         },
         stockable: {
-            label: 'Item Type',
+            label: 'Stock Type for other items',
             type: 'select',
             defaultValue: null,
             options: [
@@ -91,7 +91,7 @@ const expenseitems = {
                 { value: 1, label: 'Stockable goods' },
                 { value: 0, label: 'Service / non-stock' },
             ],
-            description: 'Choose how this item is requested and fulfilled. Stockable goods require a unit. Services and non-stock items go directly to purchasing.',
+            description: 'Goods always use stock and Services go directly to purchasing. Use this setting for a child marked Both or left unclassified.',
             showInTable: true,
             tableFormat: value => value === null || value === undefined || value === '' ? 'Existing classification' : Number(value) === 1 ? 'Stockable goods' : 'Service / non-stock',
         },

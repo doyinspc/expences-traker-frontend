@@ -4,6 +4,7 @@ import { X, Loader2, Plus, AlertCircle, Info, Calendar, ChevronDown } from 'luci
 import { API_PATH_SETTING, axiosConfig } from '../../actions/common';
 import { useSelector } from 'react-redux';
 import useReduxApiData from '../../hooks/useTanstackQuery';
+import { CATALOGUE_STOCK_TYPE, catalogueStockType } from '../../utils/functions/catalogueStockType.js';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -77,11 +78,12 @@ const RequisitionItemForm = ({
       }, [formData?.category_id, categories])
       const selectedCatalogueItem=items.find(item=>String(item.id)===String(formData.item_id));
       const selectedUnit=String(selectedCatalogueItem?selectedCatalogueItem.text_1||'':String(initialData?.item_id)===String(formData.item_id)?initialData?.unit_of_measure||'':'').trim();
-      const serviceScope = Boolean(priceFree && selectedCatalogueItem && (
-          Number(selectedCatalogueItem.text_4) === 1 ||
-          (selectedCatalogueItem.stockable != null && Number(selectedCatalogueItem.stockable) === 0) ||
-          (!selectedUnit && Number(parent_row?.purchasing_version) === 2)
-      ));
+      const stockType = catalogueStockType(selectedCatalogueItem);
+      const serviceScope = priceFree && stockType === CATALOGUE_STOCK_TYPE.SERVICE;
+      const stockSetupError = priceFree && selectedCatalogueItem && (
+          stockType === null ? 'Set Good or Service on this child item in Expense/Income Settings.' :
+          stockType === CATALOGUE_STOCK_TYPE.GOOD && !selectedUnit ? 'Set a unit of measure on this Good in Expense/Income Settings.' : ''
+      );
 
     // ==================== HANDLE CATEGORY CHANGE ====================
     const handleCategoryChange = (e) => {
@@ -183,7 +185,7 @@ const RequisitionItemForm = ({
 
         if (!formData.category_id > 0) {
             newErrors.category_id = 'Please select a category';
-        } else if (!categories.some(c => c.id === formData.category_id)) {
+        } else if (!categories.some(c => String(c.id) === String(formData.category_id))) {
             newErrors.category_id = 'Selected category is invalid';
         }
 
@@ -204,6 +206,8 @@ const RequisitionItemForm = ({
         if (!priceFree && formData.total_price !== null && formData.total_price < 0) {
             newErrors.total_price = 'Total price cannot be negative';
         }
+
+        if (stockSetupError) newErrors.item_id = stockSetupError;
 
         if (serviceScope && !formData.special_instructions?.trim()) {
             newErrors.special_instructions = 'Describe the scope, expected duration or deliverables.';
@@ -226,7 +230,7 @@ const RequisitionItemForm = ({
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
-    }, [priceFree, serviceScope, formData, requisitionId, categories, items]);
+    }, [priceFree, serviceScope, stockSetupError, formData, requisitionId, categories, items]);
 
     // ==================== HANDLE BLUR FOR VALIDATION ====================
     const handleBlur = (e) => {
@@ -485,8 +489,12 @@ const RequisitionItemForm = ({
 
                 {priceFree && selectedCatalogueItem && (
                     <p className="text-xs text-gray-600 dark:text-gray-300 md:col-span-2">
-                        Item type · {serviceScope ? 'Service / non-stock' : 'Stockable goods'}
+                        Item type · {stockType === null ? 'Unclassified' : serviceScope ? 'Service / non-stock' : 'Stockable goods'}
                     </p>
+                )}
+
+                {stockSetupError && (
+                    <p role="status" className="text-xs text-amber-700 dark:text-amber-200 md:col-span-2">{stockSetupError}</p>
                 )}
 
                 {/* Quantity */}
@@ -497,7 +505,7 @@ const RequisitionItemForm = ({
                     <input
                         type="number"
                         name="quantity"
-                        required={priceFree}
+                        required={priceFree && stockType === CATALOGUE_STOCK_TYPE.GOOD}
                         max="999999999"
                         value={formData.quantity ?? ''}
                         onChange={handleInputChange}

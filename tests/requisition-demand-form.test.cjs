@@ -11,7 +11,7 @@ function harness(){
     useMemo:fn=>fn(),useCallback:fn=>fn,useRef:value=>({current:value})};
   return {hooks,render(fn){cursor=0;const result=fn();const pending=effects;effects=[];pending.forEach(fn=>fn());return result;}};
 }
-function load(file,mocks){
+function load(file,mocks,asModule=false){
   const module={exports:{}};
   const source=fs.readFileSync(path.join(root,file),'utf8').replace(/import\.meta\.env\.VITE_APP_TENANT_DB/g,"'test_tenant'");
   const code=transformSync(source,{loader:file.endsWith('jsx')?'jsx':'js',format:'cjs',jsx:'automatic'}).code;
@@ -21,10 +21,10 @@ function load(file,mocks){
     if(id.startsWith('.')){
       let target=path.resolve(path.dirname(path.join(root,file)),id);
       if(!path.extname(target))target=['.js','.jsx'].map(ext=>target+ext).find(fs.existsSync);
-      return load(path.relative(root,target),mocks);
+      return load(path.relative(root,target),mocks,true);
     }
     return require(id);
-  }});return module.exports.default;
+  }});return asModule ? module.exports : module.exports.default;
 }
 function find(tree,predicate){
   if(!tree||typeof tree!=='object')return null;
@@ -63,7 +63,7 @@ test('Manual query loading and stopping still work with unchanged props',()=>{
 });
 function formHarness(initialData,priceFree=true){
   const h=harness(),reads=[],saved=[];
-  const options=[{id:5,name:'IT equipment',children:[{id:51,name:'Keyboard',text_1:'pieces',unit_price:300},{id:52,name:'Mouse',text_1:'pieces'},{id:53,name:'Fence repair',text_1:'visits',stockable:0}]}];
+  const options=[{id:5,name:'IT equipment',children:[{id:51,name:'Keyboard',text_1:'pieces',unit_price:300},{id:52,name:'Mouse',text_1:'pieces'},{id:53,name:'Fence repair',text_1:'visits',stockable:0},{id:54,name:'Boxes',text_4:2,text_1:'boxes',stockable:0},{id:55,name:'Unit missing',text_4:2},{id:56,name:'Unclassified'},{id:57,name:'Network install',text_4:1,text_1:'visits',stockable:1}]}];
   const queries=[];
   const Form=load('src/pages/Product/RequistiontemForm.jsx',{
     react:h.hooks,axios:{},'react-datepicker':()=>null,
@@ -109,6 +109,31 @@ test('Service forms require scope and do not submit a stock quantity',()=>{
   assert.equal(h.saved[0].special_instructions,'Repair fence in two days');
   assert.equal('quantity' in h.saved[0],false);
 });
+test('Catalogue Goods require a quantity in their saved unit',()=>{
+  const h=formHarness({category_id:5,item_id:54});
+  const tree=h.render();
+  assert.equal(named(tree,'quantity').props.required,true);
+  assert.equal(named(tree,'special_instructions').props.required,false);
+  assert.match(JSON.stringify(tree),/Quantity.*boxes/);
+  tree.props.onSubmit({preventDefault(){}});
+  assert.equal(h.saved.length,0);
+});
+test('Missing child classification or unit is explained rather than guessed as a service',()=>{
+  for (const [item_id, message] of [[55,/Set a unit of measure/],[56,/Set Good or Service/]]) {
+    const h=formHarness({category_id:5,item_id,quantity:2});
+    const tree=h.render();
+    assert.match(JSON.stringify(tree),message);
+    assert.equal(named(tree,'special_instructions').props.required,false);
+    tree.props.onSubmit({preventDefault(){}});
+    assert.equal(h.saved.length,0);
+  }
+});
+test('A catalogue Service keeps scope even when a legacy Stock Type was saved',()=>{
+  const h=formHarness({category_id:5,item_id:57});
+  const tree=h.render();
+  assert.equal(find(tree,node=>node.props?.name==='quantity'),null);
+  assert.equal(named(tree,'special_instructions').props.required,true);
+});
 test('Editing existing demand retains date and OPEX without erasing historical prices',()=>{
   const h=formHarness({id:41,category_id:5,item_id:51,account_id:7,is_type:0,quantity:3,special_instructions:'Original description',delivery_required_by:'2026-11-20',unit_price:90,total_price:270});
   const tree=h.render();tree.props.onSubmit({preventDefault(){}});assert.equal(h.saved.length,1);
@@ -149,8 +174,8 @@ test('The actual requisition page waits for its parent, opens the original form 
   assert.equal(writes.length,1);assert.equal(writes[0].requisition_id,90);assert.equal('account_id' in writes[0],false);assert.equal(writes[0].is_type,1);assert.equal(writes[0].special_instructions,'Keyboard');assert.equal(writes[0].delivery_required_by,'2026-11-20');
   tree=h.render(()=>Page());assert.equal(find(tree,node=>node.type?.name==='OriginalRequisitionForm'),null);
 });
-test('Purchase Orders open the original requisition picker and carry its outstanding quantity into the editor',()=>{
-  const h=harness(),configs=[];
+test('The Purchase Order picker saves the selected requisition quantity without asking for price or account',async()=>{
+  const h=harness(),configs=[],writes=[];
   const Page=load('src/pages/Product/PurchasingItems.jsx',{
     react:h.hooks,'react-redux':{useSelector:fn=>fn({auth:{location_id:25,role_id:7}})},
     'react-router-dom':{useNavigate:()=>()=>{},useParams:()=>({id:'91'})},
@@ -159,7 +184,7 @@ test('Purchase Orders open the original requisition picker and carry its outstan
     '../../hooks/useTanstackQuery':config=>{configs.push(config);return {data:config.uniqueKey==='purchasing-catalogue'?[{id:30,children:[{id:100,grp:5,name:'Hardware Equipment',text_1:'pieces'}]}]:[{id:7,name:'Office equipment'}]};},
     '../../actions/common':{tokenHelpers:{getTenantDb:()=> 'test',getToken:()=> 'test'}},
     '../../components/common/ParentDocumentContext':()=>null,'../../components/procurement/ItemEvidencePanel':()=>null,
-    '../../utils/functions/purchasingApi':{purchasingRequest:async()=>{}},'./PurchaseOrderRequisitions':()=>null,
+    '../../utils/functions/purchasingApi':{purchasingRequest:async(...args)=>writes.push(args)},'./PurchaseOrderRequisitions':()=>null,
     '../../components/procurement/AddRequisitionItemsModal':function ExistingRequisitionPicker(){return null;}
   });
   let tree=h.render(()=>Page({type:2}));
@@ -169,11 +194,19 @@ test('Purchase Orders open the original requisition picker and carry its outstan
   assert.equal(picker.props.isOpen,true);
   const source=picker.props.orderSelection.items.find(item=>item.id===41);
   assert.equal(source.requisition_title,'IT keyboards');assert.equal(source.remaining_quantity,5);
-  picker.props.orderSelection.onSelect(source);tree=h.render(()=>Page({type:2}));
-  const choose=(value)=>find(tree,n=>n.type==='select'&&find(n,option=>option.type==='option'&&String(option.props.value)===String(value)));
-  assert.equal(choose(100).props.value,'100');
-  choose(7).props.onChange({target:{value:'7'}});tree=h.render(()=>Page({type:2}));
-  const text=JSON.stringify(tree,(_key,value)=>typeof value==='function'?undefined:value);
-  assert.match(text,/IT keyboards/);assert.doesNotMatch(text,/Different existing account/);
-  assert.equal(find(tree,n=>n.type==='input'&&n.props['aria-label']==='Quantity for REQ-80').props.value,5);
+  await picker.props.orderSelection.onSelect(source);
+  tree=h.render(()=>Page({type:2}));
+  assert.equal(writes.length,1);
+  const [operation, payload, write] = writes[0];
+  assert.equal(operation,'save_order_line');
+  assert.equal(write,true);
+  assert.equal(payload.document_id,91);
+  assert.equal(payload.item_id,100);
+  assert.equal(payload.quantity,5);
+  assert.equal(payload.allocations[0].request_item_id,41);
+  assert.equal(payload.allocations[0].quantity,5);
+  assert.equal('unit_price' in payload,false);
+  assert.equal('account_id' in payload,false);
+  assert.equal(find(tree,n=>n.props?.['aria-label']==='Purchase Order item editor'),null);
+  assert.equal(configs.some(config=>config.uniqueKey==='purchasing-accounts'),false);
 });

@@ -15,7 +15,9 @@ interface Props {
     isFetching: boolean;
     error: any;
     refetch: () => void;
-    onSelect: (item: Candidate) => void;
+    onSelect: (item: Candidate) => Promise<void>;
+    saving?: boolean;
+    saveError?: string;
   };
 }
 
@@ -63,7 +65,8 @@ function money(value: number | string | undefined, code = 'NGN') {
 /**
  * Show approved outstanding demand grouped by requisition for the document’s location.
  * Modern Purchase Orders supply candidates with live allocation and stock information.
- * Selection opens the order editor so it can save a priced line and source allocation.
+ * Selecting an item saves the eligible quantity and source allocation. Pricing belongs
+ * to the Purchase Order approval workflow.
  * Older orders fetch candidates here and attach the original row using their existing API.
  * After an older order attaches an item, hide it from the picker and refresh if the server
  * rejects a stale selection. In both paths the server owns eligibility and quantities.
@@ -144,7 +147,7 @@ function OpenRequisitionItemsModal({
 
   async function addItem(item: Candidate) {
     if (orderSelection) {
-      orderSelection.onSelect(item);
+      await orderSelection.onSelect(item);
       return;
     }
     const itemId = Number(item.id);
@@ -191,8 +194,11 @@ function OpenRequisitionItemsModal({
           Only approved, closed requisitions at this Procurement / Purchase
           Order’s location are shown. Quantities already supplied from stock or
           assigned to another order are excluded.
-          {orderSelection && ' For goods reviewed by Stock, only quantities released by Stock can be selected.'}
+          {orderSelection && ' For goods reviewed by Stock, only released quantities can be added. Set prices during approval.'}
         </p>
+        {orderSelection?.saveError && (
+          <p role="alert" className="mb-3 text-sm text-red-600 dark:text-red-300">{orderSelection.saveError}</p>
+        )}
         <div className="mb-4 flex items-end gap-3">
           <label className="flex-1 text-sm text-gray-700 dark:text-gray-300">
             Requisition
@@ -314,7 +320,7 @@ function OpenRequisitionItemsModal({
                       <button
                         type="button"
                         onClick={() => addItem(item)}
-                        disabled={isLoadingUpdate || Boolean(orderSelection && item.stock_review && item.remaining_quantity <= 0)}
+                        disabled={isLoadingUpdate || orderSelection?.saving || Boolean(orderSelection && item.remaining_quantity <= 0)}
                         className="inline-flex items-center gap-1 rounded bg-green-50 px-2 py-1 text-xs font-medium text-green-700 disabled:opacity-50 dark:bg-green-900/20 dark:text-green-300"
                       >
                         <Plus size={14} />

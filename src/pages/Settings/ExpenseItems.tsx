@@ -131,19 +131,34 @@ const ExpensItems: React.FC = () => {
         void loadUpdate({ id, cat: 'insert', text_2: parseInt(text_2) === 0 ? 1 : 0 }).catch(()=>{});
     }, [loadUpdate]);
 
-    const onGoodOrService = useCallback((row: any): void => {
-        const { id, text_4 } = row;
-        let newValue = 0;
-        if (parseInt(text_4) === 0 || parseInt(text_4) === null || parseInt(text_4) === undefined) {
-            newValue = 1;
-        } else if (parseInt(text_4) === 1) {
-            newValue = 2;
-        } else if (parseInt(text_4) === 2) {
-            newValue = 3;
-        } else if (parseInt(text_4) === 3) {
-            newValue = 1;
+    const onGoodOrService = useCallback(async (row: any): Promise<void> => {
+        const kind = Number(row.text_4);
+        const nextKind = kind === 1 ? 2 : kind === 2 ? 3 : 1;
+        let unit = String(row.text_1 ?? '').trim();
+
+        if (nextKind === 2 && !unit) {
+            const result = await Swal.fire<string>({
+                title: 'Set the unit for this Good',
+                input: 'text',
+                inputLabel: 'Unit of measure',
+                inputPlaceholder: 'e.g. pieces, boxes or litres',
+                inputAttributes: { maxlength: '100' },
+                inputValidator: value => value.trim() ? null : 'Enter the unit used to request and issue this Good.',
+                showCancelButton: true,
+                confirmButtonText: 'Save as Good',
+            });
+            if (!result.isConfirmed || !result.value) return;
+            unit = result.value.trim();
         }
-        void loadUpdate({ id, cat: 'insert', text_4: newValue }).catch(()=>{});
+
+        try {
+            await loadUpdate({
+                id: row.id,
+                cat: 'insert',
+                text_4: nextKind,
+                ...(nextKind === 2 && unit !== String(row.text_1 ?? '').trim() ? { text_1: unit } : {}),
+            });
+        } catch { /* The API already shows the validation message. */ }
     }, [loadUpdate]);
 
     const onNext = useCallback((row: any): void => {
@@ -334,7 +349,7 @@ const ExpensItems: React.FC = () => {
                                     </div>
                                     <div className="flex items-start gap-1.5">
                                         <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Good / Service</span>
-                                        <span className="text-xs text-gray-500 dark:text-gray-400">- Classifies as physical product or service</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">- Goods require a saved unit and a requisition quantity. Services require a scope.</span>
                                     </div>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">

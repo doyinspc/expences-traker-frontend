@@ -4,6 +4,7 @@ import { useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import AddRequisitionItemsModal from "../../components/procurement/AddRequisitionItemsModal";
 import ParentDocumentContext from "../../components/common/ParentDocumentContext";
+import { CATALOGUE_STOCK_TYPE, catalogueStockType } from '../../utils/functions/catalogueStockType.js';
 import { purchasingStageLabels } from '../../utils/functions/workflowPresentation';
 import useParentDocumentContext from "../../hooks/useParentDocumentContext";
 import useReduxApiData from "../../hooks/useTanstackQuery";
@@ -65,13 +66,6 @@ export default function PurchasingItems({ type = 2 }) {
     mainParam: { grp: 5, is_active: 1 },
     enabled: modern && type === 2,
   });
-  const accounts = useReduxApiData({
-    table: "commons",
-    uniqueKey: "purchasing-accounts",
-    queryType: "gets",
-    mainParam: { grp: 7, is_active: 1 },
-    enabled: modern && type === 2,
-  });
   const state = query.data;
   const candidates = state?.candidates || EMPTY_ROWS;
   const name = type === 9 ? "Procurement" : "Purchase Order";
@@ -87,15 +81,14 @@ export default function PurchasingItems({ type = 2 }) {
     category_name: source.category_name || catalogueRows.find(item => Number(item.id) === Number(source.item_id))?.category_name,
   })) : EMPTY_ROWS;
   const editedItem = catalogueRows.find(item => Number(item.id) === Number(form?.item_id)) || form?.selectedItem;
-  const stockable = editedItem && Number(editedItem.text_4) !== 1 && String(editedItem.text_1 || '').trim() &&
-    (editedItem.stockable == null || Number(editedItem.stockable) === 1);
+  const stockable = catalogueStockType(editedItem) === CATALOGUE_STOCK_TYPE.GOOD && Boolean(String(editedItem?.text_1 || '').trim());
   const sourceRows = useMemo(() => {
     const eligible = new Map(
       candidates
         .filter(
           (row) =>
             String(row.item_id) === String(form?.item_id) &&
-            (!Number(row.account_id) || String(row.account_id) === String(form?.account_id)),
+            (!Number(form?.account_id) || !Number(row.account_id) || String(row.account_id) === String(form?.account_id)),
         )
         .map((row) => [Number(row.id), row]),
     );
@@ -143,23 +136,27 @@ export default function PurchasingItems({ type = 2 }) {
       setBusy(false);
     }
   }
-  function edit(line, source = null) {
-    const lineItem = source || line;
-    const initialQuantity = source?.recommended_purchase_quantity ?? source?.remaining_quantity;
+  function addRequisitionItem(source) {
+    const quantity = Number(source.remaining_quantity);
+    if (quantity < 1) return;
+    return mutate("save_order_line", {
+      item_id: Number(source.item_id),
+      quantity,
+      allocations: [{ request_item_id: Number(source.id), quantity }],
+    });
+  }
+
+  function edit(line) {
     setForm({
-      selectedItem: lineItem ? { id: lineItem.item_id, name: lineItem.item_name, text_1: lineItem.unit, text_4: lineItem.text_4, stockable: lineItem.stockable } : null,
+      selectedItem: line ? { id: line.item_id, name: line.item_name, text_1: line.unit, text_4: line.text_4, stockable: line.stockable } : null,
       sources: line?.request_allocations || [],
-      requestScope: source?.special_instructions || '',
       line_id: line?.id || 0,
-      item_id: String(lineItem?.item_id || ""),
-      account_id: String(lineItem?.account_id || ""),
-      quantity: initialQuantity ?? line?.quantity ?? 1,
+      item_id: String(line?.item_id || ""),
+      account_id: String(line?.account_id || ""),
+      quantity: line?.quantity ?? 1,
       unit_price: String(line?.unit_price ?? ""),
-      allocations: source && initialQuantity > 0 ? { [source.id]: initialQuantity } : Object.fromEntries(
-        (line?.request_allocations || []).map((row) => [
-          row.request_item_id,
-          row.quantity,
-        ]),
+      allocations: Object.fromEntries(
+        (line?.request_allocations || []).map((row) => [row.request_item_id, row.quantity]),
       ),
     });
     setError("");
@@ -278,7 +275,9 @@ export default function PurchasingItems({ type = 2 }) {
                   isFetching: query.isFetching,
                   error: query.error,
                   refetch: () => query.refetch(),
-                  onSelect: source => edit(null, source),
+                  onSelect: addRequisitionItem,
+                  saving: busy,
+                  saveError: error,
                 }}
               />
             </div>
@@ -326,12 +325,14 @@ export default function PurchasingItems({ type = 2 }) {
                       </td>
                       <td className="p-3 tabular-nums">{line.quantity}</td>
                       <td className="p-3 tabular-nums">
-                        {money(line.unit_price)}
+                        {type === 2 && Number(line.unit_price || 0) <= 0 && Number(line.approval_status) !== 2
+                          ? "Price pending" : money(line.unit_price)}
                       </td>
                       <td className="p-3 tabular-nums">
                         {Number(line.approval_status) === 2
                           ? "Excluded"
-                          : money(line.total_price)}
+                          : type === 2 && Number(line.unit_price || 0) <= 0
+                            ? "—" : money(line.total_price)}
                       </td>
                       <td className="p-3 text-xs">
                         {type === 2 ? (
@@ -590,7 +591,8 @@ export default function PurchasingItems({ type = 2 }) {
                         ...previous,
                         item_id: event.target.value,
                         selectedItem: null,
-                        requestScope: '',
+                        unit_price: '',
+                        account_id: '',
                         allocations: {},
                         sources: [],
                       }))
@@ -604,33 +606,6 @@ export default function PurchasingItems({ type = 2 }) {
                     {catalogueRows.map((item) => (
                       <option key={item.id} value={item.id}>
                         {item.name} · {item.text_1 || "Service"}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="text-sm">
-                  Account classification *
-                  <select
-                    required
-                    value={form.account_id}
-                    onChange={(event) => {
-                      const account = event.target.value;
-                      const compatible = new Set(candidates.filter(source =>
-                        !Number(source.account_id) || String(source.account_id) === account,
-                      ).map(source => String(source.id)));
-                      setForm(previous => ({
-                        ...previous,
-                        account_id: account,
-                        allocations: Object.fromEntries(Object.entries(previous.allocations).filter(([id]) => compatible.has(id))),
-                        sources: [],
-                      }));
-                    }}
-                    className={control}
-                  >
-                    <option value="">Choose account</option>
-                    {rows(accounts.data).map((account) => (
-                      <option key={account.id} value={account.id}>
-                        {account.name}
                       </option>
                     ))}
                   </select>
@@ -652,36 +627,18 @@ export default function PurchasingItems({ type = 2 }) {
                     className={control}
                   />
                 </label>
-                <label className="text-sm">
-                  Unit price *
-                  <input
-                    required
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={form.unit_price}
-                    onChange={(event) =>
-                      setForm((previous) => ({
-                        ...previous,
-                        unit_price: event.target.value,
-                      }))
-                    }
-                    className={control}
-                  />
-                </label>
               </div>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Set the price and account in the approval workflow.
+              </p>
               <div className="rounded-lg bg-blue-50 p-3 text-xs text-blue-900 dark:bg-blue-950 dark:text-blue-100">
                 For requisitions: {allocated} · {stockable ? 'Extra for store' : 'Unallocated'}:{" "}
-                {Math.max(0, Number(form.quantity) - allocated)} · Line amount:{" "}
-                {money(Number(form.quantity) * Number(form.unit_price))}
+                {Math.max(0, Number(form.quantity) - allocated)}
               </div>
               <section>
                 <h3 className="text-sm font-medium">
                   Outstanding requisitions for this item
                 </h3>
-                {form.requestScope && (
-                  <p className="mt-1 whitespace-pre-wrap text-sm">{form.requestScope}</p>
-                )}
                 <p className="mt-1 text-xs text-gray-500">
                   Enter the quantity allocated to each request. {stockable ? "Unallocated units are for stock." : "Services and other non-stock items do not enter inventory."}
                 </p>
