@@ -24,6 +24,7 @@ function load(relative, mocks = {}, globals = {}) {
     ...globals,
     require: (id) => {
       if (id in mocks) return mocks[id];
+      if (id.endsWith(".css")) return {};
       if (id.startsWith(".")) {
         let resolved = path.resolve(path.dirname(file), id);
         if (!path.extname(resolved))

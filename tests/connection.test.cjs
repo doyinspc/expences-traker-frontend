@@ -16,7 +16,7 @@ function setup() {
   vm.runInNewContext(transformSync(fs.readFileSync(path.join(root,'src/utils/functions/mutationBody.js'),'utf8'),{format:'cjs'}).code,{module:bodyModule,exports:bodyModule.exports,FormData,Blob});
   const mocks = {
     'react-redux': { useSelector: select => select({ auth: selected }) },
-    react: { useState: v => [v, () => {}] },
+    react: { useState: v => [v, () => {}], useEffect: effect => effect() },
     '@tanstack/react-query': {
       useQuery: opts => { query = opts; return {}; },
       useMutation: opts => { mutation = opts; return { isPending: true }; },

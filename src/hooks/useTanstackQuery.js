@@ -1,6 +1,6 @@
 import {mutationBody} from '../utils/functions/mutationBody';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { API_PATH_SETTING, axiosConfig, axiosConfig1, tokenHelpers } from '../actions/common';
 import axios from 'axios';
@@ -106,6 +106,13 @@ export default function useTanstackQuery(props) {
 
     const [param, setParam] = useState({});
     const [isEnabled, setIsEnabled] = useState(enabled ?? autoLoad);
+
+    // The parent document arrives asynchronously. Follow a changed enabled/autoLoad
+    // prop so catalogue/account reads can start after that document becomes ready.
+    // Manual loadQuery/killQuery still work while those props remain unchanged.
+    useEffect(() => {
+        setIsEnabled(enabled ?? autoLoad);
+    }, [enabled, autoLoad]);
 
     const selected = useSelector(state => state.auth || {});
     const localSettings = table === 'commons' && ([30, 31, 51].includes(Number(mainParam?.grp)) || ['room', 'roomitems', 'service', 'serviceitems'].includes(uniqueKey));

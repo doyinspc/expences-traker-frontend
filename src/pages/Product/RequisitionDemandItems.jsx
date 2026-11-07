@@ -9,6 +9,7 @@ import useReduxApiData from '../../hooks/useTanstackQuery';
 import { tokenHelpers } from '../../actions/common';
 import { purchasingRequest } from '../../utils/functions/purchasingApi';
 import LegacyRequisitionItems from './RequisitionItems';
+import RequisitionItemForm from './RequistiontemForm';
 
 const rows = (value) =>
   Array.isArray(value) ? value : Array.isArray(value?.data) ? value.data : [];
@@ -50,13 +51,6 @@ export default function RequisitionDemandItems() {
     enabled: Boolean(modern && documentId),
     queryFn: () => purchasingRequest('state', { document_id: documentId }),
   });
-  const catalogue = useReduxApiData({
-    table: 'commons',
-    uniqueKey: 'demand-catalogue',
-    queryType: 'gets',
-    mainParam: { grp: 51, is_active: 1 },
-    enabled: modern,
-  });
   const accounts = useReduxApiData({
     table: 'commons',
     uniqueKey: 'demand-accounts',
@@ -69,10 +63,6 @@ export default function RequisitionDemandItems() {
     uniqueKey: 'demand-write',
     enabled: false,
   });
-  const catalogueRows = rows(catalogue.data);
-  const selected = catalogueRows.find(
-    (item) => String(item.id) === String(form?.item_id),
-  );
   async function refresh() {
     await Promise.all(
       [
@@ -85,31 +75,19 @@ export default function RequisitionDemandItems() {
   }
   function edit(line) {
     setError('');
-    setForm({
-      id: line?.id || undefined,
-      item_id: String(line?.item_id || ''),
-      account_id: String(line?.account_id || ''),
-      quantity: line?.quantity || 1,
-      special_instructions: line?.special_instructions || '',
-    });
+    setForm(line || {});
     requestAnimationFrame(() => {
       editor.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       editor.current?.querySelector('select')?.focus();
     });
   }
-  async function save(event) {
-    event.preventDefault();
+  async function save(values) {
     if (mutation.isLoadingUpdate) return;
     try {
-      if (!selected) throw new Error('Choose an active catalogue item.');
       await mutation.loadUpdate({
-        ...form,
+        ...values,
+        ...(form.id ? { id: form.id } : {}),
         requisition_id: documentId,
-        category_id: selected.parent_id,
-        item_id: Number(form.item_id),
-        account_id: Number(form.account_id),
-        quantity: Number(form.quantity),
-        ...(!form.id ? {unit_price: '0.00', total_price: '0.00'} : {}),
         cat: 'insert',
       });
       setForm(null);
@@ -194,7 +172,7 @@ export default function RequisitionDemandItems() {
                         {line.item_name} · {line.unit || 'Service'}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {line.account_name}
+                        {line.account_name} · {Number(line.is_type) === 1 ? 'CAPEX' : 'OPEX'}
                       </p>
                       <p className="mt-1 whitespace-pre-wrap text-xs">
                         {line.special_instructions}
@@ -246,102 +224,23 @@ export default function RequisitionDemandItems() {
         </div>
       )}
       {form && (
-        <form
-          ref={editor}
-          onSubmit={save}
-          className="space-y-4 rounded-xl border border-brand-300 p-4 dark:border-brand-800"
-        >
-          <h2 className="font-semibold">
-            {form.id ? 'Edit requested item' : 'Add requested item'}
-          </h2>
-          <fieldset disabled={mutation.isLoadingUpdate} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="text-sm">
-                Item *
-                <select
-                  required
-                  className={control}
-                  value={form.item_id}
-                  onChange={(event) =>
-                    setForm({ ...form, item_id: event.target.value })
-                  }
-                >
-                  <option value="">Choose catalogue item</option>
-                  {catalogueRows.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name} · {item.text_1 || 'Service'}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-sm">
-                Account classification *
-                <select
-                  required
-                  className={control}
-                  value={form.account_id}
-                  onChange={(event) =>
-                    setForm({ ...form, account_id: event.target.value })
-                  }
-                >
-                  <option value="">Choose account classification</option>
-                  {rows(accounts.data).map((account) => (
-                    <option key={account.id} value={account.id}>
-                      {account.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-sm">
-                Quantity * ({selected?.text_1 || 'saved unit'})
-                <input
-                  required
-                  type="number"
-                  min="1"
-                  max="999999999"
-                  step="1"
-                  className={control}
-                  value={form.quantity}
-                  onChange={(event) =>
-                    setForm({ ...form, quantity: event.target.value })
-                  }
-                />
-              </label>
-              <label className="text-sm">
-                Specifications / purpose
-                <textarea
-                  className={`${control} py-2`}
-                  value={form.special_instructions}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      special_instructions: event.target.value,
-                    })
-                  }
-                />
-              </label>
-            </div>
-            <p className="text-xs text-gray-500">
-              Save the item first, then add its reference images under Images
-              and documents by stage.
-            </p>
-            <div className="flex gap-3">
-              <button
-                type="submit"
-                className="min-h-11 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white"
-              >
-                {mutation.isLoadingUpdate ? 'Saving…' : 'Save requested item'}
-              </button>
-              <button
-                type="button"
-                className="min-h-11 px-3"
-                onClick={() => setForm(null)}
-              >
-                Cancel
-              </button>
-            </div>
-          </fieldset>
-        </form>
+        <div ref={editor}>
+          <RequisitionItemForm
+            key={form.id || 'new'}
+            requisitionId={documentId}
+            parent_row={parent.document}
+            initialData={form}
+            isEdit={Boolean(form.id)}
+            priceFree
+            accountOptions={rows(accounts.data)}
+            accountsLoading={accounts.isPending || accounts.isLoading}
+            accountsError={accounts.error}
+            onRetryAccounts={() => accounts.refetch()}
+            isLoading={mutation.isLoadingUpdate}
+            onSave={save}
+            onCancel={() => setForm(null)}
+          />
+        </div>
       )}
       {error && (
         <p role="alert" className="text-sm text-red-600 dark:text-red-300">

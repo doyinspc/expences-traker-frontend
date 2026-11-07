@@ -7,7 +7,16 @@ import useReduxApiData from '../../hooks/useTanstackQuery';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 
-// ==================== COMPONENT ====================
+/**
+ * Capture a requested item using the existing expense-category tree.
+ * Load categories and their children, filter the item selector by category, and
+ * preserve the requested quantity, OPEX/CAPEX classification, description and date.
+ * In price-free mode, hide monetary inputs and submit zero prices only for a new
+ * line; editing never overwrites a historical estimate. Modern requisitions also
+ * supply account options so later order allocations keep the same classification.
+ * Validate the selected category/item before handing the payload to the caller;
+ * the caller saves it against the parent document and enforces approval locks.
+ */
 const RequisitionItemForm = ({
     requisitionId,
     parent_row,
@@ -18,6 +27,10 @@ const RequisitionItemForm = ({
     priceFree = Number(parent_row?.requisition_type) === 1,
     isLoading = false,
     onError,
+    accountOptions,
+    accountsLoading = false,
+    accountsError,
+    onRetryAccounts,
 }) => {
     
     const { tenantDb } = useSelector(state => state.auth);
@@ -26,7 +39,6 @@ const RequisitionItemForm = ({
 
     // ==================== STATE ====================
     const [category_id, setcategory_id] = useState([]);
-    const [filteredItems, setFilteredItems] = useState([]);
     const [loadingItems, setLoadingItems] = useState(false);
     const [fetchError, setFetchError] = useState(null);
     const [touched, setTouched] = useState({});
@@ -37,6 +49,7 @@ const RequisitionItemForm = ({
         requisition_id: requisitionId || 0,
         category_id: initialData?.category_id ?? null,
         item_id: initialData?.item_id ?? null,
+        account_id: initialData?.account_id ?? null,
         is_type: initialData?.is_type ?? 0, // 0 for OPEX, 1 for CAPEX
         quantity: initialData?.quantity ?? null,
         unit_price: initialData?.unit_price ?? null,
@@ -69,18 +82,6 @@ const RequisitionItemForm = ({
       }, [formData?.category_id, categories])
       const selectedCatalogueItem=items.find(item=>String(item.id)===String(formData.item_id));
       const selectedUnit=String(selectedCatalogueItem?selectedCatalogueItem.text_1||'':String(initialData?.item_id)===String(formData.item_id)?initialData?.unit_of_measure||'':'').trim();
-
-    // ==================== FILTER ITEMS BY CATEGORY ====================
-    useEffect(() => {
-        if (formData.category_id && items.length > 0) {
-            const filtered = items.filter(
-                item => parseInt(item.category_id) === parseInt(formData.category_id)
-            );
-            setFilteredItems(filtered);
-        } else {
-            setFilteredItems([]);
-        }
-    }, [formData.category_id, items]);
 
     // ==================== HANDLE CATEGORY CHANGE ====================
     const handleCategoryChange = (e) => {
@@ -123,13 +124,13 @@ const RequisitionItemForm = ({
     const handleInputChange = (e) => {
         const { name, value, type } = e.target;
         
-        const allowedFields = ['quantity', 'unit_price', 'total_price', 'is_type', 'special_instructions'];
+        const allowedFields = ['quantity', 'unit_price', 'total_price', 'is_type', 'special_instructions', 'account_id'];
         if (!allowedFields.includes(name) && name !== 'sku_id') {
             console.warn('Unknown field:', name);
             return;
         }
         
-        if (type === 'number' || name === 'is_type') {
+        if (type === 'number' || name === 'is_type' || name === 'account_id') {
             const numValue = value === '' ? null : Number(value);
             if (value !== '' && isNaN(numValue)) return;
             
@@ -192,6 +193,10 @@ const RequisitionItemForm = ({
             newErrors.item_id = 'Selected item is invalid';
         }
 
+        if (accountOptions && !accountOptions.some(account => String(account.id) === String(formData.account_id))) {
+            newErrors.account_id = 'Choose an active account classification';
+        }
+
         if (!priceFree && !formData.total_price && !formData.unit_price) {
             newErrors.total_price = 'A Total Price or Unit Price is required';
         }
@@ -202,6 +207,10 @@ const RequisitionItemForm = ({
 
         if (!priceFree && formData.total_price !== null && formData.total_price < 0) {
             newErrors.total_price = 'Total price cannot be negative';
+        }
+
+        if (priceFree && (!Number.isInteger(formData.quantity) || formData.quantity < 1 || formData.quantity > 999999999)) {
+            newErrors.quantity = 'Enter a whole quantity between 1 and 999999999';
         }
 
         if (formData.quantity !== null && formData.quantity !== undefined && formData.quantity < 0) {
@@ -217,7 +226,7 @@ const RequisitionItemForm = ({
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
-    }, [priceFree, formData, requisitionId, categories, items]);
+    }, [priceFree, formData, requisitionId, categories, items, accountOptions]);
 
     // ==================== HANDLE BLUR FOR VALIDATION ====================
     const handleBlur = (e) => {
@@ -248,6 +257,7 @@ const RequisitionItemForm = ({
             requisition_id: requisitionId,
             category_id: formData.category_id,
             item_id: formData.item_id,
+            ...(accountOptions ? { account_id: Number(formData.account_id) } : {}),
             is_type: formData.is_type,
             quantity: formData.quantity,
             ...(!priceFree ? {unit_price: formData.unit_price, total_price: formData.total_price ?? (formData.quantity ?? 0) * (formData.unit_price ?? 0)} : !(isEdit || initialData?.id) ? {unit_price:'0.00', total_price:'0.00'} : {}),
@@ -264,7 +274,8 @@ const RequisitionItemForm = ({
     }, [])
     
 
-    const isFormDisabled = isLoading || loadingCategories || loadingItems;
+    const isFormDisabled = isLoading || loadingCategories || loadingItems || accountsLoading;
+    const loadError = expenseError?.message || accountsError?.message || fetchError;
 
     // ==================== RENDER ====================
     return (
@@ -349,16 +360,17 @@ const RequisitionItemForm = ({
             </div>
 
             {/* Error Banner */}
-            {fetchError && (
+            {loadError && (
                 <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
                     <AlertCircle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
                     <div className="text-sm text-red-700 dark:text-red-300">
                         <p className="font-medium">Error loading data</p>
-                        <p>{fetchError}</p>
+                        <p role="alert">{loadError}</p>
                         <button
                             type="button"
                             onClick={() => {
                                 loadExpenses();
+                                onRetryAccounts?.();
                             }}
                             className="mt-1 text-xs text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 underline"
                         >
@@ -399,6 +411,20 @@ const RequisitionItemForm = ({
                         <option value={1}>CAPEX</option>
                     </select>
                 </div>
+
+                {accountOptions && <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Account classification <span className="text-red-500">*</span>
+                    </label>
+                    <select name="account_id" value={formData.account_id ?? ''}
+                        onChange={handleInputChange} onBlur={handleBlur}
+                        disabled={isFormDisabled} required
+                        className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600">
+                        <option value="">Choose account classification</option>
+                        {accountOptions.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}
+                    </select>
+                    {errors.account_id && touched.account_id && <p className="mt-1 text-xs text-red-500">{errors.account_id}</p>}
+                </div>}
 
                 {/* Category Select */}
                 <div>
@@ -468,7 +494,7 @@ const RequisitionItemForm = ({
                     {errors.item_id && touched.item_id && (
                         <p className="mt-1 text-xs text-red-500">{errors.item_id}</p>
                     )}
-                    {formData.category_id && !filteredItems.length && !loadingItems && (
+                    {formData.category_id && !items.length && !loadingItems && (
                         <p className="mt-1 text-xs text-gray-400">No items in this category</p>
                     )}
                 </div>
@@ -481,6 +507,8 @@ const RequisitionItemForm = ({
                     <input
                         type="number"
                         name="quantity"
+                        required={priceFree}
+                        max="999999999"
                         value={formData.quantity ?? ''}
                         onChange={handleInputChange}
                         onBlur={handleBlur}
@@ -602,7 +630,7 @@ const RequisitionItemForm = ({
                 {/* Special Instructions - Full Width */}
                 <div className="md:col-span-2">
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Special Instructions
+                        Description / Special Instructions
                     </label>
                     <textarea
                         name="special_instructions"
