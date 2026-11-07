@@ -70,7 +70,7 @@ function formHarness(initialData,priceFree=true){
     '../../actions/common':{},'react-redux':{useSelector:fn=>fn({auth:{tenantDb:'test'}})},
     '../../hooks/useTanstackQuery':config=>{queries.push(config);return {data:options,loadQuery:()=>reads.push(config),isLoading:false};}
   });
-  const props={requisitionId:90,parent_row:{requisition_type:1},initialData,priceFree,accountOptions:[{id:7,name:'Office equipment'}],onSave:value=>saved.push(value)};
+  const props={requisitionId:90,parent_row:{requisition_type:1},initialData,priceFree,onSave:value=>saved.push(value)};
   return {render:()=>h.render(()=>Form(props)),saved,reads,queries};
 }
 test('Original add-item form requests structured categories and filters item options after a category is chosen',()=>{
@@ -82,16 +82,17 @@ test('Original add-item form requests structured categories and filters item opt
   assert.equal(named(tree,'item_id').props.disabled,false);
   assert.ok(find(named(tree,'item_id'),n=>n.type==='option'&&React.Children.toArray(n.props.children).join('')==='Keyboard'));
   assert.ok(named(tree,'special_instructions'));assert.ok(named(tree,'is_type'));
+  assert.equal(find(tree,n=>n.props?.name==='account_id'),null);
   assert.equal(find(tree,n=>n.props?.name==='unit_price'),null);
   assert.equal(find(tree,n=>n.props?.name==='total_price'),null);
 });
-test('Adding demand preserves description, CAPEX, quantity and account while sending zero new prices',()=>{
+test('Adding demand preserves description, CAPEX and quantity without an account while sending zero new prices',()=>{
   const h=formHarness();let tree=h.render();
   const change=(name,value,type='select-one')=>{named(tree,name).props.onChange({target:{name,value,type}});tree=h.render();};
-  change('category_id','5');change('item_id','51');change('is_type','1');change('account_id','7');change('quantity','5','number');change('special_instructions','  Wireless keyboard with number pad  ','textarea');
+  change('category_id','5');change('item_id','51');change('is_type','1');change('quantity','5','number');change('special_instructions','  Wireless keyboard with number pad  ','textarea');
   tree.props.onSubmit({preventDefault(){}});
   assert.equal(h.saved.length,1);const value=h.saved[0];
-  assert.equal(value.category_id,5);assert.equal(Number(value.item_id),51);assert.equal(value.is_type,1);assert.equal(value.quantity,5);assert.equal(value.account_id,7);
+  assert.equal(value.category_id,5);assert.equal(Number(value.item_id),51);assert.equal(value.is_type,1);assert.equal(value.quantity,5);assert.equal('account_id' in value,false);
   assert.equal(value.special_instructions,'Wireless keyboard with number pad');assert.equal(value.unit_price,'0.00');assert.equal(value.total_price,'0.00');
 });
 test('Editing existing demand retains date and OPEX without erasing historical prices',()=>{
@@ -99,7 +100,7 @@ test('Editing existing demand retains date and OPEX without erasing historical p
   const tree=h.render();tree.props.onSubmit({preventDefault(){}});assert.equal(h.saved.length,1);
   const value=h.saved[0];assert.equal(value.is_type,0);assert.equal(value.special_instructions,'Original description');assert.equal(value.delivery_required_by.toISOString().slice(0,10),'2026-11-20');assert.equal('unit_price' in value,false);assert.equal('total_price' in value,false);
 });
-test('Invalid account or catalogue selection cannot save an empty requisition line',()=>{
+test('Invalid catalogue selection cannot save an empty requisition line',()=>{
   const h=formHarness({category_id:5,item_id:999,account_id:999,quantity:1});const tree=h.render();tree.props.onSubmit({preventDefault(){}});assert.equal(h.saved.length,0);
 });
 test('Priced documents keep the original unit and total price controls',()=>{
@@ -123,13 +124,35 @@ test('The actual requisition page waits for its parent, opens the original form 
     './RequisitionItems':()=>null,
     './RequistiontemForm':function OriginalRequisitionForm(){return null;}
   });
-  h.render(()=>Page());assert.equal(configurations.find(config=>config.uniqueKey==='demand-accounts').enabled,false);
+  h.render(()=>Page());assert.equal(configurations.some(config=>config.uniqueKey==='demand-accounts'),false);
   parent={isPending:false,document:{id:90,title:'IT demand',location_id:25,requisition_type:1,purchasing_version:2}};
-  let tree=h.render(()=>Page());assert.equal(configurations.filter(config=>config.uniqueKey==='demand-accounts').at(-1).enabled,true);
+  let tree=h.render(()=>Page());assert.equal(configurations.some(config=>config.uniqueKey==='demand-accounts'),false);
   const add=find(tree,node=>node.type==='button'&&node.props.children==='Add requested item');assert.ok(add);add.props.onClick();
   tree=h.render(()=>Page());const form=find(tree,node=>node.type?.name==='OriginalRequisitionForm');assert.ok(form);
   assert.equal(form.props.priceFree,true);assert.equal(form.props.requisitionId,90);assert.equal(form.props.parent_row.location_id,25);
-  await form.props.onSave({item_id:51,category_id:5,account_id:7,is_type:1,quantity:5,special_instructions:'Keyboard',delivery_required_by:'2026-11-20',unit_price:'0.00',total_price:'0.00'});
-  assert.equal(writes.length,1);assert.equal(writes[0].requisition_id,90);assert.equal(writes[0].is_type,1);assert.equal(writes[0].special_instructions,'Keyboard');assert.equal(writes[0].delivery_required_by,'2026-11-20');
+  assert.equal(form.props.accountOptions,undefined);
+  await form.props.onSave({item_id:51,category_id:5,is_type:1,quantity:5,special_instructions:'Keyboard',delivery_required_by:'2026-11-20',unit_price:'0.00',total_price:'0.00'});
+  assert.equal(writes.length,1);assert.equal(writes[0].requisition_id,90);assert.equal('account_id' in writes[0],false);assert.equal(writes[0].is_type,1);assert.equal(writes[0].special_instructions,'Keyboard');assert.equal(writes[0].delivery_required_by,'2026-11-20');
   tree=h.render(()=>Page());assert.equal(find(tree,node=>node.type?.name==='OriginalRequisitionForm'),null);
+});
+test('Purchase Orders can select original group-five expense items and unclassified approved demand',()=>{
+  const h=harness(),configs=[];
+  const Page=load('src/pages/Product/PurchasingItems.jsx',{
+    react:h.hooks,'react-redux':{useSelector:fn=>fn({auth:{location_id:25,role_id:7}})},
+    'react-router-dom':{useNavigate:()=>()=>{},useParams:()=>({id:'91'})},
+    '@tanstack/react-query':{useQueryClient:()=>({invalidateQueries:async()=>{}}),useQuery:()=>({data:{items:[],can_edit:true,candidates:[{id:41,item_id:100,account_id:null,source_title:'IT keyboards',available_quantity:5},{id:42,item_id:100,account_id:8,source_title:'Different existing account',available_quantity:1}]},isPending:false})},
+    '../../hooks/useParentDocumentContext':()=>({document:{id:91,requisition_type:2,purchasing_version:2}}),
+    '../../hooks/useTanstackQuery':config=>{configs.push(config);return {data:config.uniqueKey==='purchasing-catalogue'?[{id:30,children:[{id:100,grp:5,name:'Hardware Equipment',text_1:'pieces'}]}]:[{id:7,name:'Office equipment'}]};},
+    '../../actions/common':{tokenHelpers:{getTenantDb:()=> 'test',getToken:()=> 'test'}},
+    '../../components/common/ParentDocumentContext':()=>null,'../../components/procurement/ItemEvidencePanel':()=>null,
+    '../../utils/functions/purchasingApi':{purchasingRequest:async()=>{}},'./PurchaseOrderRequisitions':()=>null
+  });
+  let tree=h.render(()=>Page({type:2}));
+  assert.equal(configs.find(config=>config.uniqueKey==='purchasing-catalogue').queryType,'getRowsWithChildrenStructuredExpense');
+  find(tree,n=>n.type==='button'&&n.props.children==='Add item / consolidate requisitions').props.onClick();tree=h.render(()=>Page({type:2}));
+  const choose=(value)=>find(tree,n=>n.type==='select'&&find(n,option=>option.type==='option'&&String(option.props.value)===String(value)));
+  choose(100).props.onChange({target:{value:'100'}});tree=h.render(()=>Page({type:2}));
+  choose(7).props.onChange({target:{value:'7'}});tree=h.render(()=>Page({type:2}));
+  const text=JSON.stringify(tree,(_key,value)=>typeof value==='function'?undefined:value);
+  assert.match(text,/IT keyboards/);assert.doesNotMatch(text,/Different existing account/);
 });

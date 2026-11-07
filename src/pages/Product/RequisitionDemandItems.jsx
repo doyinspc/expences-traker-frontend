@@ -11,8 +11,6 @@ import { purchasingRequest } from '../../utils/functions/purchasingApi';
 import LegacyRequisitionItems from './RequisitionItems';
 import RequisitionItemForm from './RequistiontemForm';
 
-const rows = (value) =>
-  Array.isArray(value) ? value : Array.isArray(value?.data) ? value.data : [];
 const control =
   'mt-1 min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900';
 
@@ -21,7 +19,7 @@ const control =
  * Algorithm: resolve the exact parent from the route; preserve the earlier requisition
  * layout through its price-free fallback, while cash advances retain their priced form.
  * Existing stored estimates are never erased on edit. For new requisitions load server-owned
- * lifecycle/fulfilment state, save only catalogue, account, quantity and specifications,
+ * lifecycle/fulfilment state, save only category, item, quantity, expense type, date and description,
  * and keep stage evidence attached to each saved line. A saved unit comes from Settings;
  * neither the browser nor the request form can redefine it. Approval locks editing and
  * stock issues alone reduce outstanding demand. Pricing starts at Purchase Order stage.
@@ -50,13 +48,6 @@ export default function RequisitionDemandItems() {
     queryKey: ['purchasing-state', ...scope],
     enabled: Boolean(modern && documentId),
     queryFn: () => purchasingRequest('state', { document_id: documentId }),
-  });
-  const accounts = useReduxApiData({
-    table: 'commons',
-    uniqueKey: 'demand-accounts',
-    queryType: 'gets',
-    mainParam: { grp: 7, is_active: 1 },
-    enabled: modern,
   });
   const mutation = useReduxApiData({
     table: 'requisitionitems',
@@ -172,7 +163,7 @@ export default function RequisitionDemandItems() {
                         {line.item_name} · {line.unit || 'Service'}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {line.account_name} · {Number(line.is_type) === 1 ? 'CAPEX' : 'OPEX'}
+                        {Number(line.is_type) === 1 ? 'CAPEX' : 'OPEX'}
                       </p>
                       <p className="mt-1 whitespace-pre-wrap text-xs">
                         {line.special_instructions}
@@ -232,10 +223,6 @@ export default function RequisitionDemandItems() {
             initialData={form}
             isEdit={Boolean(form.id)}
             priceFree
-            accountOptions={rows(accounts.data)}
-            accountsLoading={accounts.isPending || accounts.isLoading}
-            accountsError={accounts.error}
-            onRetryAccounts={() => accounts.refetch()}
             isLoading={mutation.isLoadingUpdate}
             onSave={save}
             onCancel={() => setForm(null)}

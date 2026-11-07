@@ -56,10 +56,10 @@ export default function PurchasingItems({ type = 2 }) {
     queryFn: () => purchasingRequest("state", { document_id: documentId }),
   });
   const catalogue = useReduxApiData({
-    table: "commons",
+    table: "expenses",
     uniqueKey: "purchasing-catalogue",
-    queryType: "gets",
-    mainParam: { grp: 51, is_active: 1 },
+    queryType: "getRowsWithChildrenStructuredExpense",
+    mainParam: { grp: 5, is_active: 1 },
     enabled: modern && type === 2,
   });
   const accounts = useReduxApiData({
@@ -73,14 +73,14 @@ export default function PurchasingItems({ type = 2 }) {
   const candidates = state?.candidates || EMPTY_ROWS;
   const name = type === 9 ? "Procurement" : "Purchase Order";
   const path = type === 9 ? "procurement" : "purchaseorder";
-  const catalogueRows = rows(catalogue.data);
+  const catalogueRows = rows(catalogue.data).flatMap(category => category.children || []);
   const sourceRows = useMemo(() => {
     const eligible = new Map(
       candidates
         .filter(
           (row) =>
             String(row.item_id) === String(form?.item_id) &&
-            String(row.account_id) === String(form?.account_id),
+            (!Number(row.account_id) || String(row.account_id) === String(form?.account_id)),
         )
         .map((row) => [Number(row.id), row]),
     );
@@ -617,7 +617,7 @@ export default function PurchasingItems({ type = 2 }) {
               </div>
               <section>
                 <h3 className="text-sm font-medium">
-                  Outstanding requisitions for this item and account
+                  Outstanding requisitions for this item
                 </h3>
                 <p className="mt-1 text-xs text-gray-500">
                   Enter the quantity allocated to each request. Leave blank for
@@ -648,7 +648,7 @@ export default function PurchasingItems({ type = 2 }) {
                 ))}
                 {!sourceRows.length && (
                   <p className="mt-2 text-xs text-gray-500">
-                    No outstanding requests for the selected item and account.
+                    No outstanding requests for the selected item.
                     This quantity can be purchased for stock or a standalone
                     service.
                   </p>
