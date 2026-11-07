@@ -816,15 +816,22 @@ export default function ApprovalCenterDetails() {
                 isLoading={mutation.isPending}
                 onSubmit={(values) => mutation.mutateAsync(values)}
               />
-              <ApprovalEmailReminder workflow={workflow} />
               {!closed && (
-                <p className="px-1 text-xs leading-5 text-gray-500 dark:text-gray-400">
-                  {workflow.escalation_role_name
-                    ? `Escalation role: ${workflow.escalation_role_name}`
-                    : workflow.permissions?.can_approve
-                      ? "No escalation role is configured. An administrator can set one in workflow settings."
-                      : ""}
-                </p>
+                <details className={card}>
+                  <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">
+                    Reminders and escalation
+                  </summary>
+                  <div className="space-y-2 px-4 pb-4">
+                    <ApprovalEmailReminder workflow={workflow} />
+                    {(workflow.escalation_role_name || workflow.permissions?.can_approve) && (
+                      <p className="text-xs leading-5 text-gray-500 dark:text-gray-400">
+                        {workflow.escalation_role_name
+                          ? `Escalation role: ${workflow.escalation_role_name}`
+                          : "No escalation role is configured for this step."}
+                      </p>
+                    )}
+                  </div>
+                </details>
               )}
             </div>
           </div>
@@ -841,8 +848,8 @@ export default function ApprovalCenterDetails() {
             />
           </aside>
         </div>
-        <details className={`${card} group`} open>
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 font-semibold text-gray-900 dark:text-white">
+        <details className={`${card} group`}>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">
             <span className="flex items-center gap-2">
               <History size={18} className="text-gray-400" aria-hidden="true" />
               Approval history
@@ -895,7 +902,7 @@ export default function ApprovalCenterDetails() {
         </details>
         {workflow.escalation_history?.length > 0 && (
           <details className={`${card} group`}>
-            <summary className="cursor-pointer p-5 font-semibold text-gray-900 dark:text-white">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">
               Escalation history ({workflow.escalation_history.length})
             </summary>
             <ol className="space-y-4 px-5 pb-5 text-sm text-gray-700 dark:text-gray-300">
@@ -919,7 +926,7 @@ export default function ApprovalCenterDetails() {
         )}
         {workflow.audit_history?.length > 0 && (
           <details className={card}>
-            <summary className="cursor-pointer p-5 font-semibold text-gray-900 dark:text-white">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">
               Decision log ({workflow.audit_history.length})
             </summary>
             <ol className="space-y-4 px-5 pb-5 text-sm text-gray-700 dark:text-gray-300">

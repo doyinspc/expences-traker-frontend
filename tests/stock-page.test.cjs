@@ -4,10 +4,10 @@ const {pathToFileURL}=require('node:url');
 const labels=import(pathToFileURL(path.join(root,'src/utils/functions/workflowPresentation.js')).href);
 let workflowPresentation;
 test.before(async()=>{workflowPresentation=await labels;});
-function markup(data,props={},activeView){
+function markup(data,props={},activeView,list){
  const module={exports:{}};const code=require(path.join(root,'node_modules/esbuild')).transformSync(fs.readFileSync(path.join(root,'src/pages/Inventory/StockLedgerPanel.jsx'),'utf8'),{loader:'jsx',format:'cjs',jsx:'automatic'}).code;
  const mocks={
- react:{...React,useState:initial=>React.useState(activeView&&initial==='issue'?activeView:initial)},
+ react:{...React,useState:initial=>React.useState(activeView&&initial==='issue'?activeView:list&&initial==='active'?list:initial)},
  '@tanstack/react-query':{useQuery:options=>{
    if(activeView && activeView!=='issue')assert.equal(options.queryKey[4],'receipt');
    else if(!props.reportOnly)assert.equal(options.queryKey[4],'issue');
@@ -33,13 +33,30 @@ test('Approved Goods can be reviewed before opening without showing a verified s
      quantity:6,requested_quantity:5,remaining_quantity:6,stock_review_id:4,stock_review_stage_id:10}]});
  assert.match(html,/Approved stock requisitions/);
  assert.match(html,/IT equipment/);
- assert.match(html,/aria-label="Review Keyboards"[^>]*>Review<\/button>/);
- assert.doesNotMatch(html,/<button[^>]*disabled=""[^>]*aria-label="Review Keyboards"/);
+ assert.match(html,/aria-label="Forward to Purchase Order: Keyboards"/);
+ assert.match(html,/aria-label="Issue from stock: Keyboards"[^>]*disabled=""/);
  assert.match(html,/<dialog[^>]*aria-label="Stock confirmation"/);
  assert.match(html,/Requested 5/);
  assert.match(html,/Opening stock unconfirmed/);
  for (const label of ['Requisition queue','Receive goods','Stock balances','Movement history','Opening stock']) assert.ok(html.includes('>'+label+'</button>'),label);
  assert.doesNotMatch(html,/0 on hand|Review stock issue/);
+});
+test('Stock separates forwarded lines and paginates active requests by 25',()=>{
+ const row={document_id:11,title:'IT request',department_name:'Information Technology',unit:'pieces',requested_quantity:5,
+   quantity:5,remaining_quantity:5,stock_review_id:4,stock_review_stage_id:10};
+ const active=Array.from({length:500},(_,id)=>({...row,id,item_name:'Active item '+id}));
+ const forwarded={...row,id:501,item_name:'Forwarded keyboard',stock_review_finalized_at:'2026-11-07',stock_review_stage_id:40};
+ const resolved={...forwarded,id:502,item_name:'Resolved keyboard',remaining_quantity:0};
+ const data={schema_ready:true,period,years:[],can_review:true,rows:[],candidates:[...active,forwarded,resolved]};
+ const queue=markup(data);
+ assert.match(queue,/Information Technology/);
+ assert.match(queue,/1–25 of 500 items/);
+ assert.match(queue,/Active item 24/);
+ assert.doesNotMatch(queue,/Active item 25|Forwarded keyboard|Resolved keyboard/);
+ const purchasing=markup(data,{},undefined,'purchasing');
+ assert.match(purchasing,/Forwarded keyboard/);
+ assert.match(purchasing,/Awaiting receipt/);
+ assert.doesNotMatch(purchasing,/Active item 0|Resolved keyboard/);
 });
 test('Receive goods explains the opening requirement without hiding the tabs',()=>{
  const html=markup({schema_ready:true,period,years:[],items:[]},{},'receipt');

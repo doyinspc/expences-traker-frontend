@@ -69,12 +69,25 @@ function StockReviewForm({ line, disabled, onReview }) {
         <textarea className={control} maxLength={2000} required value={reason}
           onChange={event => setReason(event.target.value)} disabled={disabled} />
       </label>
-      <p className="text-xs">Record any available issue first. Completing this review will release {quantity(released)} {line.unit} to Purchasing.</p>
+      <p className="text-xs">Record any available issue first. Completing this review sends {quantity(released)} {line.unit} to Purchasing.</p>
       <div className="flex flex-wrap gap-2">
         <button className={control} value="save" disabled={disabled}>Save Stock review</button>
-        <button className={button} value="finalize" disabled={disabled}>Complete Stock review</button>
+        <button className={button} value="finalize" disabled={disabled}>
+          {released > 0 ? 'Review forwarding' : 'Complete Stock review'}
+        </button>
       </div>
     </form>
+  );
+}
+
+function StockActionButton({ label, icon, disabled, onClick }) {
+  const paths = { issue: 'M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4', forward: 'M4 12h15m-6-6 6 6-6 6', complete: 'm5 12 4 4L19 6' };
+  return (
+    <button type="button" title={label} aria-label={label} disabled={disabled} onClick={onClick}
+      className="grid size-10 place-items-center rounded-md border border-gray-300 hover:bg-blue-50 disabled:opacity-40 dark:border-gray-600 dark:hover:bg-blue-950">
+      <svg aria-hidden="true" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={paths[icon]} /></svg>
+    </button>
   );
 }
 
@@ -126,7 +139,9 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
   const initialTab = reportOnly ? 'balance' : [2, 9].includes(Number(documentType)) ? 'receipt' : 'issue';
   const [year,setYear]=useState(0),[asof,setAsof]=useState(''),[tab,setTab]=useState(initialTab);
   const [search,setSearch]=useState(''),[line,setLine]=useState(null),[amount,setAmount]=useState(''),[date,setDate]=useState(''),[direct,setDirect]=useState(false);
-  const [queueFilter, setQueueFilter] = useState('all');
+  const [queueList, setQueueList] = useState('active');
+  const [queuePage, setQueuePage] = useState(0);
+  const [itemAction, setItemAction] = useState('issue');
   const [evidenceIds,setEvidenceIds]=useState([]);
   const [receiptId, setReceiptId] = useState('');
   const [delivery,setDelivery]=useState(''),[receivedNew,setReceivedNew]=useState(false);
@@ -165,8 +180,8 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
       ? [['balance', 'Balance report'], ['history', 'Movement history']]
       : [['issue', 'Requisition queue'], ['receipt', 'Receive goods'], ['balance', 'Stock balances'], ['history', 'Movement history']])
     : [['issue', 'Requisition queue'], ['opening', 'Opening stock']];
-  const changeTab=value=>{setTab(value);if(value==='issue')setAsof('');setReview(null);setLine(null);setError('');setMessage('');};
-  const changeYear=value=>{setYear(Number(value));if(tab==='opening')setTab(initialTab);setAsof('');setReview(null);setLine(null);setOpenRows([]);setItemId('');setOpeningAmount('');setError('');setMessage('');};
+  const changeTab=value=>{setTab(value);setQueuePage(0);if(value==='issue')setAsof('');setReview(null);setLine(null);setError('');setMessage('');};
+  const changeYear=value=>{setYear(Number(value));setQueuePage(0);if(tab==='opening')setTab(initialTab);setAsof('');setReview(null);setLine(null);setOpenRows([]);setItemId('');setOpeningAmount('');setError('');setMessage('');};
   const reviewMovement=()=>{
     if(!line||!/^\d+$/.test(amount)||Number(amount)<1||Number(amount)>Number(line.remaining_quantity)){setError('Enter a positive whole quantity up to the outstanding quantity.');return;}
     if(!date){setError('Choose the actual receipt or issue date.');return;}
@@ -199,17 +214,21 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
     catch(failure){setError(failure.response?.data?.message||failure.message||'Stock could not be saved.');}
     finally{setBusy(false);}
   };
-  const matches=row=>[row.item_name,row.category_name,row.unit,row.title,row.document_id,row.reference].join(' ').toLowerCase().includes(search.trim().toLowerCase());
+  const matches=row=>[row.item_name,row.category_name,row.unit,row.title,row.document_id,row.department_name,row.reference].join(' ').toLowerCase().includes(search.trim().toLowerCase());
   const rows=(data?.rows||[]).filter(matches);
-  const matchingCandidates=(data?.candidates||[]).filter(row=>(!documentId||Number(row.document_id)===Number(documentId))&&matches(row));
-  function queueStatus(row) {
-    if (row.linked_receipts?.length) return 'ready';
-    if (row.stock_review_finalized_at) return 'purchasing';
-    return 'review';
-  }
-  const candidates = view === 'issue' && queueFilter !== 'all'
-    ? matchingCandidates.filter(row => queueStatus(row) === queueFilter)
-    : matchingCandidates;
+  const waitingOnPurchasing = row => Boolean(row.stock_review_finalized_at && !row.linked_receipts?.length);
+  const isIssueQueue = view === 'issue';
+  const matchingCandidates = (data?.candidates || []).filter(row =>
+    (!documentId || Number(row.document_id) === Number(documentId)) && matches(row) &&
+    (!isIssueQueue || Number(row.remaining_quantity) > 0 || (row.stock_review_id && !row.stock_review_finalized_at))
+  );
+  const activeRequests = matchingCandidates.filter(row => !waitingOnPurchasing(row));
+  const forwardedRequests = matchingCandidates.filter(waitingOnPurchasing);
+  const candidates = isIssueQueue ? (queueList === 'purchasing' ? forwardedRequests : activeRequests) : matchingCandidates;
+  const pageSize = 25;
+  const pageCount = Math.max(1, Math.ceil(candidates.length / pageSize));
+  const currentPage = Math.min(queuePage, pageCount - 1);
+  const visibleCandidates = candidates.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
   const writable=data?.can_write&&period&&!period.closed_at;
   const canReviewLine = row => view === 'issue' && data.can_review && row.stock_review_id && !row.stock_review_finalized_at;
   function stockOnHand(item) {
@@ -218,6 +237,20 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
     if (itemBalances.some(row => Number(row.unit_mismatch) || Number(row.closing_quantity) < 0)) return null;
     return Number(itemBalances.find(row => row.unit === item.unit)?.closing_quantity || 0);
   }
+  function openStockItem(row, action) {
+    setItemAction(action);
+    setLine(row);
+    setReceiptId('');
+    setEvidenceIds([]);
+    setAmount('');
+    setDelivery('');
+    setReceivedNew(false);
+    setDate(data.today <= range.end_date ? data.today : range.end_date);
+    setDirect(false);
+    setReview(null);
+    setError('');
+  }
+
   const stockTabs = (
           <div className="flex flex-wrap gap-2" aria-label="Stock views">
             {views.map(([value, label]) => (
@@ -234,7 +267,7 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
     {mainStock && stockTabs}
     {query.isPending?<div className="relative min-h-48"><Loader text="Loading stock balances…"/></div>:query.error?<p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">{query.error.response?.data?.message||query.error.message} <button className="underline" onClick={()=>query.refetch()}>Retry</button></p>:data&&<>
       {!data.schema_ready?<div role="alert" className="space-y-3 rounded-lg bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100"><p>The stock quantity history has not been prepared on this server. No stock balance can be verified yet.</p>{!reportOnly&&data.can_prepare?<><p>Keep a current database backup before preparing stock tracking. This adds quantity history and a procurement quantity field; it retains existing users, settings, documents and workflows.</p><button disabled={busy} className={button} onClick={()=>setReview({operation:'prepare',label:'Prepare stock tracking while retaining existing records',payload:{}})}>Review stock setup</button></>:<p>A Super Admin with Full Stock access can prepare stock tracking here.</p>}</div>:!range?<p role="alert" className="rounded-lg bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">Set the accounting-year start in Company Profile before opening stock.</p>:<>
-        <div className="flex flex-wrap items-end gap-3"><label className="grid gap-1 text-sm">Accounting year<select aria-label="Stock accounting year" value={year} disabled={busy} className={control} onChange={e=>changeYear(e.target.value)}>{data.years.map(r=><option key={r.offset} value={r.offset}>{r.label} · {r.start_date} to {r.end_date}</option>)}</select></label><label className="grid gap-1 text-sm">Find an item<input aria-label="Find stock item" className={control} value={search} onChange={e=>setSearch(e.target.value)} placeholder={view === 'issue' ? 'Requisition or item' : view === 'receipt' ? 'Procurement or item' : 'Item, category or reference'}/></label>{period&&<span className={`rounded-full px-3 py-1 text-xs font-medium ${period.closed_at?'bg-gray-100 dark:bg-gray-700':'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200'}`}>{period.closed_at?'Closed stock year':'Open stock year'}</span>}</div>
+        <div className="flex flex-wrap items-end gap-3"><label className="grid gap-1 text-sm">Accounting year<select aria-label="Stock accounting year" value={year} disabled={busy} className={control} onChange={e=>changeYear(e.target.value)}>{data.years.map(r=><option key={r.offset} value={r.offset}>{r.label} · {r.start_date} to {r.end_date}</option>)}</select></label><label className="grid gap-1 text-sm">Find an item<input aria-label="Find stock item" className={control} value={search} onChange={e=>{setSearch(e.target.value);setQueuePage(0);}} placeholder={view === 'issue' ? 'Requisition, department or item' : view === 'receipt' ? 'Procurement or item' : 'Item, category or reference'}/></label>{period&&<span className={`rounded-full px-3 py-1 text-xs font-medium ${period.closed_at?'bg-gray-100 dark:bg-gray-700':'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200'}`}>{period.closed_at?'Closed stock year':'Open stock year'}</span>}</div>
 
         {Number(data.unverified_legacy_lines)>0&&<p role="status" className="rounded-lg border border-amber-300 p-3 text-sm text-amber-800 dark:border-amber-700 dark:text-amber-200">{data.unverified_legacy_lines} older stock-linked line(s) are retained for reference. Their old links do not prove physical receipts or issues. This report uses confirmed opening quantities and evidenced movements; avoid entering goods already included in the opening balance as another receipt.</p>}
         {!mainStock && (!reportOnly || period) && stockTabs}
@@ -270,18 +303,18 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
           </>:<>
             {view === 'issue' && <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-semibold">Approved stock requisitions</h3>
-              <select aria-label="Filter requisitions by status" className={control} value={queueFilter}
-                onChange={event => setQueueFilter(event.target.value)}>
-                <option value="all">All outstanding</option>
-                <option value="review">Needs Stock review</option>
-                <option value="purchasing">Sent to Purchasing</option>
-                <option value="ready">Ready to issue from receipt</option>
-              </select>
+              <div className="flex flex-wrap gap-2" aria-label="Requisition lists">
+                {[['active', 'Active Stock requests', activeRequests.length], ['purchasing', 'Waiting on Purchasing', forwardedRequests.length]].map(([value, label, count]) => (
+                  <button key={value} aria-pressed={queueList === value}
+                    className={control + (queueList === value ? ' border-blue-500 font-semibold' : '')}
+                    onClick={() => { setQueueList(value); setQueuePage(0); }}>{label} ({count})</button>
+                ))}
+              </div>
             </div>}
             {view === 'receipt' && <h3 className="font-semibold">Outstanding Procurement deliveries</h3>}
             <p className="text-sm leading-6">{view === 'receipt'
               ? 'Record deliveries against approved Procurement. Received goods can then be issued to requisitions.'
-              : 'Issue available Goods first. Complete the review to send any shortfall to Purchase Order.'}</p>
+              : queueList === 'purchasing' ? 'Forwarded quantities return to Active Stock requests when a linked receipt is available.' : 'Issue available Goods first. Complete the review to send any shortfall to Purchase Order.'}</p>
             {!writable && <p role="status" className="rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-900">
               {!period ? 'Confirm opening stock before recording issues. You can review requests now.'
                 : period.closed_at ? 'This stock year is closed. Its quantities remain available for reporting.'
@@ -289,14 +322,16 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
             </p>}
             {!period && view === 'issue' && <button className={control} onClick={() => changeTab('opening')}>Set opening stock</button>}
             {data.more_candidates&&<p role="status" className="text-sm text-amber-700 dark:text-amber-200">Showing the latest 500 eligible lines. Open the relevant procurement or requisition to record an older line.</p>}
-            <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-50 dark:bg-gray-900"><tr>{[[view === 'receipt' ? 'Procurement / item' : 'Requisition / item', false], [view === 'receipt' ? 'Expected' : 'Approved', true], [view === 'receipt' ? 'Received' : 'Issued', true], ['Outstanding', false], ['Action', false]].map(([label, desktop]) => <th scope="col" key={label} className={'px-2 py-2 text-xs sm:px-3' + (desktop ? ' hidden sm:table-cell' : '')}>{label}</th>)}</tr></thead><tbody className="divide-y divide-gray-200 dark:divide-gray-700">{candidates.map(r=><tr key={r.id}><td className="px-3 py-3"><span className="font-medium">#{r.document_id} · {r.title}</span><span className="block text-xs text-gray-500 dark:text-gray-300">{r.item_name}{view === 'receipt' && r.account_name ? ' · ' + r.account_name : ''}</span>
+            <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-50 dark:bg-gray-900"><tr>{[[view === 'receipt' ? 'Procurement / item' : 'Requisition / department / item', false], [view === 'receipt' ? 'Expected' : 'Approved', true], [view === 'receipt' ? 'Received' : 'Issued', true], ['Outstanding', false], ['Action', false]].map(([label, desktop]) => <th scope="col" key={label} className={'px-2 py-2 text-xs sm:px-3' + (desktop ? ' hidden sm:table-cell' : '')}>{label}</th>)}</tr></thead><tbody className="divide-y divide-gray-200 dark:divide-gray-700">{visibleCandidates.map(r=><tr key={r.id}><td className="px-2 py-2 sm:px-3"><span className="font-medium">#{r.document_id} · {r.title}</span>
+              {isIssueQueue && <span className="block text-xs text-gray-500 dark:text-gray-300">{r.department_name || 'Department unavailable'}</span>}
+              <span className="block text-xs text-gray-500 dark:text-gray-300">{r.item_name}{view === 'receipt' && r.account_name ? ' · ' + r.account_name : ''}</span>
               {(purchasingStageLabels[r.stock_review_stage_id] || r.linked_receipts?.length) && (
-                <span className="mt-1 inline-block rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-800 dark:bg-blue-950 dark:text-blue-200">{r.linked_receipts?.length ? 'Ready to issue' : purchasingStageLabels[r.stock_review_stage_id]}</span>
+                <span className="mt-1 inline-block rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-800 dark:bg-blue-950 dark:text-blue-200">{r.linked_receipts?.length ? 'Ready to issue' : isIssueQueue && Number(r.remaining_quantity) === 0 ? 'Complete Stock review' : purchasingStageLabels[r.stock_review_stage_id]}</span>
               )}
               </td><td className="hidden px-3 py-2 sm:table-cell">{quantity(r.quantity)} {r.unit}
                 {view === 'issue' && Number(r.requested_quantity) !== Number(r.quantity) && (
                   <span className="block text-xs text-gray-500 dark:text-gray-300">Requested {quantity(r.requested_quantity)}</span>
-                )}</td><td className="hidden px-3 py-2 sm:table-cell">{quantity(r.processed_quantity)}</td><td className="px-3 py-3 font-medium">{quantity(r.remaining_quantity)} {r.unit}
+                )}</td><td className="hidden px-3 py-2 sm:table-cell">{quantity(r.processed_quantity)}</td><td className="px-2 py-2 font-medium sm:px-3">{quantity(r.remaining_quantity)} {r.unit}
               {tab === 'issue' && year === 0 && (() => {
                 const onHand = stockOnHand(r);
                 const shortfall = Number(r.remaining_quantity) - (onHand ?? 0);
@@ -305,12 +340,32 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
                   {onHand != null && shortfall > 0 ? ` · ${quantity(shortfall)} short` : ''}
                 </span>;
               })()}
-              </td><td className="px-3 py-3"><button disabled={busy || (!writable && !canReviewLine(r))} className={control} aria-label={(view === 'receipt' ? 'Receive ' : canReviewLine(r) ? 'Review ' : 'Issue ') + r.item_name} onClick={()=>{setLine(r);setReceiptId('');setEvidenceIds([]);setAmount('');setDelivery('');setReceivedNew(false);setDate(data.today<=range.end_date?data.today:range.end_date);setDirect(false);setReview(null);setError('');}}>{view === 'receipt' ? 'Receive' : canReviewLine(r) ? 'Review' : 'Issue'}</button></td></tr>)}</tbody></table></div>
-            {!candidates.length&&<p className="py-4 text-sm text-gray-500 dark:text-gray-300">{matchingCandidates.length && queueFilter !== 'all' ? 'No requisitions match this status.' : data.can_read_candidate_documents === false
+              </td><td className="px-2 py-2">
+                {!isIssueQueue ? <button className={control} disabled={busy || !writable}
+                  onClick={() => openStockItem(r, 'receive')}>Receive</button>
+                : waitingOnPurchasing(r) ? <span className="text-xs">Awaiting receipt</span>
+                : <div className="flex gap-1">
+                  <StockActionButton label={'Issue from stock: ' + r.item_name} icon="issue"
+                    disabled={busy || !writable || Number(r.remaining_quantity) <= 0 || (year === 0 && stockOnHand(r) === 0)}
+                    onClick={() => openStockItem(r, 'issue')} />
+                  {canReviewLine(r) && <StockActionButton
+                    label={(Number(r.remaining_quantity) > 0 ? 'Forward to Purchase Order: ' : 'Complete Stock review: ') + r.item_name}
+                    icon={Number(r.remaining_quantity) > 0 ? 'forward' : 'complete'} disabled={busy}
+                    onClick={() => openStockItem(r, 'forward')} />}
+                </div>}
+              </td></tr>)}</tbody></table></div>
+            {!candidates.length&&<p className="py-4 text-sm text-gray-500 dark:text-gray-300">{data.can_read_candidate_documents === false
                 ? 'Document view access at this location is required to see these lines.'
                 : view === 'issue'
-                  ? 'No outstanding approved Goods for this location. The requisition workflow must be complete, and the Goods item must have a saved unit.'
+                  ? queueList === 'purchasing' ? 'No matching requisition items are waiting on Purchasing.' : 'No matching active Goods requests at this location.'
                   : 'No outstanding stockable lines from approved Procurement at this location.'}</p>}
+            {pageCount > 1 && <nav aria-label="Stock list pages" className="flex flex-wrap items-center justify-between gap-2 text-sm">
+              <span>{currentPage * pageSize + 1}–{Math.min((currentPage + 1) * pageSize, candidates.length)} of {candidates.length} items</span>
+              <div className="flex gap-2">
+                <button className={control} disabled={currentPage === 0} onClick={() => setQueuePage(currentPage - 1)}>Previous</button>
+                <button className={control} disabled={currentPage + 1 === pageCount} onClick={() => setQueuePage(currentPage + 1)}>Next</button>
+              </div>
+            </nav>}
 
           </>}
         </>}
@@ -321,7 +376,7 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
       className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-xl bg-white p-4 text-gray-900 shadow-xl backdrop:bg-black/60 dark:bg-gray-900 dark:text-white sm:p-6">
       {line&&<div hidden={Boolean(review)} className="space-y-3"><div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <h3 ref={lineHeading} tabIndex={-1} className="font-semibold">{line.item_name} · {line.unit}</h3>
+                  <h3 ref={lineHeading} tabIndex={-1} className="font-semibold">{itemAction === 'forward' ? (Number(line.remaining_quantity) > 0 ? 'Forward to Purchase Order' : 'Complete Stock review') : itemAction === 'receive' ? 'Receive goods' : 'Issue from stock'} · {line.item_name}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-300">#{line.document_id} · {line.title}</p>
                 </div>
                 <button className={control} disabled={busy} onClick={closeStockDialog}>
@@ -336,10 +391,10 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
                   <div key={label}><dt>{label}</dt><dd className="font-semibold">{quantity(amount)} {line.unit}</dd></div>
                 ))}
               </dl>
-              {canReviewLine(line) && (
+              {itemAction === 'forward' && canReviewLine(line) && (
                 <StockReviewForm key={line.id} line={line} disabled={busy} onReview={reviewStockDecision} />
               )}
-              {writable && view === 'issue' && line.stock_review_finalized_at && (
+              {itemAction === 'issue' && writable && view === 'issue' && line.stock_review_finalized_at && (
                 line.linked_receipts?.length ? <label className="grid gap-1 text-sm">
                   Confirmed Procurement receipt
                   <select className={control} value={receiptId} disabled={busy}
@@ -351,7 +406,7 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
                   </select>
                 </label> : <p className="text-sm">Waiting for a confirmed receipt from the linked Procurement.</p>
               )}
-              {writable && (view === 'receipt' || Number(line.remaining_quantity) > 0) && <><p className="text-sm">Outstanding: {quantity(line.remaining_quantity)} {line.unit}. {tab==='issue'?`Current stock: ${stockOnHand(line) == null ? 'check balance' : quantity(stockOnHand(line))} ${line.unit}.`:''}</p><div className="flex flex-wrap gap-3"><label className="grid gap-1 text-sm">{tab==='issue'?'Quantity to issue':'Quantity received'} ({line.unit})<input aria-label="Stock movement quantity" type="number" min="1" max={line.remaining_quantity} step="1" disabled={busy} className={control} value={amount} onChange={e=>{setAmount(e.target.value);setReview(null);}}/></label><label className="grid gap-1 text-sm">Actual movement date<input aria-label="Stock movement date" type="date" min={range.start_date} max={range.end_date<data.today?range.end_date:data.today} value={date} disabled={busy} className={control} onChange={e=>{setDate(e.target.value);setReview(null);}}/></label></div>
+              {itemAction !== 'forward' && writable && (view === 'receipt' || Number(line.remaining_quantity) > 0) && <><p className="text-sm">Outstanding: {quantity(line.remaining_quantity)} {line.unit}. {tab==='issue'?`Current stock: ${stockOnHand(line) == null ? 'check balance' : quantity(stockOnHand(line))} ${line.unit}.`:''}</p><div className="flex flex-wrap gap-3"><label className="grid gap-1 text-sm">{tab==='issue'?'Quantity to issue':'Quantity received'} ({line.unit})<input aria-label="Stock movement quantity" type="number" min="1" max={line.remaining_quantity} step="1" disabled={busy} className={control} value={amount} onChange={e=>{setAmount(e.target.value);setReview(null);}}/></label><label className="grid gap-1 text-sm">Actual movement date<input aria-label="Stock movement date" type="date" min={range.start_date} max={range.end_date<data.today?range.end_date:data.today} value={date} disabled={busy} className={control} onChange={e=>{setDate(e.target.value);setReview(null);}}/></label></div>
               {tab==='receipt'&&<><label className="grid gap-1 text-sm">Delivery note / receipt reference<input aria-label="Delivery reference" maxLength={100} value={delivery} disabled={busy} className={control} placeholder="Supplier delivery note or receipt number" onChange={e=>{setDelivery(e.target.value);setReview(null);}}/></label><label className="flex min-h-11 items-start gap-2 text-sm leading-6"><input className="mt-1" type="checkbox" checked={receivedNew} disabled={busy} onChange={e=>{setReceivedNew(e.target.checked);setReview(null);}}/>These goods were physically received and are not already included in opening stock or another receipt.</label></>}
               {tab==='receipt'&&!Number(line.procurement_id)&&Number(line.purchaseorder_id)>0&&Number(line.requisition_id)>0&&Number(line.requisition_id)!==Number(line.purchaseorder_id)&&<label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={direct} disabled={busy} onChange={e=>{setDirect(e.target.checked);setReview(null);}}/>This delivery directly fulfils the linked requisition. Record receipt and issue together.</label>}
               {tab==='receipt' && <ItemEvidencePanel key={line.id} documentId={line.document_id} itemId={line.id} itemName={line.item_name} stockMode initiallyOpen onUploaded={id => {setEvidenceIds(previous => [...new Set([...previous,id])]);setReview(null);}}/>}
