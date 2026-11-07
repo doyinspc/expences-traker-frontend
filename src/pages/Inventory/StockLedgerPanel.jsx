@@ -1,5 +1,5 @@
 import ItemEvidencePanel from '../../components/procurement/ItemEvidencePanel';
-import {useState} from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {useQuery} from '@tanstack/react-query';
 import {useSelector} from 'react-redux';
 import axios from 'axios';
@@ -78,18 +78,75 @@ function StockReviewForm({ line, disabled, onReview }) {
   );
 }
 
+function openingCategoryKey(item) {
+  return String(item.category_id ?? item.category_name ?? '');
+}
+
+function OpeningStockPicker({ items, itemId, onItemChange, amount, onAmountChange, onAdd, disabled }) {
+  const [category, setCategory] = useState('');
+  const categories = new Map(items.map(item => [openingCategoryKey(item), item.category_name]));
+  const choices = items.filter(item => !category || openingCategoryKey(item) === category);
+  if (!items.length) return <p className="text-sm">No stockable catalogue items are available. In Expense/Income Settings, set up a Goods child item with a unit of measure.</p>;
+
+  return (
+    <div className="flex flex-wrap items-end gap-2">
+      <label className="grid min-w-40 gap-1 text-sm">
+        Category filter
+        <select className={control} value={category} disabled={disabled} onChange={event => {
+          setCategory(event.target.value);
+          onItemChange('');
+        }}>
+          <option value="">All categories</option>
+          {[...categories].map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+        </select>
+      </label>
+      <label className="grid min-w-48 flex-1 gap-1 text-sm">
+        Goods item
+        <select aria-label="Opening stock item" className={control} value={itemId} disabled={disabled}
+          onChange={event => onItemChange(event.target.value)}>
+          <option value="">Choose the specific item</option>
+          {choices.map(item => (
+            <option key={item.id} value={item.id}>
+              {item.name} · {item.unit}{!category && item.category_name ? ' · ' + item.category_name : ''}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="grid gap-1 text-sm">
+        Opening quantity
+        <input className={control + ' w-36'} type="number" min="1" max="999999999" step="1"
+          value={amount} disabled={disabled} onChange={event => onAmountChange(event.target.value)} />
+      </label>
+      <button className={control} disabled={disabled || !itemId || !amount} onClick={onAdd}>Add opening row</button>
+    </div>
+  );
+}
+
 function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,locationLabel}){
-  const [year,setYear]=useState(0),[asof,setAsof]=useState(''),[tab,setTab]=useState(!reportOnly&&documentType===1?'issue':!reportOnly&&[2,9].includes(Number(documentType))?'receipt':'balance');
+  const initialTab = reportOnly ? 'balance' : [2, 9].includes(Number(documentType)) ? 'receipt' : 'issue';
+  const [year,setYear]=useState(0),[asof,setAsof]=useState(''),[tab,setTab]=useState(initialTab);
   const [search,setSearch]=useState(''),[line,setLine]=useState(null),[amount,setAmount]=useState(''),[date,setDate]=useState(''),[direct,setDirect]=useState(false);
   const [evidenceIds,setEvidenceIds]=useState([]);
   const [receiptId, setReceiptId] = useState('');
   const [delivery,setDelivery]=useState(''),[receivedNew,setReceivedNew]=useState(false);
   const [openRows,setOpenRows]=useState([]),[itemId,setItemId]=useState(''),[openingAmount,setOpeningAmount]=useState('');
   const [review,setReview]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
+  const lineHeading = useRef(null);
+  const confirmHeading = useRef(null);
+  useEffect(() => { if (line) lineHeading.current?.focus(); }, [line]);
+  useEffect(() => { if (review) confirmHeading.current?.focus(); }, [review]);
+
   const query=useQuery({queryKey:['stock-ledger',scope,year,asof,tab==='issue'?'issue':'receipt',documentId],queryFn:()=>stockRequest('state',{year_offset:year,...(documentId?{document_id:documentId}:{}),...(asof?{as_of:asof}:{}),candidate_type:tab==='issue'?'issue':'receipt'}),staleTime:0});
   const data=query.data,period=data?.active_period,range=data?.period;
+  // Opening controls physical movements. The approval queue can be reviewed before opening.
+  const view = !period && tab !== 'issue' ? 'opening' : period && tab === 'opening' ? initialTab : tab;
+  const views = period
+    ? (reportOnly
+      ? [['balance', 'Balance report'], ['history', 'Movement history']]
+      : [['issue', 'Issue to requisition'], ['receipt', 'Receive procurement'], ['balance', 'Balance report'], ['history', 'Movement history']])
+    : [['issue', 'Issue to requisition'], ['opening', 'Opening stock']];
   const changeTab=value=>{setTab(value);if(value==='issue')setAsof('');setReview(null);setLine(null);setError('');setMessage('');};
-  const changeYear=value=>{setYear(Number(value));setAsof('');setReview(null);setLine(null);setOpenRows([]);setError('');setMessage('');};
+  const changeYear=value=>{setYear(Number(value));if(tab==='opening')setTab(initialTab);setAsof('');setReview(null);setLine(null);setOpenRows([]);setItemId('');setOpeningAmount('');setError('');setMessage('');};
   const reviewMovement=()=>{
     if(!line||!/^\d+$/.test(amount)||Number(amount)<1||Number(amount)>Number(line.remaining_quantity)){setError('Enter a positive whole quantity up to the outstanding quantity.');return;}
     if(!date){setError('Choose the actual receipt or issue date.');return;}
@@ -118,7 +175,7 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
   }
   const confirm=async()=>{
     if(busy||!review)return;setBusy(true);setError('');
-    try{const result=await stockRequest(review.operation,{...review.payload,confirmation:review.operation==='prepare'?'PREPARE_STOCK':review.operation==='review'?'CONFIRM_STOCK_REVIEW':'CONFIRM_STOCK'},true);setMessage(result.message);setReview(null);setLine(null);setOpenRows([]);setAmount('');await query.refetch();onChanged?.();}
+    try{const result=await stockRequest(review.operation,{...review.payload,confirmation:review.operation==='prepare'?'PREPARE_STOCK':review.operation==='review'?'CONFIRM_STOCK_REVIEW':'CONFIRM_STOCK'},true);setMessage(result.message);setReview(null);setLine(null);setOpenRows([]);setAmount('');if(review.operation==='open')setTab(initialTab);await query.refetch();onChanged?.();}
     catch(failure){setError(failure.response?.data?.message||failure.message||'Stock could not be saved.');}
     finally{setBusy(false);}
   };
@@ -126,28 +183,40 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
   const rows=(data?.rows||[]).filter(matches);
   const candidates=(data?.candidates||[]).filter(row=>(!documentId||Number(row.document_id)===Number(documentId))&&matches(row));
   const writable=data?.can_write&&period&&!period.closed_at;
+  const canReviewLine = row => view === 'issue' && data.can_review && row.stock_review_id && !row.stock_review_finalized_at;
   function stockOnHand(item) {
+    if (!period) return null;
     const itemBalances = (data?.rows || []).filter(row => Number(row.item_id) === Number(item.item_id));
     if (itemBalances.some(row => Number(row.unit_mismatch) || Number(row.closing_quantity) < 0)) return null;
     return Number(itemBalances.find(row => row.unit === item.unit)?.closing_quantity || 0);
   }
   return <section aria-label="Stock balances and movements" aria-busy={busy} className="mb-6 space-y-4 rounded-xl border border-gray-200 bg-white p-4 text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white sm:p-5">
     <p className="text-sm font-medium">{locationLabel}</p>
-    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">{reportOnly?'Stock balance report':'Stock balances & movements'}</h2><p className="mt-1 text-sm text-gray-600 dark:text-gray-300">For your selected location. First complete stock setup and confirm this accounting year’s opening balance; the receipt, issue and history buttons then appear. Each quantity uses the item’s saved unit of measure.</p></div><button className={control} disabled={busy||query.isFetching} onClick={()=>{setReview(null);query.refetch();}}>Refresh stock</button></div>
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">{reportOnly?'Stock balance report':'Stock balances & movements'}</h2><p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Review approved Goods for the selected location. Confirm the accounting year’s opening balance before recording physical receipts or issues. Each quantity uses the item’s saved unit.</p></div><button className={control} disabled={busy||query.isFetching} onClick={()=>{setReview(null);query.refetch();}}>Refresh stock</button></div>
     {query.isPending?<div className="relative min-h-48"><Loader text="Loading stock balances…"/></div>:query.error?<p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">{query.error.response?.data?.message||query.error.message} <button className="underline" onClick={()=>query.refetch()}>Retry</button></p>:data&&<>
       {!data.schema_ready?<div role="alert" className="space-y-3 rounded-lg bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100"><p>The stock quantity history has not been prepared on this server. No stock balance can be verified yet.</p>{!reportOnly&&data.can_prepare?<><p>Keep a current database backup before preparing stock tracking. This adds quantity history and a procurement quantity field; it retains existing users, settings, documents and workflows.</p><button disabled={busy} className={button} onClick={()=>setReview({operation:'prepare',label:'Prepare stock tracking while retaining existing records',payload:{}})}>Review stock setup</button></>:<p>A Super Admin with Full Stock access can prepare stock tracking here.</p>}</div>:!range?<p role="alert" className="rounded-lg bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">Set the accounting-year start in Company Profile before opening stock.</p>:<>
         <div className="flex flex-wrap items-end gap-3"><label className="grid gap-1 text-sm">Accounting year<select aria-label="Stock accounting year" value={year} disabled={busy} className={control} onChange={e=>changeYear(e.target.value)}>{data.years.map(r=><option key={r.offset} value={r.offset}>{r.label} · {r.start_date} to {r.end_date}</option>)}</select></label><label className="grid gap-1 text-sm">Find an item<input aria-label="Find stock item" className={control} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Item, category, unit or document"/></label>{period&&<span className={`rounded-full px-3 py-1 text-xs font-medium ${period.closed_at?'bg-gray-100 dark:bg-gray-700':'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200'}`}>{period.closed_at?'Closed stock year':'Open stock year'}</span>}</div>
         <p className="text-xs leading-5 text-gray-500 dark:text-gray-300">Opening stock + actual procurement receipts − actual issues = closing stock. Approval alone does not add stock. Stock quantities are not added to expense totals. Different items and units are never combined into one quantity total.</p>
         {Number(data.unverified_legacy_lines)>0&&<p role="status" className="rounded-lg border border-amber-300 p-3 text-sm text-amber-800 dark:border-amber-700 dark:text-amber-200">{data.unverified_legacy_lines} older stock-linked line(s) are retained for reference. Their old links do not prove physical receipts or issues. This report uses confirmed opening quantities and evidenced movements; avoid entering goods already included in the opening balance as another receipt.</p>}
-        {!period?<div className="space-y-3 rounded-lg border border-blue-200 bg-blue-50/40 p-4 dark:border-blue-900 dark:bg-blue-950/20"><h3 className="font-semibold">Opening balance required</h3><p className="text-sm leading-6">Confirm quantities held at the start of this accounting year. Opening balances do not create purchases or expenses. Once confirmed, quantities are protected from direct editing.</p>
+        {(!reportOnly || period) && (
+          <div className="flex flex-wrap gap-2" aria-label="Stock views">
+            {views.map(([value, label]) => (
+              <button key={value} disabled={busy} aria-pressed={view === value}
+                className={control + (view === value ? ' border-blue-500 font-semibold text-blue-700 dark:text-blue-300' : '')}
+                onClick={() => changeTab(value)}>{label}</button>
+            ))}
+          </div>
+        )}
+        {view === 'opening' ? <div className="space-y-3 rounded-lg border border-blue-200 bg-blue-50/40 p-4 dark:border-blue-900 dark:bg-blue-950/20"><h3 className="font-semibold">Opening balance required</h3><p className="text-sm leading-6">Confirm quantities held at the start of this accounting year. Opening balances do not create purchases or expenses. Once confirmed, quantities are protected from direct editing.</p>
           {reportOnly?<p className="text-sm">Open Stock under Requests &amp; Documents to confirm this location’s opening balance before generating a stock report.</p>:!data.can_open?<p className="text-sm">A staff member with Full Stock access must confirm this location’s opening balance.</p>:data.previous_period?<><p className="text-sm">The preceding stock year is available. Review its closing report before carrying it forward. Carrying closes that year and prevents later postings to it.</p><button disabled={busy} className={button} onClick={()=>reviewOpening('carry')}>Review carry forward</button></>:data.has_history?<p role="alert" className="text-sm text-amber-700 dark:text-amber-200">Stock history already exists at this location. Select and carry forward each consecutive accounting year; a second manual opening is not allowed.</p>:<>
             <p className="text-sm">For first-time setup, enter the counted stock at {range.start_date}. Choose a previous year above if you need to start there. Do not include receipts that you will record separately.</p>
-            <div className="flex flex-wrap items-end gap-2"><label className="grid min-w-48 flex-1 gap-1 text-sm">Opening item<select aria-label="Opening stock item" className={control} value={itemId} disabled={busy} onChange={e=>setItemId(e.target.value)}><option value="">Choose an item and unit</option>{data.items.map(i=><option key={i.id} value={i.id}>{i.name} · {i.unit}</option>)}</select></label><label className="grid gap-1 text-sm">Opening quantity<input aria-label="Opening quantity" className={`${control} w-36`} type="number" min="1" max="999999999" step="1" value={openingAmount} disabled={busy} onChange={e=>setOpeningAmount(e.target.value)}/></label><button className={control} disabled={busy} onClick={addOpening}>Add opening row</button></div>
+            <OpeningStockPicker key={year} items={data.items} itemId={itemId} amount={openingAmount} disabled={busy}
+              onItemChange={value => { setItemId(value); setReview(null); setError(''); }}
+              onAmountChange={value => { setOpeningAmount(value); setReview(null); }} onAdd={addOpening} />
             {openRows.length>0&&<ul className="divide-y divide-gray-200 dark:divide-gray-700">{openRows.map(r=><li key={r.item_id} className="flex items-center justify-between gap-3 py-2 text-sm"><span>{r.name} — {quantity(r.quantity)} {r.unit}</span><button disabled={busy} className="min-h-11 px-2 text-red-600 dark:text-red-300" onClick={()=>{setOpenRows(openRows.filter(i=>i.item_id!==r.item_id));setReview(null);}}>Remove {r.name}</button></li>)}</ul>}
             <button disabled={busy} className={button} onClick={()=>reviewOpening('manual')}>Review {openRows.length?'opening balance':'zero opening balance'}</button>
           </>}
         </div>:<>
-          <div className="flex flex-wrap gap-2" aria-label="Stock views">{(reportOnly?[['balance','Balance report'],['history','Movement history']]:[['balance','Balance report'],['receipt','Receive procurement'],['issue','Issue to requisition'],['history','Movement history']]).map(([value,label])=><button key={value} disabled={busy} aria-pressed={tab===value} className={`${control} ${tab===value?'border-blue-500 font-semibold text-blue-700 dark:text-blue-300':''}`} onClick={()=>changeTab(value)}>{label}</button>)}</div>
           {query.isFetching?<p role="status" className="py-8 text-sm">Refreshing stock details…</p>:tab==='balance'?<>
             <div className="flex flex-wrap items-end gap-3"><label className="grid gap-1 text-sm">Report as of<input aria-label="Stock report as of" type="date" min={range.start_date} max={range.end_date<data.today?range.end_date:data.today} value={asof||data.as_of||''} disabled={busy} className={control} onChange={e=>setAsof(e.target.value)}/></label><button className={control} disabled={!rows.length||rows.some(r=>Number(r.unit_mismatch)||Number(r.closing_quantity)<0)} onClick={()=>download(rows,range.label,data.as_of,locationLabel)}>Export stock report</button></div>
             <div className="overflow-x-auto"><table className="w-full text-left text-sm"><caption className="py-3 text-left text-xs text-gray-500 dark:text-gray-300">{locationLabel} · {range.label} · As of {data.as_of}. Zero and missing records are distinguished by the confirmed opening year.</caption><thead className="bg-gray-50 dark:bg-gray-900"><tr>{['Item / category','Unit','Opening','Received','Issued','Closing'].map(t=><th key={t} className="whitespace-nowrap px-3 py-3">{t}</th>)}</tr></thead><tbody className="divide-y divide-gray-200 dark:divide-gray-700">{rows.map(r=><tr key={`${r.item_id}:${r.unit}`}><td className="px-3 py-3"><span className="font-medium">{r.item_name}</span><span className="block text-xs text-gray-500 dark:text-gray-300">{r.category_name}</span></td><td className="px-3 py-3">{r.unit}</td>{[r.opening_quantity,r.received_quantity,r.issued_quantity].map((n,i)=><td key={i} className="px-3 py-3 tabular-nums">{quantity(n)}</td>)}<td className="px-3 py-3 font-semibold tabular-nums">{Number(r.unit_mismatch)||Number(r.closing_quantity)<0?<span className="text-red-600 dark:text-red-300">Needs reconciliation</span>:quantity(r.closing_quantity)}</td></tr>)}</tbody></table>{!rows.length&&<p className="py-6 text-sm text-gray-500 dark:text-gray-300">No matching stock movements in this confirmed stock year by the selected date.</p>}</div>
@@ -157,29 +226,51 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
             <p className="text-xs text-gray-500 dark:text-gray-300">Latest {data.movements.length} of {data.movement_count||0} recorded movements through {data.as_of}. Every entry retains its item, unit, source and staff member.</p>
             <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-50 dark:bg-gray-900"><tr>{['Date','Item','Movement','Quantity / unit','Reference','Recorded by'].map(t=><th className="px-3 py-3" key={t}>{t}</th>)}</tr></thead><tbody className="divide-y divide-gray-200 dark:divide-gray-700">{data.movements.filter(matches).map(m=><tr key={m.id}><td className="whitespace-nowrap px-3 py-3">{m.movement_date}</td><td className="px-3 py-3">{m.item_name}</td><td className="px-3 py-3"><span className={`rounded-full px-2 py-1 text-xs ${m.movement_type==='ISSUE'?'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-100':m.movement_type==='RECEIPT'?'bg-green-100 text-green-900 dark:bg-green-950 dark:text-green-100':'bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-100'}`}>{m.movement_type}</span></td><td className="whitespace-nowrap px-3 py-3 tabular-nums">{Number(m.quantity)>0?'+':''}{quantity(m.quantity)} {m.unit}</td><td className="px-3 py-3">{m.reference}</td><td className="px-3 py-3">{[m.first_name,m.last_name].filter(Boolean).join(' ')||'Staff #'+m.created_by}</td></tr>)}</tbody></table></div>
           </>:<>
-            <p className="text-sm leading-6">{tab==='receipt'?'Record the quantity physically received from an approved procurement. New Procurement receipts enter store. Use Issue to requisition to fulfil approved demand; extra quantities remain in store. Older linked purchases may offer direct delivery.':'Issue the quantity you actually hand over. The stock balance and outstanding requisition quantity update after confirmation. The Purchase Order picker shows the remaining demand for this location.'}</p>
-            {!writable&&<p role="status" className="rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-900">{period.closed_at?'This stock year is closed. Its quantities remain available for reporting.':'Stock create/update permission is required to record movements.'}</p>}
+            {view === 'issue' && <h3 className="font-semibold">Approved stock requisitions</h3>}
+            <p className="text-sm leading-6">{view === 'receipt'
+              ? 'Record goods physically received from approved Procurement. Use Issue to requisition to fulfil approved demand. Extra quantities remain in store.'
+              : 'Review approved Goods for this location. Record what you issue, then complete the review to release any outstanding quantity to Purchase Order.'}</p>
+            {!writable && <p role="status" className="rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-900">
+              {!period ? 'Opening stock is unconfirmed. You can review requests here. Confirm opening stock to record issues.'
+                : period.closed_at ? 'This stock year is closed. Its quantities remain available for reporting.'
+                : 'Stock create/update permission is required to record movements.'}
+            </p>}
             {data.more_candidates&&<p role="status" className="text-sm text-amber-700 dark:text-amber-200">Showing the latest 500 eligible lines. Open the relevant procurement or requisition to record an older line.</p>}
-            <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-50 dark:bg-gray-900"><tr>{['Document / item','Quantity / unit',tab==='receipt'?'Received':'Issued','Outstanding','Action'].map(t=><th key={t} className="px-3 py-3">{t}</th>)}</tr></thead><tbody className="divide-y divide-gray-200 dark:divide-gray-700">{candidates.map(r=><tr key={r.id}><td className="px-3 py-3"><span className="font-medium">#{r.document_id} · {r.title}</span><span className="block text-xs text-gray-500 dark:text-gray-300">{r.item_name} · {r.account_name||'Account not set'}</span>
+            <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-gray-50 dark:bg-gray-900"><tr>{['Document / item','Quantity / unit',tab==='receipt'?'Received':'Issued','Outstanding','Action'].map(t=><th key={t} className="px-3 py-3">{t}</th>)}</tr></thead><tbody className="divide-y divide-gray-200 dark:divide-gray-700">{candidates.map(r=><tr key={r.id}><td className="px-3 py-3"><span className="font-medium">#{r.document_id} · {r.title}</span><span className="block text-xs text-gray-500 dark:text-gray-300">{r.item_name}{view === 'receipt' && r.account_name ? ' · ' + r.account_name : ''}</span>
               {purchasingStageLabels[r.stock_review_stage_id] && (
                 <span className="block text-xs text-blue-700 dark:text-blue-200">{purchasingStageLabels[r.stock_review_stage_id]}</span>
               )}
-              </td><td className="px-3 py-3">{quantity(r.quantity)} {r.unit}</td><td className="px-3 py-3">{quantity(r.processed_quantity)}</td><td className="px-3 py-3 font-medium">{quantity(r.remaining_quantity)} {r.unit}
+              </td><td className="px-3 py-3">{quantity(r.quantity)} {r.unit}
+                {view === 'issue' && Number(r.requested_quantity) !== Number(r.quantity) && (
+                  <span className="block text-xs text-gray-500 dark:text-gray-300">Requested {quantity(r.requested_quantity)}</span>
+                )}</td><td className="px-3 py-3">{quantity(r.processed_quantity)}</td><td className="px-3 py-3 font-medium">{quantity(r.remaining_quantity)} {r.unit}
               {tab === 'issue' && year === 0 && (() => {
                 const onHand = stockOnHand(r);
                 const shortfall = Number(r.remaining_quantity) - (onHand ?? 0);
                 return <span className="mt-1 block text-xs font-normal text-gray-600 dark:text-gray-300">
-                  {onHand == null ? 'Check stock balance' : `${quantity(onHand)} on hand`}
+                  {!period ? 'Opening stock unconfirmed' : onHand == null ? 'Check stock balance' : `${quantity(onHand)} on hand`}
                   {onHand != null && shortfall > 0 ? ` · ${quantity(shortfall)} short` : ''}
                 </span>;
               })()}
-              </td><td className="px-3 py-3"><button disabled={!writable||busy} className={control} onClick={()=>{setLine(r);setReceiptId('');setEvidenceIds([]);setAmount('');setDelivery('');setReceivedNew(false);setDate(data.today<=range.end_date?data.today:range.end_date);setDirect(false);setReview(null);setError('');}}>Select {r.item_name}</button></td></tr>)}</tbody></table></div>
-            {!candidates.length&&<p className="py-4 text-sm text-gray-500 dark:text-gray-300">No eligible outstanding lines. The item needs a saved unit and a completed, approved workflow. Check document access and location. Procurement approval alone does not prove receipt.</p>}
-            {line&&<div className="space-y-3 rounded-lg border border-blue-200 p-4 dark:border-blue-900"><h3 className="font-semibold">{line.item_name} · {line.unit}</h3>
-              {tab === 'issue' && data.can_review && line.stock_review_id && !line.stock_review_finalized_at && (
+              </td><td className="px-3 py-3"><button disabled={busy || (!writable && !canReviewLine(r))} className={control} onClick={()=>{setLine(r);setReceiptId('');setEvidenceIds([]);setAmount('');setDelivery('');setReceivedNew(false);setDate(data.today<=range.end_date?data.today:range.end_date);setDirect(false);setReview(null);setError('');}}>{canReviewLine(r) ? 'Review' : 'Select'} {r.item_name}</button></td></tr>)}</tbody></table></div>
+            {!candidates.length&&<p className="py-4 text-sm text-gray-500 dark:text-gray-300">{data.can_read_candidate_documents === false
+                ? 'Document view access at this location is required to see these lines.'
+                : view === 'issue'
+                  ? 'No outstanding approved Goods for this location. The requisition workflow must be complete, and the Goods item must have a saved unit.'
+                  : 'No outstanding stockable lines from approved Procurement at this location.'}</p>}
+            {line&&<div className="space-y-3 rounded-lg border border-blue-200 p-4 dark:border-blue-900"><div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h3 ref={lineHeading} tabIndex={-1} className="font-semibold">{line.item_name} · {line.unit}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">#{line.document_id} · {line.title}</p>
+                </div>
+                <button className={control} disabled={busy} onClick={() => { setLine(null); setReview(null); }}>
+                  Close item
+                </button>
+              </div>
+              {canReviewLine(line) && (
                 <StockReviewForm key={line.id} line={line} disabled={busy} onReview={reviewStockDecision} />
               )}
-              {tab === 'issue' && line.stock_review_finalized_at && (
+              {writable && view === 'issue' && line.stock_review_finalized_at && (
                 line.linked_receipts?.length ? <label className="grid gap-1 text-sm">
                   Confirmed Procurement receipt
                   <select className={control} value={receiptId} disabled={busy}
@@ -191,7 +282,7 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
                   </select>
                 </label> : <p className="text-sm">Waiting for a confirmed receipt from the linked Procurement.</p>
               )}
-              {(tab === 'receipt' || Number(line.remaining_quantity) > 0) && <><p className="text-sm">Outstanding: {quantity(line.remaining_quantity)} {line.unit}. {tab==='issue'?`Current stock: ${quantity(stockOnHand(line))} ${line.unit}.`:''}</p><div className="flex flex-wrap gap-3"><label className="grid gap-1 text-sm">{tab==='issue'?'Quantity to issue':'Quantity received'} ({line.unit})<input aria-label="Stock movement quantity" type="number" min="1" max={line.remaining_quantity} step="1" disabled={busy} className={control} value={amount} onChange={e=>{setAmount(e.target.value);setReview(null);}}/></label><label className="grid gap-1 text-sm">Actual movement date<input aria-label="Stock movement date" type="date" min={range.start_date} max={range.end_date<data.today?range.end_date:data.today} value={date} disabled={busy} className={control} onChange={e=>{setDate(e.target.value);setReview(null);}}/></label></div>
+              {writable && (view === 'receipt' || Number(line.remaining_quantity) > 0) && <><p className="text-sm">Outstanding: {quantity(line.remaining_quantity)} {line.unit}. {tab==='issue'?`Current stock: ${stockOnHand(line) == null ? 'check balance' : quantity(stockOnHand(line))} ${line.unit}.`:''}</p><div className="flex flex-wrap gap-3"><label className="grid gap-1 text-sm">{tab==='issue'?'Quantity to issue':'Quantity received'} ({line.unit})<input aria-label="Stock movement quantity" type="number" min="1" max={line.remaining_quantity} step="1" disabled={busy} className={control} value={amount} onChange={e=>{setAmount(e.target.value);setReview(null);}}/></label><label className="grid gap-1 text-sm">Actual movement date<input aria-label="Stock movement date" type="date" min={range.start_date} max={range.end_date<data.today?range.end_date:data.today} value={date} disabled={busy} className={control} onChange={e=>{setDate(e.target.value);setReview(null);}}/></label></div>
               {tab==='receipt'&&<><label className="grid gap-1 text-sm">Delivery note / receipt reference<input aria-label="Delivery reference" maxLength={100} value={delivery} disabled={busy} className={control} placeholder="Supplier delivery note or receipt number" onChange={e=>{setDelivery(e.target.value);setReview(null);}}/></label><label className="flex min-h-11 items-start gap-2 text-sm leading-6"><input className="mt-1" type="checkbox" checked={receivedNew} disabled={busy} onChange={e=>{setReceivedNew(e.target.checked);setReview(null);}}/>These goods were physically received and are not already included in opening stock or another receipt.</label></>}
               {tab==='receipt'&&!Number(line.procurement_id)&&Number(line.purchaseorder_id)>0&&Number(line.requisition_id)>0&&Number(line.requisition_id)!==Number(line.purchaseorder_id)&&<label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={direct} disabled={busy} onChange={e=>{setDirect(e.target.checked);setReview(null);}}/>This delivery directly fulfils the linked requisition. Record receipt and issue together.</label>}
               {tab==='receipt' && <ItemEvidencePanel key={line.id} documentId={line.document_id} itemId={line.id} itemName={line.item_name} stockMode initiallyOpen onUploaded={id => {setEvidenceIds(previous => [...new Set([...previous,id])]);setReview(null);}}/>}
@@ -202,7 +293,7 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
         </>}
       </>}
     </>}
-    {review&&<div role="region" aria-label="Review stock movement" className="space-y-3 rounded-lg border-2 border-blue-500 bg-blue-50 p-4 dark:bg-blue-950"><h3 className="font-semibold">Review before confirming</h3><p className="text-sm">{review.label}</p>{review.operation==='prepare'?<p className="text-sm">Confirm that you have a current database backup. Preparing stock tracking retains existing data and does not invent opening quantities or post expenses. Only a Super Admin with Full Stock access can complete this setup.</p>:review.operation==='review'?<p className="text-sm">The original request and all confirmed issues remain in the record.</p>:review.operation==='open'?<p className="text-sm">{review.payload.opening_mode==='carry'?'The previous year will be locked. Its closing quantities become this year’s opening quantities, without creating an expense.':'Only confirm quantities physically held at the year’s start. A zero opening explicitly means there was no stock then.'}</p>:<p className="text-sm">Date: {review.payload.movement_date}. {review.payload.fulfil_request?'This records both receipt and issue to the linked requisition.':'This changes the stock balance at the selected location.'} The server will recheck approval, unit, outstanding quantity and stock before saving.</p>}<div className="flex flex-wrap gap-2"><button disabled={busy} className={button} onClick={confirm}>{busy?'Recording…':review.operation==='prepare'?'Confirm stock setup':review.operation==='review'?'Confirm Stock review':'Confirm stock movement'}</button><button disabled={busy} className={control} onClick={()=>setReview(null)}>Back to editing</button></div></div>}
+    {review&&<div role="region" aria-label="Review stock movement" className="space-y-3 rounded-lg border-2 border-blue-500 bg-blue-50 p-4 dark:bg-blue-950"><h3 ref={confirmHeading} tabIndex={-1} className="font-semibold">Review before confirming</h3><p className="text-sm">{review.label}</p>{review.operation==='prepare'?<p className="text-sm">Confirm that you have a current database backup. Preparing stock tracking retains existing data and does not invent opening quantities or post expenses. Only a Super Admin with Full Stock access can complete this setup.</p>:review.operation==='review'?<p className="text-sm">The original request and all confirmed issues remain in the record.</p>:review.operation==='open'?<p className="text-sm">{review.payload.opening_mode==='carry'?'The previous year will be locked. Its closing quantities become this year’s opening quantities, without creating an expense.':'Only confirm quantities physically held at the year’s start. A zero opening explicitly means there was no stock then.'}</p>:<p className="text-sm">Date: {review.payload.movement_date}. {review.payload.fulfil_request?'This records both receipt and issue to the linked requisition.':'This changes the stock balance at the selected location.'} The server will recheck approval, unit, outstanding quantity and stock before saving.</p>}<div className="flex flex-wrap gap-2"><button disabled={busy} className={button} onClick={confirm}>{busy?'Recording…':review.operation==='prepare'?'Confirm stock setup':review.operation==='review'?'Confirm Stock review':'Confirm stock movement'}</button><button disabled={busy} className={control} onClick={()=>setReview(null)}>Back to editing</button></div></div>}
     {error&&<p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">{error}</p>}
     {message&&<p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">{message}</p>}
   </section>;
