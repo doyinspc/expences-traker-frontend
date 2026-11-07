@@ -77,6 +77,11 @@ const RequisitionItemForm = ({
       }, [formData?.category_id, categories])
       const selectedCatalogueItem=items.find(item=>String(item.id)===String(formData.item_id));
       const selectedUnit=String(selectedCatalogueItem?selectedCatalogueItem.text_1||'':String(initialData?.item_id)===String(formData.item_id)?initialData?.unit_of_measure||'':'').trim();
+      const serviceScope = Boolean(priceFree && selectedCatalogueItem && (
+          Number(selectedCatalogueItem.text_4) === 1 ||
+          (selectedCatalogueItem.stockable != null && Number(selectedCatalogueItem.stockable) === 0) ||
+          (!selectedUnit && Number(parent_row?.purchasing_version) === 2)
+      ));
 
     // ==================== HANDLE CATEGORY CHANGE ====================
     const handleCategoryChange = (e) => {
@@ -200,11 +205,15 @@ const RequisitionItemForm = ({
             newErrors.total_price = 'Total price cannot be negative';
         }
 
-        if (priceFree && (!Number.isInteger(formData.quantity) || formData.quantity < 1 || formData.quantity > 999999999)) {
+        if (serviceScope && !formData.special_instructions?.trim()) {
+            newErrors.special_instructions = 'Describe the scope, expected duration or deliverables.';
+        }
+
+        if (priceFree && !serviceScope && (!Number.isInteger(formData.quantity) || formData.quantity < 1 || formData.quantity > 999999999)) {
             newErrors.quantity = 'Enter a whole quantity between 1 and 999999999';
         }
 
-        if (formData.quantity !== null && formData.quantity !== undefined && formData.quantity < 0) {
+        if (!serviceScope && formData.quantity !== null && formData.quantity !== undefined && formData.quantity < 0) {
             newErrors.quantity = 'Quantity cannot be negative';
         }
 
@@ -217,7 +226,7 @@ const RequisitionItemForm = ({
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
-    }, [priceFree, formData, requisitionId, categories, items]);
+    }, [priceFree, serviceScope, formData, requisitionId, categories, items]);
 
     // ==================== HANDLE BLUR FOR VALIDATION ====================
     const handleBlur = (e) => {
@@ -249,7 +258,7 @@ const RequisitionItemForm = ({
             category_id: formData.category_id,
             item_id: formData.item_id,
             is_type: formData.is_type,
-            quantity: formData.quantity,
+            ...(!serviceScope ? { quantity: formData.quantity } : {}),
             ...(!priceFree ? {unit_price: formData.unit_price, total_price: formData.total_price ?? (formData.quantity ?? 0) * (formData.unit_price ?? 0)} : !(isEdit || initialData?.id) ? {unit_price:'0.00', total_price:'0.00'} : {}),
             delivery_required_by: formData.delivery_required_by,
             special_instructions: formData.special_instructions?.trim() ?? '',
@@ -289,7 +298,7 @@ const RequisitionItemForm = ({
                                         <span className="font-medium">Category &amp; Item:</span> First choose a category, then select the specific item from the filtered list
                                     </li>
                                     <li>
-                                        {priceFree ? <>Enter the quantity and specifications. Pricing is handled on the Purchase Order.</> : <><span className="font-medium">Pricing:</span> Enter quantity and either unit price or total price (the other will auto-calculate)</>}
+                                        {priceFree ? <>Enter a quantity for stockable goods, or describe the scope and duration for services. Pricing is handled on the Purchase Order.</> : <><span className="font-medium">Pricing:</span> Enter quantity and either unit price or total price (the other will auto-calculate)</>}
                                     </li>
                                     <li>
                                         <span className="font-medium">Delivery Date:</span> Use the calendar dropdown to select when the item is required
@@ -474,8 +483,14 @@ const RequisitionItemForm = ({
                     )}
                 </div>
 
+                {priceFree && selectedCatalogueItem && (
+                    <p className="text-xs text-gray-600 dark:text-gray-300 md:col-span-2">
+                        Item type · {serviceScope ? 'Service / non-stock' : 'Stockable goods'}
+                    </p>
+                )}
+
                 {/* Quantity */}
-                <div>
+                {!serviceScope && <div>
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Quantity {selectedUnit?`(${selectedUnit})`:''}
                     </label>
@@ -502,7 +517,7 @@ const RequisitionItemForm = ({
                         <p className="mt-1 text-xs text-red-500">{errors.quantity}</p>
                     )}
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-300">{selectedUnit?`Enter whole quantities in ${selectedUnit}. Procurement and stock use this same item unit.`:'Set the item’s unit in Settings before receiving or issuing it as stock.'}</p>
-                </div>
+                </div>}
 
                 {!priceFree && <>
                 {/* Unit Price */}
@@ -605,14 +620,17 @@ const RequisitionItemForm = ({
                 {/* Special Instructions - Full Width */}
                 <div className="md:col-span-2">
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Description / Special Instructions
+                        {serviceScope ? 'Scope, duration or deliverables' : 'Description / Special Instructions'}
+                        {serviceScope && <span className="text-red-500"> *</span>}
                     </label>
                     <textarea
                         name="special_instructions"
+                        required={serviceScope}
+                        data-error={!!errors.special_instructions}
                         value={formData.special_instructions ?? ''}
                         onChange={handleInputChange}
                         onBlur={handleBlur}
-                        placeholder="Any special requirements or instructions..."
+                        placeholder={serviceScope ? 'e.g. Repair the fence at the main gate within two days and clear away the debris.' : 'Any special requirements or instructions...'}
                         rows={2}
                         disabled={isFormDisabled}
                         className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 
@@ -620,6 +638,9 @@ const RequisitionItemForm = ({
                             focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors
                             resize-none disabled:opacity-50 disabled:cursor-not-allowed"
                     />
+                    {errors.special_instructions && touched.special_instructions && (
+                        <p className="mt-1 text-xs text-red-500">{errors.special_instructions}</p>
+                    )}
                 </div>
             </div>
 

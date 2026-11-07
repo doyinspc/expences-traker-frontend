@@ -1,6 +1,7 @@
 import { safeHttpUrl, openAttachment } from '../../../utils/functions/safeUrls';
 // src/components/common/DisplayPageChild.tsx
 
+import { documentApprovalLabel } from '../../../utils/functions/workflowPresentation.js';
 import React, { useEffect, useState } from 'react';
 import { X, ArrowLeft, Power, Loader2, Send, AlertTriangle, DeleteIcon } from 'lucide-react';
 import useReduxApiData from '../../../hooks/useTanstackQuery';
@@ -276,7 +277,7 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
     onSubmitForApproval({
       id: Number(document.id),
       workflow_id: data.workflow_id,
-      status_id: 255,
+      status_id: data.status_id,
       priority_id: data.priority_id,
       comment: data.comment || 'Submitting for approval',
       document_type_id: documentTypeId
@@ -509,7 +510,7 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
   };
 
   const getStatusValue = () => {
-    return document?.status_name || document?.status || 'N/A';
+    return documentApprovalLabel(document);
   };
 
   const getPriorityValue = () => {
@@ -901,7 +902,6 @@ const DisplayPageChild: React.FC<DisplayPageChildProps> = ({
         defaultValues={{
           workflow_id: document?.approval_workflow_id || '',
           priority_id: document?.priority || '',
-          status_id: 1,
           comment: '',
         }}
       />

@@ -124,6 +124,12 @@ export const getCountryOptions = (): FieldOption[] => {
   ];
 };
 
+const WORKFLOW_DOCUMENT_FORMS = new Set([
+  'requisitions', 'purchaseorders', 'procurements', 'cashadvance', 'cashadvances',
+  'cashtransfers', 'incomes', 'stocks', 'skus', 'budgets',
+]);
+const APPROVAL_STATUS_FIELDS = new Set(['status', 'status_id', 'status_name']);
+
 const EMPTY_HIDDEN_FIELDS: string[] = [];
 const EMPTY_EXCLUDED_FIELDS: string[] = [];
 const EMPTY_INITIAL_DATA: Record<string, any> = {};
@@ -158,7 +164,8 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
     const configured = getFormFields(tableName);
     if (!configured) return configured;
     return Object.fromEntries(Object.entries(configured)
-      .filter(([name]) => !excludedFieldNames.includes(name))
+      .filter(([name]) => !excludedFieldNames.includes(name) &&
+        !(WORKFLOW_DOCUMENT_FORMS.has(tableName) && APPROVAL_STATUS_FIELDS.has(name)))
       .map(([name, field]) => [name, { ...field, hidden: hiddenFieldNames.includes(name) || field.hidden || (tableName === "users" && name === "password" && Boolean(initialData.id)), description: field.description || fieldGuidance[name] }]));
   }, [tableName, initialData.id, hiddenFieldNames, excludedFieldNames]);
 

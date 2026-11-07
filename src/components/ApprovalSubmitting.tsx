@@ -42,27 +42,12 @@ const ApprovalSubmitModal: React.FC<ApprovalSubmitModalProps> = ({
 }) => {
   const [selectedWorkflow, setSelectedWorkflow] = useState<string>('');
   const [selectedPriority, setSelectedPriority] = useState<string>('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [comment, setComment] = useState<string>('');
 
   // ============================================
   // LOAD DATA INTERNALLY
   // ============================================
   
-  // Fetch statuses (grp=11)
-  const { 
-    data: statusData, 
-    loadQuery: loadStatuses, 
-    isLoading: isStatusLoading 
-  } = useReduxApiData({
-    table: "commons",
-    uniqueKey: 'modal_statuses',
-    queryType: 'gets',
-    mainParam: { grp: 11, is_active: 1 },
-    narration: 'get statuses',
-    autoLoad: false,
-  });
-
   // Fetch priorities (grp=14)
   const { 
     data: priorityData, 
@@ -102,7 +87,6 @@ const ApprovalSubmitModal: React.FC<ApprovalSubmitModalProps> = ({
   // ============================================
   useEffect(() => {
     if (isOpen) {
-      loadStatuses();
       loadPriorities();
       loadWorkflows();
     }
@@ -115,7 +99,6 @@ const ApprovalSubmitModal: React.FC<ApprovalSubmitModalProps> = ({
     if (isOpen) {
       setSelectedWorkflow(defaultValues.workflow_id ? String(defaultValues.workflow_id) : '');
       setSelectedPriority(defaultValues.priority_id ? String(defaultValues.priority_id) : '');
-      setSelectedStatus(defaultValues.status_id ? String(defaultValues.status_id) : '');
       setComment(defaultValues.comment || '');
     }
   }, [isOpen, defaultValues]);
@@ -124,10 +107,9 @@ const ApprovalSubmitModal: React.FC<ApprovalSubmitModalProps> = ({
   // RELOAD ALL DATA
   // ============================================
   const handleReload = useCallback(() => {
-    loadStatuses();
     loadPriorities();
     loadWorkflows();
-  }, [loadStatuses, loadPriorities, loadWorkflows]);
+  }, [loadPriorities, loadWorkflows]);
 
   // ============================================
   // RESET FORM ON CLOSE
@@ -135,7 +117,6 @@ const ApprovalSubmitModal: React.FC<ApprovalSubmitModalProps> = ({
   const handleClose = () => {
     setSelectedWorkflow('');
     setSelectedPriority('');
-    setSelectedStatus('');
     setComment('');
     onClose();
   };
@@ -152,15 +133,10 @@ const ApprovalSubmitModal: React.FC<ApprovalSubmitModalProps> = ({
       alert('Please select a priority');
       return;
     }
-    if (!selectedStatus) {
-      alert('Please select a status');
-      return;
-    }
-
     onSubmit({
       workflow_id: Number(selectedWorkflow),
       priority_id: Number(selectedPriority),
-      status_id: Number(selectedStatus),
+      status_id: 0,
       comment: comment || `Submitting ${documentType} for approval`,
     });
   };
@@ -172,12 +148,11 @@ const ApprovalSubmitModal: React.FC<ApprovalSubmitModalProps> = ({
     return item?.text_1 || '#3B82F6';
   };
 
-  const isLoading = isStatusLoading || isPriorityLoading || isWorkflowLoading;
+  const isLoading = isPriorityLoading || isWorkflowLoading;
 
   if (!isOpen) return null;
 
   // Safely get arrays
-  const safeStatusData = Array.isArray(statusData) ? statusData : [];
   const safePriorityData = Array.isArray(priorityData) ? priorityData : [];
   const safeWorkflowData = Array.isArray(workflowData) ? workflowData : [];
 
@@ -306,38 +281,6 @@ const ApprovalSubmitModal: React.FC<ApprovalSubmitModalProps> = ({
               )}
             </div>
 
-            {/* Status Selection */}
-            {/* <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Select Status <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                disabled={isSubmitting || isLoading}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-              >
-                <option value="">-- Select Status --</option>
-                {safeStatusData.map((status: any) => (
-                  <option 
-                    key={status.id} 
-                    value={status.id}
-                    style={{ 
-                      backgroundColor: status.text_1 ? status.text_1 : undefined,
-                      color: status.text_1 ? '#ffffff' : undefined
-                    }}
-                  >
-                    {status.name}
-                  </option>
-                ))}
-              </select>
-              {isStatusLoading && (
-                <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                  <Loader2 className="w-3 h-3 animate-spin" /> Loading statuses...
-                </p>
-              )}
-            </div> */}
-
             {/* Comment */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -367,10 +310,10 @@ const ApprovalSubmitModal: React.FC<ApprovalSubmitModalProps> = ({
           
           <button
             onClick={handleSubmit}
-            disabled={!selectedWorkflow || !selectedPriority || !selectedStatus || isSubmitting || isLoading || !safeWorkflowData.length}
+            disabled={!selectedWorkflow || !selectedPriority || isSubmitting || isLoading || !safeWorkflowData.length}
             className={`
               px-4 py-2 text-sm font-semibold text-white rounded-lg transition-all
-              ${!selectedWorkflow || !selectedPriority || !selectedStatus || isSubmitting || isLoading || !safeWorkflowData.length
+              ${!selectedWorkflow || !selectedPriority || isSubmitting || isLoading || !safeWorkflowData.length
                 ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg'
               }

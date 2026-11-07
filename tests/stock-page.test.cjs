@@ -1,5 +1,9 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs'),vm=require('node:vm');
 const root=process.env.PROKURE_ROOT||path.resolve(__dirname,'..'),React=require(path.join(root,'node_modules/react')),{renderToStaticMarkup}=require(path.join(root,'node_modules/react-dom/server'));
+const {pathToFileURL}=require('node:url');
+const labels=import(pathToFileURL(path.join(root,'src/utils/functions/workflowPresentation.js')).href);
+let workflowPresentation;
+test.before(async()=>{workflowPresentation=await labels;});
 function markup(data,props={}){
  const module={exports:{}};const code=require(path.join(root,'node_modules/esbuild')).transformSync(fs.readFileSync(path.join(root,'src/pages/Inventory/StockLedgerPanel.jsx'),'utf8'),{loader:'jsx',format:'cjs',jsx:'automatic'}).code;
  const mocks={
@@ -7,6 +11,7 @@ function markup(data,props={}){
  'react-redux':{useSelector:()=>({user:{id:21},location_id:41,role_id:110})},
  '../../actions/common':{tokenHelpers:{getTenantDb:()=> 'fixture',getToken:()=> 'fixture'}},
  '../../components/ui/Loader':()=>null,
+ '../../utils/functions/workflowPresentation':workflowPresentation,
  '../../components/procurement/ItemEvidencePanel':()=>null,
  '../Reports/StockReportCharts':()=>React.createElement('section',null,'Stock charts'),
  };

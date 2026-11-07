@@ -92,6 +92,7 @@ function page(file, { parent = document, state = {}, extra = {} } = {}) {
       data: [],
       loadUpdate: async () => {},
     }),
+    "../../hooks/useTanstackQuery.js": () => ({ data: [] }),
     "../../actions/common": {
       tokenHelpers: {
         getToken: () => "synthetic",

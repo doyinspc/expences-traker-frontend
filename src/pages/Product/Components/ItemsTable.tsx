@@ -32,6 +32,7 @@ export interface DocumentItem {
   id: string | number;
   category_name?: string;
   item_name?: string;
+  request_scopes?: { request_item_id: number; requisition_id: number; request_title: string; scope: string }[];
   quantity?: number;
   procurement_quantity?: number;
   stock_received_quantity?: number;
@@ -901,10 +902,22 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
                               </p>
                             </div>
 
-                            {item.description && (
+                            {(item.special_instructions || item.description) && (
                               <div className="col-span-1 sm:col-span-2">
                                 <p className="text-xs text-gray-500 dark:text-gray-400">Description</p>
-                                <p className="text-sm text-gray-900 dark:text-white">{item.description}</p>
+                                <p className="text-sm text-gray-900 dark:text-white">{item.special_instructions || item.description}</p>
+                              </div>
+                            )}
+
+                            {!!item.request_scopes?.length && (
+                              <div className="col-span-1 space-y-2 sm:col-span-2 lg:col-span-4">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Scope from requisitions</p>
+                                {item.request_scopes.map(source => (
+                                  <p key={source.request_item_id} className="whitespace-pre-wrap break-words text-sm">
+                                    <span className="font-medium">REQ-{source.requisition_id} · {source.request_title}</span>
+                                    <br />{source.scope}
+                                  </p>
+                                ))}
                               </div>
                             )}
 

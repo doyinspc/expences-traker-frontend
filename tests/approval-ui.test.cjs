@@ -2,12 +2,12 @@ const {test}=require('node:test');const assert=require('node:assert/strict');con
 const root=process.env.PROKURE_ROOT||path.resolve(__dirname,'..');const {transformSync}=require(path.join(root,'node_modules/esbuild'));
 const React=require(path.join(root,'node_modules/react'));const {renderToStaticMarkup}=require(path.join(root,'node_modules/react-dom/server'));
 function load(relative,mocks={},globals={}){const module={exports:{}};vm.runInNewContext(transformSync(fs.readFileSync(path.join(root,relative),'utf8'),{format:'cjs',jsx:'automatic',loader:relative.endsWith('jsx')?'jsx':'js',define:{'import.meta.env':'{}'}}).code,{module,exports:module.exports,console,require:id=>id in mocks?mocks[id]:require(require.resolve(id,{paths:[root]})),...globals});return module.exports;}
-const {authSelection,currentStep,workflowState}=load('src/utils/functions/workflowPresentation.js');
+const {authSelection,currentStep,workflowState,DOCUMENT_APPROVAL_STATE}=load('src/utils/functions/workflowPresentation.js');
 test('Non-admin location membership and local roles survive numeric/string IDs',()=>{const result=authSelection({location_id:41,role_id:110,locations:[{id:'41',is_active:0}],roles:[{id:'110',location_id:'41'},{id:120,location_id:42}]},41,120);assert.equal(result.isAdmin,false);assert.equal(result.role_id,'110');});
 test('Switching location derives its admin flag and refuses an unassigned role',()=>{const result=authSelection({locations:[{id:41,is_active:1},{id:42,is_admin:0}],roles:[{id:110,location_id:41},{id:120,location_id:42}]},42,110);assert.equal(result.location_id,42);assert.equal(result.role_id,120);assert.equal(result.isAdmin,false);});
 test('Workflow current position uses its actual step ID rather than first unfinished row',()=>{const row={current_step_id:'22',steps:[{id:21,is_active:0},{id:22,is_active:0}]};assert.equal(currentStep(row).id,22);});
-test('An escalation stays distinct from approval or terminal rejection',()=>{assert.equal(workflowState({is_active:'1',is_completed:'0',escalation:{state:'pending'}}),'Escalated');assert.equal(workflowState({is_active:'1',is_completed:'1'}),'Completed');});
-test('Returned request can remain actionable despite its rejection history',()=>{assert.equal(workflowState({is_active:1,is_completed:0,rejected_at:'2026-10-27',current_step_id:21,steps:[{id:21,is_active:0,assigned_to_user_id:1}]}),'Awaiting approval');});
+test('An escalation stays distinct from approval or terminal rejection',()=>{assert.equal(workflowState({is_active:'1',is_completed:'0',escalation:{state:'pending'}}),DOCUMENT_APPROVAL_STATE.ESCALATED);assert.equal(workflowState({is_active:'1',is_completed:'1'}),DOCUMENT_APPROVAL_STATE.COMPLETED);});
+test('Returned request can remain actionable despite its rejection history',()=>{assert.equal(workflowState({is_active:1,is_completed:0,rejected_at:'2026-10-27',current_step_id:21,steps:[{id:21,is_active:0,assigned_to_user_id:1}]}),DOCUMENT_APPROVAL_STATE.AWAITING_APPROVAL);});
 function actions(permissions){const Component=load('src/components/approvals/ApprovalActions.jsx',{'../../actions/common':{tokenHelpers:{getTenantDb:()=> 'fixture'},axiosConfig:{}},'@tanstack/react-query':{useQuery:()=>({data:[],isPending:false})}}).default;return renderToStaticMarkup(React.createElement(Component,{workflow:{permissions},onSubmit:async()=>{},isLoading:false}));}
 test('Oversight-only viewer receives no approval controls',()=>{const html=actions({});assert.doesNotMatch(html,/<form/);assert.match(html,/assigned role/);});
 test('Escalation reviewer receives resolution actions without an approval button',()=>{const html=actions({can_resolve:true});assert.match(html,/Resolve and return/);assert.match(html,/Return for clarification/);assert.doesNotMatch(html,/>Approve</);});
@@ -21,3 +21,11 @@ test('Ordinary approvers and viewers receive no payment confirmation',()=>{for(c
 
 test('Final approval exposes unpaid-balance confirmation for partially funded transactions',()=>{const html=paymentActions({permissions:{can_approve:true},cash_movements:{entries:[{key:'one'}],unpaid:'600.00'},current_serial_number:2,steps:[{step_serial_number:1,is_active:1},{step_serial_number:2,is_active:0}]});assert.match(html,/remaining unpaid amount/);assert.match(html,/600.00/);});
 test('Intermediate approval does not offer premature unpaid-balance settlement',()=>{const html=paymentActions({permissions:{can_approve:true},cash_movements:{entries:[{key:'one'}],unpaid:'600.00'},current_serial_number:1,steps:[{step_serial_number:1,is_active:0},{step_serial_number:2,is_active:0}]});assert.doesNotMatch(html,/remaining unpaid amount/);});
+
+test('Document status labels use the live step and the stored completion date', () => {
+ const {documentApprovalLabel}=load('src/utils/functions/workflowPresentation.js');
+ assert.equal(documentApprovalLabel({is_active:0,status_name:'Approved'}),'Draft');
+ assert.match(documentApprovalLabel({approval_state_id:20,approval_step_number:2,approval_step_name:'Finance review'}),/Step 2.*Finance review/);
+ assert.match(documentApprovalLabel({approval_state_id:50,approval_completed_at:'2026-11-07 23:59:00'}),/Completed.*7 Nov 2026/);
+ assert.equal(documentApprovalLabel({approval_state_id:50,approval_completed_at:'0000-00-00'}),'Completed');
+});

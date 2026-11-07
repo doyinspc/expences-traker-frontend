@@ -10,9 +10,10 @@ function load(relative,mocks={}){
  vm.runInNewContext(code,{module,exports:module.exports,require:localRequire,console});return module.exports;
 }
 const ux=load('src/utils/functions/workflowUx.js');
-test('Overdue filter includes an escalation that also missed its deadline',()=>{assert.equal(ux.matchesWorkflowFilter({is_overdue:1,is_active:1,is_completed:0,escalation:{state:'pending'}},'Overdue'),true);});
-test('Overdue filter excludes closed and non-overdue numeric-string rows',()=>{for(const row of [{is_overdue:1,is_active:1,is_completed:1},{is_overdue:1,is_active:0,is_completed:0},{is_overdue:'0',is_active:1,is_completed:0}])assert.equal(ux.matchesWorkflowFilter(row,'Overdue'),false);});
-test('State filtering keeps escalation separate from an approval task',()=>{const row={is_active:1,is_completed:0,escalation:{state:'pending'}};assert.equal(ux.matchesWorkflowFilter(row,'Escalated'),true);assert.equal(ux.matchesWorkflowFilter(row,'Awaiting approval'),false);});
+const {DOCUMENT_APPROVAL_STATE:S}=load('src/utils/functions/workflowPresentation.js');
+test('Overdue filter includes an escalation that also missed its deadline',()=>{assert.equal(ux.matchesWorkflowFilter({is_overdue:1,is_active:1,is_completed:0,escalation:{state:'pending'}},S.OVERDUE),true);});
+test('Overdue filter excludes closed and non-overdue numeric-string rows',()=>{for(const row of [{is_overdue:1,is_active:1,is_completed:1},{is_overdue:1,is_active:0,is_completed:0},{is_overdue:'0',is_active:1,is_completed:0}])assert.equal(ux.matchesWorkflowFilter(row,String(S.OVERDUE)),false);});
+test('State filtering keeps escalation separate from an approval task',()=>{const row={is_active:1,is_completed:0,escalation:{state:'pending'}};assert.equal(ux.matchesWorkflowFilter(row,S.ESCALATED),true);assert.equal(ux.matchesWorkflowFilter(row,S.AWAITING_APPROVAL),false);});
 test('Navigation accepts an active child permission without a container grant',()=>{assert.equal(ux.hasNavigationAccess([{location_id:'41',parent_path_number:'4',child_path_number:'1',is_active:'1',access_level:'1'}],41,4,1),true);});
 test('Navigation refuses a different location, inactive grant and zero access',()=>{for(const change of [{location_id:42},{is_active:0},{access_level:0},{child_path_number:2}])assert.equal(ux.hasNavigationAccess([{location_id:41,parent_path_number:4,child_path_number:1,is_active:1,access_level:2,...change}],41,4,1),false);});
 test('Progress uses completed steps while preserving the real current-step ID',()=>{const result=ux.workflowProgress({current_step_id:12,steps:[{id:11,is_active:'1'},{id:12,is_active:0}]});assert.equal(result.completed,1);assert.equal(result.percent,50);assert.equal(result.current.id,12);assert.equal(ux.workflowProgress({}).percent,0);});

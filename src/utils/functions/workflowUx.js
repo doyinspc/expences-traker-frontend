@@ -1,9 +1,10 @@
-import { currentStep, workflowState } from './workflowPresentation';
+import { currentStep, DOCUMENT_APPROVAL_STATE, workflowState } from './workflowPresentation';
 
 export function matchesWorkflowFilter(row, filter) {
   if (!filter) return true;
-  if (filter === 'Overdue') return Number(row.is_overdue) === 1 && Number(row.is_active) === 1 && Number(row.is_completed) === 0;
-  return workflowState(row) === filter;
+  const stateId = Number(filter);
+  if (stateId === DOCUMENT_APPROVAL_STATE.OVERDUE) return Number(row.is_overdue) === 1 && Number(row.is_active) === 1 && Number(row.is_completed) === 0;
+  return workflowState(row) === stateId;
 }
 export function hasNavigationAccess(access, locationId, parent, child = 0) {
   return (access || []).some(row => Number(row.location_id) === Number(locationId) && Number(row.parent_path_number) === parent && Number(row.child_path_number) === child && Number(row.is_active ?? 1) === 1 && Number(row.access_level) >= 1);

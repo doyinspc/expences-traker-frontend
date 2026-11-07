@@ -8,6 +8,7 @@ import useParentDocumentContext from '../../hooks/useParentDocumentContext';
 import useReduxApiData from '../../hooks/useTanstackQuery';
 import { tokenHelpers } from '../../actions/common';
 import { purchasingRequest } from '../../utils/functions/purchasingApi';
+import { purchasingStageLabels } from '../../utils/functions/workflowPresentation';
 import LegacyRequisitionItems from './RequisitionItems';
 import RequisitionItemForm from './RequistiontemForm';
 
@@ -103,8 +104,8 @@ export default function RequisitionDemandItems() {
         <div>
           <h1 className="text-xl font-semibold">Requisition items</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Describe what you need and how many. Prices are entered later on the
-            Purchase Order.
+            Enter a quantity for stockable goods or describe the scope of a service.
+            Prices are entered on the Purchase Order.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -160,30 +161,36 @@ export default function RequisitionDemandItems() {
                   <tr className="border-t dark:border-gray-700">
                     <td className="p-3">
                       <p className="font-medium">
-                        {line.item_name} · {line.unit || 'Service'}
+                        {line.item_name} · {line.is_stockable === false ? 'Service / non-stock' : (line.unit || '—')}
                       </p>
                       <p className="text-xs text-gray-500">
                         {Number(line.is_type) === 1 ? 'CAPEX' : 'OPEX'}
+                        {Number(line.stock_review?.approved_quantity) > Number(line.quantity) && ' · Quantity increased'}
                       </p>
                       <p className="mt-1 whitespace-pre-wrap text-xs">
                         {line.special_instructions}
                       </p>
                     </td>
-                    <td className="p-3">{line.quantity}</td>
-                    <td className="p-3">{line.issued_quantity || 0}</td>
+                    <td className="p-3">
+                      {line.is_stockable === false ? 'See scope' : line.quantity}
+                      {line.stock_review && <span className="block text-xs text-gray-500">
+                        {line.stock_review.approved_quantity} Stock-approved
+                      </span>}
+                    </td>
+                    <td className="p-3">{line.is_stockable === false ? '—' : (line.issued_quantity || 0)}</td>
                     <td className="p-3">
                       {Number(line.approval_status) === 2
                         ? 'Excluded'
-                        : line.remaining_quantity}
+                        : line.is_stockable === false ? '—' : line.remaining_quantity}
                     </td>
                     <td className="p-3">
                       {Number(line.approval_status) === 2
                         ? 'Rejected'
-                        : Number(line.resolved) === 1
+                        : purchasingStageLabels[line.stock_review_stage_id] || (Number(line.resolved) === 1
                           ? 'Fulfilled'
                           : Number(line.approved) === 1
-                            ? 'Approved · awaiting supply'
-                            : 'Awaiting approval'}
+                            ? (line.is_stockable === false ? 'Approved · service requested' : 'Approved · awaiting supply')
+                            : 'Awaiting approval')}
                       {query.data?.can_edit && (
                         <button
                           type="button"

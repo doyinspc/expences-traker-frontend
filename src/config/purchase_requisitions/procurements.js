@@ -5,7 +5,7 @@ export default {
   frontendRoutes: ['/procurement/procurement'],
   displayName: 'Procurement',
   description:
-    'Combine approved Purchase Orders at one location for purchasing, payment and receipt into stock.',
+    'Combine approved Purchase Orders at one location for purchasing and receipt into stock.',
   fields: {
     ...purchaseOrders.fields,
     requisition_type: {

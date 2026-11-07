@@ -1,5 +1,6 @@
 ﻿// src/pages/Procurement/Requisitions.tsx
 
+import { documentApprovalLabel } from '../../utils/functions/workflowPresentation.js';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -229,10 +230,11 @@ const Requisitions: React.FC = () => {
         loadQuery: loadBudgetData,  
     } = useReduxApiData({
         table: "budgets",
-        uniqueKey: 'budget',
+        uniqueKey: 'document-location-budgets',
         queryType: 'gets',
-        mainParam: { is_active: 1 },
-        narration: 'get all budgets data'
+        mainParam: { is_active: 1, location_id },
+        enabled: Number(location_id) > 0,
+        narration: 'get active budgets for the document location'
     });
 
     const { 
@@ -352,7 +354,7 @@ const Requisitions: React.FC = () => {
         loadDepartmentData();
         loadVendorData();
         loadUserData();
-        loadBudgetData();
+        if (Number(location_id) > 0) loadBudgetData();
         loadCurrencyData();
         loadstatusData()
         loadpriorityData()
@@ -457,6 +459,7 @@ const Requisitions: React.FC = () => {
         const rows = processRows(data, TABLE_NAME);
         return rows.map((row: any) => ({
             ...row,
+            status_name: documentApprovalLabel(row),
             pr_id: `PR-${String(row.location_id || 0).padStart(3, '0')}-${String(row.id || 0).padStart(5, '0')}`,
             requisition_type_name: getOptionLabel(row.requisition_type, REQUISITION_TYPE_OPTIONS),
         }));
@@ -1058,10 +1061,10 @@ const Requisitions: React.FC = () => {
             requisition_status: formatOptions(safeData(statusData), 'name', 'id'),
             priorities: formatOptions(safeData(priorityData), 'name', 'id'),
             requisition_types: REQUISITION_TYPE_OPTIONS,
-            budgets: formatOptions(safeData(budgetData), 'budget_name', 'id'),
+            budgets: formatOptions(safeData(budgetData).filter(budget => Number(budget.location_id) === Number(location_id)), 'budget_name', 'id'),
             currencies: formatOptions(safeData(currencyData), 'name', 'id')
         };
-    }, [locationData, userData, vendorData, departmentData, statusData, priorityData,  budgetData, currencyData]);
+    }, [locationData, userData, vendorData, departmentData, statusData, priorityData,  budgetData, currencyData, location_id]);
 
     // ==================== COLUMNS ====================
     const columns = useMemo(() => {

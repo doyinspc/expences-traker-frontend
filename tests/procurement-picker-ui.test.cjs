@@ -19,7 +19,7 @@ const code = require('esbuild').buildSync({
   logLevel: 'silent',
 }).outputFiles[0].text;
 
-function render(rows, selected = '', extra = {}) {
+function render(rows, selected = '', extra = {}, pickerProps = {}) {
   const calls = [];
   const moduleConfig = { exports: {} };
   vm.runInNewContext(code, {
@@ -52,6 +52,7 @@ function render(rows, selected = '', extra = {}) {
       purchaseOrderId: 302,
       onClose() {},
       onItemsAdded() {},
+      ...pickerProps,
     }),
   );
   return { html, calls };
@@ -112,4 +113,15 @@ test('empty and failed candidate lists give a clear message instead of offering 
     }).html,
     /role="alert"/,
   );
+});
+
+test('The current Purchase Order uses the original requisition dropdown and shows quantities before order pricing', () => {
+  const { html, calls } = render([], '301', {}, {
+    orderSelection: { items: [{ ...row, remaining_quantity: 2 }], isFetching: false, refetch() {}, onSelect() {} },
+  });
+  assert.match(html, /IT equipment/);
+  assert.match(html, /Keyboard/);
+  assert.match(html, /Still needed/);
+  assert.doesNotMatch(html, /Estimated total|Unit price/);
+  assert.equal(calls[0].enabled, false);
 });

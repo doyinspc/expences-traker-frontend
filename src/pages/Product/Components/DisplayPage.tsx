@@ -18,6 +18,7 @@ import {
     getTableDisplayName
 } from '../../../utils/functions/tableBuilder';
 import { getTableMapping } from '../../../config/tableMapping';
+import { documentApprovalLabel, documentApprovalState, documentApprovalStates } from '../../../utils/functions/workflowPresentation.js';
 
 import { 
     processRows, 
@@ -169,7 +170,17 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
 
     // ==================== CONFIGURATIONS ====================
     const tableMapping = useMemo(() => getTableMapping(TABLE_NAME), [TABLE_NAME]);
-    const filterConfig = useMemo(() => getTableFilterConfig(TABLE_NAME), [TABLE_NAME]);
+    const filterConfig = useMemo(() => {
+        const config = getTableFilterConfig(TABLE_NAME);
+        if (!config) return config;
+        return {
+            ...config,
+            filterableFields: [
+                ...config.filterableFields.filter(field => !['status', 'status_id', 'status_name'].includes(field.name)),
+                { name: 'approval_state_id', label: 'Approval status', type: 'select' as const, options: 'approval_states' },
+            ],
+        };
+    }, [TABLE_NAME]);
     const displayName = useMemo(() => getTableDisplayName(TABLE_NAME), [TABLE_NAME]);
 
     // ==================== REFS FOR DATE PICKERS ====================
@@ -198,7 +209,7 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
     const [isDateRangeApplied, setIsDateRangeApplied] = useState<boolean>(true);
 
     // ==================== API HOOKS ====================
-    const { data, loadQuery, loadUpdate, isLoading, isProcessing, getOne, row:document} = useReduxApiData({
+    const { data, loadQuery, loadUpdate, isLoading, isProcessing} = useReduxApiData({
         table: 'requisitions',
         uniqueKey: TABLE_PATH,
         queryType: 'gets',
@@ -251,10 +262,11 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
         loadQuery: loadBudgetData,  
     } = useReduxApiData({
         table: "budgets",
-        uniqueKey: 'budget',
+        uniqueKey: 'document-location-budgets',
         queryType: 'gets',
-        mainParam: { is_active: 1 },
-        narration: 'get all budgets data'
+        mainParam: { is_active: 1, location_id },
+        enabled: supportsBudget && Number(location_id) > 0,
+        narration: 'get active budgets for the document location'
     });
 
     const { 
@@ -266,17 +278,6 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
         queryType: 'gets',
         mainParam: { is_active: 1, grp: 6 },
         narration: 'get all currencies data'
-    });
-
-    const { 
-        data: statusData, 
-        loadQuery: loadstatusData,
-    } = useReduxApiData({
-        table: "commons",
-        uniqueKey: 'status',
-        queryType: 'gets',
-        mainParam: { is_active: 1, grp: 13 },
-        narration: 'get all statuses data'
     });
 
     const { 
@@ -349,19 +350,18 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
 
     const onView = useCallback((row: any): void => {
         setRow(row);
-        getOne({ id: row.id });
         setIsEdit(false);
         setPage(2);
     }, []);
 
-    const handleSave = useCallback((formData: any): void => {
+    const handleSave = useCallback(async (formData: any) => {
         formData.created_by_id = user?.id || null;
         formData.requester_id = user?.id || null;
         formData.requisition_type = DOCUMENT_TYPE || null;
         formData.location_id = location_id || 0;
-        loadUpdate(formData);
+        await loadUpdate(formData);
         setPage(0);
-    }, [user, location_id, DOCUMENT_TYPE]);
+    }, [user, location_id, DOCUMENT_TYPE, loadUpdate]);
 
     const handleCustomCreate = useCallback(async (formData: any): Promise<any> => {
         const payload = {
@@ -374,24 +374,23 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
         return loadUpdate(payload);
     }, [user?.id, location_id, DOCUMENT_TYPE, loadUpdate]);
 
-    const handleUpdate = useCallback((formData: any): void => {
+    const handleUpdate = useCallback(async (formData: any) => {
         formData.location_id = location_id || 0;
         formData.created_by_id = user?.id;
         formData.requisition_type = DOCUMENT_TYPE || null;
-        loadUpdate(formData);
+        await loadUpdate(formData);
         setPage(0);
-    }, [location_id, user?.id, DOCUMENT_TYPE]);
+    }, [location_id, user?.id, DOCUMENT_TYPE, loadUpdate]);
 
     const handleReload = useCallback((): void => {
         loadQuery();
         loadDepartmentData();
         loadVendorData();
         loadUserData();
-        loadBudgetData();
+        if (supportsBudget && Number(location_id) > 0) loadBudgetData();
         loadCurrencyData();
-        loadstatusData();
         loadpriorityData();
-    }, [loadQuery, loadDepartmentData, loadVendorData, loadUserData, loadBudgetData, loadCurrencyData, loadstatusData, loadpriorityData]);
+    }, [loadQuery, loadDepartmentData, loadVendorData, loadUserData, loadBudgetData, loadCurrencyData, loadpriorityData, supportsBudget, location_id]);
 
     const handleFilterChange = useCallback((filterName: string, value: any): void => {
         setFilters(prev => ({ ...prev, [filterName]: value }));
@@ -485,6 +484,8 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
         const rows = processRows(data, TABLE_NAME);
         return rows.map((row: any) => ({
             ...row,
+            approval_state_id: documentApprovalState(row),
+            status_name: documentApprovalLabel(row),
             pr_id: `${PAGE_CODE}-${String(row.location_id || 0).padStart(3, '0')}-${String(row.id || 0).padStart(5, '0')}`,
             requisition_type_name: getOptionLabel(row.requisition_type, REQUISITION_TYPE_OPTIONS),
         }));
@@ -658,13 +659,13 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
             locations: formatOptions(safeData(locationData), 'name', 'id'),
             vendors: formatOptions(safeData(vendorData), 'name', 'id'),
             departments: formatOptions(safeData(departmentData), 'name', 'id'),
-            requisition_status: formatOptions(safeData(statusData), 'name', 'id'),
+            approval_states: Object.entries(documentApprovalStates).map(([id, label]) => ({ label, value: Number(id) })),
             priorities: formatOptions(safeData(priorityData), 'name', 'id'),
             requisition_types: REQUISITION_TYPE_OPTIONS,
-            budgets: formatOptions(safeData(budgetData), 'budget_name', 'id'),
+            budgets: formatOptions(safeData(budgetData).filter(budget => Number(budget.location_id) === Number(location_id)), 'budget_name', 'id'),
             currencies: formatOptions(safeData(currencyData), 'name', 'id')
         };
-    }, [locationData, userData, vendorData, departmentData, statusData, priorityData, budgetData, currencyData]);
+    }, [locationData, userData, vendorData, departmentData, priorityData, budgetData, currencyData, location_id]);
 
     // ==================== COLUMNS ====================
     const columns = useMemo(() => {
@@ -808,7 +809,7 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
                             ) : null}
                             {page === 2 ? (
                                 <DisplayPageDetails
-                                    document={document || row}
+                                    document={processedRows.find((entry: any) => Number(entry.id) === Number(row.id)) || row}
                                     table_path={TABLE_PATH}
                                     mainParamData={{
                                         location_id: location_id || 0,
@@ -825,7 +826,6 @@ const DisplayPage: React.FC<RequisitionsPageProps> = (props) => {
                                     title={`${displayName} Details`}
                                     showDeactivate={true}
                                     isProcessing={isProcessing}
-                                    statusData={statusData || []}
                                     priorityData={priorityData || []}
                                     onSubmitForApproval={submitForApproval}
                                     onResetApproval={resetForApproval}

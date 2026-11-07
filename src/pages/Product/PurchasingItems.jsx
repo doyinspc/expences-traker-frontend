@@ -2,7 +2,9 @@ import React, { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
+import AddRequisitionItemsModal from "../../components/procurement/AddRequisitionItemsModal";
 import ParentDocumentContext from "../../components/common/ParentDocumentContext";
+import { purchasingStageLabels } from '../../utils/functions/workflowPresentation';
 import useParentDocumentContext from "../../hooks/useParentDocumentContext";
 import useReduxApiData from "../../hooks/useTanstackQuery";
 import { tokenHelpers } from "../../actions/common";
@@ -39,6 +41,7 @@ export default function PurchasingItems({ type = 2 }) {
   const [form, setForm] = useState(null);
   const editor = useRef(null);
   const [selected, setSelected] = useState({});
+  const [isRequisitionPickerOpen, setRequisitionPickerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const scope = [
@@ -73,7 +76,19 @@ export default function PurchasingItems({ type = 2 }) {
   const candidates = state?.candidates || EMPTY_ROWS;
   const name = type === 9 ? "Procurement" : "Purchase Order";
   const path = type === 9 ? "procurement" : "purchaseorder";
-  const catalogueRows = rows(catalogue.data).flatMap(category => category.children || []);
+  const catalogueRows = rows(catalogue.data).flatMap(category =>
+    (category.children || []).map(item => ({ ...item, category_name: category.name })),
+  );
+  const requestCandidates = type === 2 && isRequisitionPickerOpen ? candidates.map(source => ({
+    ...source,
+    requisition_title: source.source_title,
+    remaining_quantity: Number(source.available_quantity),
+    unit_of_measure: source.unit,
+    category_name: source.category_name || catalogueRows.find(item => Number(item.id) === Number(source.item_id))?.category_name,
+  })) : EMPTY_ROWS;
+  const editedItem = catalogueRows.find(item => Number(item.id) === Number(form?.item_id)) || form?.selectedItem;
+  const stockable = editedItem && Number(editedItem.text_4) !== 1 && String(editedItem.text_1 || '').trim() &&
+    (editedItem.stockable == null || Number(editedItem.stockable) === 1);
   const sourceRows = useMemo(() => {
     const eligible = new Map(
       candidates
@@ -128,15 +143,19 @@ export default function PurchasingItems({ type = 2 }) {
       setBusy(false);
     }
   }
-  function edit(line) {
+  function edit(line, source = null) {
+    const lineItem = source || line;
+    const initialQuantity = source?.recommended_purchase_quantity ?? source?.remaining_quantity;
     setForm({
+      selectedItem: lineItem ? { id: lineItem.item_id, name: lineItem.item_name, text_1: lineItem.unit, text_4: lineItem.text_4, stockable: lineItem.stockable } : null,
       sources: line?.request_allocations || [],
+      requestScope: source?.special_instructions || '',
       line_id: line?.id || 0,
-      item_id: String(line?.item_id || ""),
-      account_id: String(line?.account_id || ""),
-      quantity: line?.quantity || 1,
+      item_id: String(lineItem?.item_id || ""),
+      account_id: String(lineItem?.account_id || ""),
+      quantity: initialQuantity ?? line?.quantity ?? 1,
       unit_price: String(line?.unit_price ?? ""),
-      allocations: Object.fromEntries(
+      allocations: source && initialQuantity > 0 ? { [source.id]: initialQuantity } : Object.fromEntries(
         (line?.request_allocations || []).map((row) => [
           row.request_item_id,
           row.quantity,
@@ -144,6 +163,7 @@ export default function PurchasingItems({ type = 2 }) {
       ),
     });
     setError("");
+    setRequisitionPickerOpen(false);
     requestAnimationFrame(() => {
       editor.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       editor.current?.querySelector("select")?.focus();
@@ -240,13 +260,28 @@ export default function PurchasingItems({ type = 2 }) {
       {state && !state.setup_required && (
         <>
           {state.can_edit && type === 2 && (
-            <button
-              type="button"
-              onClick={() => edit(null)}
-              className="min-h-11 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white"
-            >
-              Add item / consolidate requisitions
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => setRequisitionPickerOpen(true)}
+                className="min-h-11 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white">
+                Add Items
+              </button>
+              <button type="button" onClick={() => edit(null)}
+                className="min-h-11 rounded-lg border px-4 text-sm dark:border-gray-700">
+                Add stock or service item
+              </button>
+              <AddRequisitionItemsModal
+                isOpen={isRequisitionPickerOpen}
+                onClose={() => setRequisitionPickerOpen(false)}
+                purchaseOrderId={documentId}
+                orderSelection={{
+                  items: requestCandidates,
+                  isFetching: query.isFetching,
+                  error: query.error,
+                  refetch: () => query.refetch(),
+                  onSelect: source => edit(null, source),
+                }}
+              />
+            </div>
           )}
           <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
             <table className="min-w-full text-left text-sm">
@@ -257,7 +292,7 @@ export default function PurchasingItems({ type = 2 }) {
                     "Quantity",
                     "Unit price",
                     "Total",
-                    "Source / extra stock",
+                    "Source / allocation",
                     "Actions",
                   ].map((label) => (
                     <th
@@ -278,6 +313,11 @@ export default function PurchasingItems({ type = 2 }) {
                         <p className="text-xs text-gray-500">
                           {line.unit || "Service / amount"}
                         </p>
+                        {purchasingStageLabels[line.purchasing_stage_id] && (
+                          <span className="text-xs font-medium text-blue-700 dark:text-blue-200">
+                            {purchasingStageLabels[line.purchasing_stage_id]}
+                          </span>
+                        )}
                         {Number(line.approval_status) === 2 && (
                           <span className="text-xs text-red-600">
                             Rejected / removed
@@ -301,8 +341,7 @@ export default function PurchasingItems({ type = 2 }) {
                               item(s)
                             </p>
                             <p className="mt-1 font-medium text-blue-700 dark:text-blue-300">
-                              Extra for store: {line.extra_stock_quantity}{" "}
-                              {line.unit}
+                              {line.is_stockable === false ? 'Non-stock item' : `Extra for store: ${line.extra_stock_quantity} ${line.unit || ''}`}
                             </p>
                           </>
                         ) : (
@@ -349,6 +388,17 @@ export default function PurchasingItems({ type = 2 }) {
                     </tr>
                     <tr>
                       <td colSpan={6} className="px-3 pb-3">
+                        {!!line.request_scopes?.length && (
+                          <details className="mb-2 text-sm">
+                            <summary className="cursor-pointer font-medium">Scope from requisitions</summary>
+                            {line.request_scopes.map(source => (
+                              <p key={source.request_item_id} className="mt-2 whitespace-pre-wrap break-words text-xs">
+                                <span className="font-medium">REQ-{source.requisition_id} · {source.request_title}</span>
+                                <br />{source.scope}
+                              </p>
+                            ))}
+                          </details>
+                        )}
                         <ItemEvidencePanel
                           documentId={documentId}
                           itemId={line.id}
@@ -511,7 +561,8 @@ export default function PurchasingItems({ type = 2 }) {
             onSubmit={(event) => {
               event.preventDefault();
               void mutate("save_order_line", {
-                ...form,
+                line_id: form.line_id,
+                unit_price: form.unit_price,
                 item_id: Number(form.item_id),
                 account_id: Number(form.account_id),
                 quantity: Number(form.quantity),
@@ -538,6 +589,8 @@ export default function PurchasingItems({ type = 2 }) {
                       setForm((previous) => ({
                         ...previous,
                         item_id: event.target.value,
+                        selectedItem: null,
+                        requestScope: '',
                         allocations: {},
                         sources: [],
                       }))
@@ -545,6 +598,9 @@ export default function PurchasingItems({ type = 2 }) {
                     className={control}
                   >
                     <option value="">Choose catalogue item</option>
+                    {form.selectedItem && !catalogueRows.some(item => Number(item.id) === Number(form.selectedItem.id)) && (
+                      <option value={form.selectedItem.id}>{form.selectedItem.name}</option>
+                    )}
                     {catalogueRows.map((item) => (
                       <option key={item.id} value={item.id}>
                         {item.name} · {item.text_1 || "Service"}
@@ -557,14 +613,18 @@ export default function PurchasingItems({ type = 2 }) {
                   <select
                     required
                     value={form.account_id}
-                    onChange={(event) =>
-                      setForm((previous) => ({
+                    onChange={(event) => {
+                      const account = event.target.value;
+                      const compatible = new Set(candidates.filter(source =>
+                        !Number(source.account_id) || String(source.account_id) === account,
+                      ).map(source => String(source.id)));
+                      setForm(previous => ({
                         ...previous,
-                        account_id: event.target.value,
-                        allocations: {},
+                        account_id: account,
+                        allocations: Object.fromEntries(Object.entries(previous.allocations).filter(([id]) => compatible.has(id))),
                         sources: [],
-                      }))
-                    }
+                      }));
+                    }}
                     className={control}
                   >
                     <option value="">Choose account</option>
@@ -611,7 +671,7 @@ export default function PurchasingItems({ type = 2 }) {
                 </label>
               </div>
               <div className="rounded-lg bg-blue-50 p-3 text-xs text-blue-900 dark:bg-blue-950 dark:text-blue-100">
-                For requisitions: {allocated} · Extra for store:{" "}
+                For requisitions: {allocated} · {stockable ? 'Extra for store' : 'Unallocated'}:{" "}
                 {Math.max(0, Number(form.quantity) - allocated)} · Line amount:{" "}
                 {money(Number(form.quantity) * Number(form.unit_price))}
               </div>
@@ -619,9 +679,11 @@ export default function PurchasingItems({ type = 2 }) {
                 <h3 className="text-sm font-medium">
                   Outstanding requisitions for this item
                 </h3>
+                {form.requestScope && (
+                  <p className="mt-1 whitespace-pre-wrap text-sm">{form.requestScope}</p>
+                )}
                 <p className="mt-1 text-xs text-gray-500">
-                  Enter the quantity allocated to each request. Leave blank for
-                  extra stock only.
+                  Enter the quantity allocated to each request. {stockable ? "Unallocated units are for stock." : "Services and other non-stock items do not enter inventory."}
                 </p>
                 {sourceRows.map((source) => (
                   <label
