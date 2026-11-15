@@ -16,6 +16,7 @@ function load(file,mocks,asModule=false){
   const source=fs.readFileSync(path.join(root,file),'utf8').replace(/import\.meta\.env\.VITE_APP_TENANT_DB/g,"'test_tenant'");
   const code=transformSync(source,{loader:file.endsWith('jsx')?'jsx':'js',format:'cjs',jsx:'automatic'}).code;
   vm.runInNewContext(code,{module,exports:module.exports,console,FormData,requestAnimationFrame:fn=>fn(),sessionStorage:{getItem:()=>null},document:{querySelector:()=>null},require:id=>{
+    if(id==='../../components/inventory/ProcurementBatchPanel')return ()=>null;
     if(id in mocks)return mocks[id];
     if(id.endsWith('.css'))return {};
     if(id.startsWith('.')){

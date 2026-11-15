@@ -23,6 +23,7 @@ function load(relative, mocks = {}, globals = {}) {
     FormData,
     ...globals,
     require: (id) => {
+      if (id === '../../components/inventory/ProcurementBatchPanel') return () => null;
       if (id in mocks) return mocks[id];
       if (id.endsWith(".css")) return {};
       if (id.startsWith(".")) {

@@ -224,7 +224,7 @@ const navItems: NavItem[] = [
       },
       {
         id: 504,
-        name: "Stock report",
+        name: "Stock & Inventory",
         path: "/reports/stock",
         parent_path_number: 3,
         child_path_number: 6,

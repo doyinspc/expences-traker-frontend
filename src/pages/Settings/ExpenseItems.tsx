@@ -1,3 +1,4 @@
+import useInventory from '../../hooks/useInventory';
 import ParentDocumentContext from '../../components/common/ParentDocumentContext.jsx';
 import useParentDocumentContext from '../../hooks/useParentDocumentContext.js';
 // src/pages/Procurement/Requisitions.tsx
@@ -48,6 +49,7 @@ type TabType = 'table' | 'analysis';
 // ==================== COMPONENT ====================
 const ExpensItems: React.FC = () => {
     const nav = useNavigate();
+    const inventoryReady = Boolean(useInventory({}, 'status').data?.ready);
 
     // ==================== CONFIGURATIONS ====================
     const tableMapping = useMemo(() => getTableMapping(TABLE_NAME), []);
@@ -172,14 +174,18 @@ const ExpensItems: React.FC = () => {
     }, []);
 
     const handleSave = useCallback(async (formData: any) => {
-        await loadUpdate(formData);
+        const payload = { ...formData };
+        if (!inventoryReady) delete payload.is_perishable;
+        await loadUpdate(payload);
         setPage(0);
-    }, [loadUpdate]);
+    }, [loadUpdate, inventoryReady]);
 
     const handleUpdate = useCallback(async (formData: any) => {
-        await loadUpdate(formData);
+        const payload = { ...formData };
+        if (!inventoryReady) delete payload.is_perishable;
+        await loadUpdate(payload);
         setPage(0);
-    }, [loadUpdate]);
+    }, [loadUpdate, inventoryReady]);
 
     const handleReload = useCallback((): void => {
         loadQuery(initialData);
@@ -518,7 +524,7 @@ const ExpensItems: React.FC = () => {
                                 </>
                             ) : (
                                 <div className="space-y-6">
-                                    <DynamicForm
+                                    <DynamicForm excludedFieldNames={inventoryReady ? [] : ['is_perishable']}
                                         tableName={TABLE_NAME}
                                         title={isEdit ? `Edit ${displayName}` : `Create ${displayName}`}
                                         submitLabel={isEdit ? `Update ${displayName}` : `Create ${displayName}`}

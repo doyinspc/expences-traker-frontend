@@ -1,3 +1,5 @@
+import useInventory from '../../hooks/useInventory';
+import InventoryAlert from '../inventory/InventoryAlert';
 import TeamUpdatesPanel from './TeamUpdatesPanel.jsx';
 import useTeamUpdates from '../../hooks/useTeamUpdates';
 import { useState } from 'react';
@@ -36,13 +38,16 @@ export default function NotificationDropdown() {
     staleTime: 30000,
     refetchInterval: 60000,
   });
+  const stock = useInventory({}, 'alerts').data;
+  const stockCount = (stock?.low_count || 0) + (stock?.expiry_count || 0) + (stock?.incoming_count || 0);
   const notifications = getPendingApprovalNotifications(data, role_id);
+  const totalNotifications = notifications.length + stockCount;
   const hasContext = Boolean(isAuthenticated && user?.id && location_id && role_id);
   return (
     <div className="relative">
-      <button type="button" aria-label={`Notifications, ${notifications.length} pending approvals`} aria-expanded={isOpen} aria-controls="approval-notifications" onClick={() => setIsOpen(!isOpen)} className="relative flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
+      <button type="button" aria-label={`Notifications, ${notifications.length} pending approvals, ${stockCount} stock alerts`} aria-expanded={isOpen} aria-controls="approval-notifications" onClick={() => setIsOpen(!isOpen)} className="relative flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
         <Bell size={20} />
-        {notifications.length > 0 && <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-brand-500 px-1 text-xs leading-5 text-white">{notifications.length > 99 ? '99+' : notifications.length}</span>}
+        {totalNotifications > 0 && <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-brand-500 px-1 text-xs leading-5 text-white">{totalNotifications > 99 ? '99+' : totalNotifications}</span>}
       </button>
       <Dropdown isOpen={isOpen} onClose={() => setIsOpen(false)} className="absolute right-0 mt-3 max-h-[calc(100dvh-110px)] overflow-y-auto w-[min(360px,calc(100vw-32px))] rounded-xl border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-800 dark:bg-gray-900">
         <div id="approval-notifications">
@@ -55,6 +60,7 @@ export default function NotificationDropdown() {
               : notifications.length === 0 ? <p className="py-6 text-sm text-gray-500">You’re up to date. No approvals are waiting for your action.</p>
               : <ul className="divide-y divide-gray-100 dark:divide-gray-800">{notifications.map((item) => <li key={item.id}><Link to={item.path} onClick={() => setIsOpen(false)} className="block rounded-lg px-2 py-3 hover:bg-gray-50 dark:hover:bg-gray-800"><span className="block text-sm font-medium text-gray-900 dark:text-white">{item.title}</span><span className="mt-1 block text-xs text-gray-500">{item.description}</span></Link></li>)}</ul>}
           </div>
+          <InventoryAlert compact onOpen={() => setIsOpen(false)} />
           <TeamUpdatesPanel />
           <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 text-sm dark:border-gray-800"><Link to="/procurement/approvals" onClick={() => setIsOpen(false)} className="font-medium text-brand-600">View My Approvals</Link><button type="button" disabled={!hasContext || isFetching} onClick={() => refetch()} aria-label="Refresh notifications" className="p-1 disabled:opacity-40"><RefreshCw size={16} className={isFetching ? 'animate-spin' : ''} /></button></div>
         </div>

@@ -1,3 +1,4 @@
+import ProcurementBatchPanel from '../../components/inventory/ProcurementBatchPanel';
 import React, { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
@@ -418,6 +419,7 @@ export default function PurchasingItems({ type = 2 }) {
               </p>
             )}
           </div>
+          {type === 9 && <ProcurementBatchPanel documentId={documentId} canEdit={Boolean(state.can_edit)} />}
           {!state.can_edit && (
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Approval has started or completed. Quantities and membership are

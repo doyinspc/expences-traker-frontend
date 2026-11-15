@@ -82,6 +82,14 @@ const expenseitems = {
             filterType: 'text',
             analyzable: false,
         },
+        is_perishable: {
+            label: 'Perishable / Requires expiry tracking',
+            type: 'toggle',
+            defaultValue: false,
+            description: 'Goods only. Require a batch reference and expiry date in Procurement and Stock.',
+            showInTable: true,
+            tableFormat: value => Number(value) === 1 ? 'Expiry tracked' : 'Standard',
+        },
         stockable: {
             label: 'Stock Type for other items',
             type: 'select',

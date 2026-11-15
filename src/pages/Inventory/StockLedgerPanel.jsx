@@ -97,6 +97,9 @@ function openingCategoryKey(item) {
 
 function OpeningStockPicker({ items, itemId, onItemChange, amount, onAmountChange, onAdd, disabled }) {
   const [category, setCategory] = useState('');
+  const [batch, setBatch] = useState('');
+  const [expiry, setExpiry] = useState('');
+  const perishable = Number(items.find(item => String(item.id) === String(itemId))?.is_perishable) === 1;
   const categories = new Map(items.map(item => [openingCategoryKey(item), item.category_name]));
   const choices = items.filter(item => !category || openingCategoryKey(item) === category);
   if (!items.length) return <p className="text-sm">No stockable catalogue items are available. In Expense/Income Settings, set up a Goods child item with a unit of measure.</p>;
@@ -130,7 +133,12 @@ function OpeningStockPicker({ items, itemId, onItemChange, amount, onAmountChang
         <input className={control + ' w-36'} type="number" min="1" max="999999999" step="1"
           value={amount} disabled={disabled} onChange={event => onAmountChange(event.target.value)} />
       </label>
-      <button className={control} disabled={disabled || !itemId || !amount} onClick={onAdd}>Add opening row</button>
+      {perishable && <>
+        <label className="grid gap-1 text-sm">Batch reference<input className={control} value={batch} disabled={disabled} maxLength={100} onChange={event => setBatch(event.target.value)} /></label>
+        <label className="grid gap-1 text-sm">Expiry date<input className={control} type="date" value={expiry} disabled={disabled} onChange={event => setExpiry(event.target.value)} /></label>
+      </>}
+      <button className={control} disabled={disabled || !itemId || !amount || (perishable && (!batch.trim() || !expiry))}
+        onClick={() => { if (onAdd(perishable ? { batch_reference: batch.trim(), expiry_date: expiry } : {})) { setBatch(''); setExpiry(''); } }}>Add opening row</button>
     </div>
   );
 }
@@ -144,6 +152,8 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
   const [itemAction, setItemAction] = useState('issue');
   const [evidenceIds,setEvidenceIds]=useState([]);
   const [receiptId, setReceiptId] = useState('');
+  const [receiptBatch, setReceiptBatch] = useState('');
+  const [receiptExpiry, setReceiptExpiry] = useState('');
   const [delivery,setDelivery]=useState(''),[receivedNew,setReceivedNew]=useState(false);
   const [openRows,setOpenRows]=useState([]),[itemId,setItemId]=useState(''),[openingAmount,setOpeningAmount]=useState('');
   const [review,setReview]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
@@ -189,16 +199,17 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
       setError('Choose the confirmed Procurement receipt for this issue.');
       return;
     }
+    if(tab==='receipt'&&Number(line.is_perishable)===1&&(!receiptBatch.trim()||!receiptExpiry)){setError('Confirm the delivered batch reference and expiry date.');return;}
     if(tab==='receipt'&&(!delivery.trim()||!receivedNew)){setError('Enter the delivery reference and confirm the goods have not already been counted.');return;}
-    setError('');setMessage('');setReview({operation:tab==='issue'?'issue':'receive',label:`${tab==='issue'?'Issue':'Receive'} ${quantity(amount)} ${line.unit} of ${line.item_name}${tab==='receipt'?' · Delivery '+delivery.trim():''}`,payload:{year_offset:year,line_id:line.id,...(receiptId && tab === 'issue' ? { source_line_id: receiptId } : {}),quantity:amount,unit:line.unit,movement_date:date,fulfil_request:tab==='receipt'&&direct&&!Number(line.procurement_id),evidence_ids:evidenceIds,delivery_reference:delivery.trim(),not_in_opening:receivedNew,request_key:key()}});
+    setError('');setMessage('');setReview({operation:tab==='issue'?'issue':'receive',label:`${tab==='issue'?'Issue':'Receive'} ${quantity(amount)} ${line.unit} of ${line.item_name}${tab==='receipt'?' · Delivery '+delivery.trim():''}`,payload:{year_offset:year,line_id:line.id,...(receiptId && tab === 'issue' ? { source_line_id: receiptId } : {}),quantity:amount,unit:line.unit,movement_date:date,fulfil_request:tab==='receipt'&&direct&&!Number(line.procurement_id),evidence_ids:evidenceIds,...(tab === 'receipt' && Number(line.is_perishable) === 1 ? {batch_reference:receiptBatch,expiry_date:receiptExpiry} : {}),delivery_reference:delivery.trim(),not_in_opening:receivedNew,request_key:key()}});
   };
-  const addOpening=()=>{
+  const addOpening=(batch={})=>{
     const item=data?.items.find(r=>String(r.id)===itemId);
     if(!item||!/^\d+$/.test(openingAmount)||Number(openingAmount)<1){setError('Choose an item and a positive whole opening quantity.');return;}
     if(openRows.some(r=>r.item_id===item.id)){setError('This item is already in the opening list. Remove its row before correcting it.');return;}
-    setOpenRows([...openRows,{item_id:item.id,name:item.name,unit:item.unit,quantity:openingAmount}]);setItemId('');setOpeningAmount('');setReview(null);setError('');
+    setOpenRows([...openRows,{item_id:item.id,name:item.name,unit:item.unit,quantity:openingAmount,...batch}]);setItemId('');setOpeningAmount('');setReview(null);setError('');return true;
   };
-  const reviewOpening=mode=>{setError('');setMessage('');setReview({operation:'open',label:mode==='carry'?`Close the previous stock year and carry its closing quantities into ${range.label}`:`Confirm ${openRows.length?openRows.length+' counted opening item(s)':'a ZERO opening balance'} for ${range.label}`,payload:{year_offset:year,opening_mode:mode,opening_rows:mode==='manual'?openRows.map(({item_id,unit,quantity})=>({item_id,unit,quantity})):[],request_key:key()}});};
+  const reviewOpening=mode=>{setError('');setMessage('');setReview({operation:'open',label:mode==='carry'?`Close the previous stock year and carry its closing quantities into ${range.label}`:`Confirm ${openRows.length?openRows.length+' counted opening item(s)':'a ZERO opening balance'} for ${range.label}`,payload:{year_offset:year,opening_mode:mode,opening_rows:mode==='manual'?openRows.map(({item_id,unit,quantity,batch_reference,expiry_date})=>({item_id,unit,quantity,batch_reference,expiry_date})):[],request_key:key()}});};
   function reviewStockDecision(payload) {
     setError('');
     setReview({
@@ -235,12 +246,15 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
     if (!period) return null;
     const itemBalances = (data?.rows || []).filter(row => Number(row.item_id) === Number(item.item_id));
     if (itemBalances.some(row => Number(row.unit_mismatch) || Number(row.closing_quantity) < 0)) return null;
-    return Number(itemBalances.find(row => row.unit === item.unit)?.closing_quantity || 0);
+    const balance = itemBalances.find(row => row.unit === item.unit);
+    return Number(balance?.available_quantity ?? balance?.closing_quantity ?? 0);
   }
   function openStockItem(row, action) {
     setItemAction(action);
     setLine(row);
     setReceiptId('');
+    setReceiptBatch(row.batch_reference || '');
+    setReceiptExpiry(row.expiry_date || '');
     setEvidenceIds([]);
     setAmount('');
     setDelivery('');
@@ -409,6 +423,17 @@ function StockLedgerScope({scope,documentId,documentType,onChanged,reportOnly,lo
               {itemAction !== 'forward' && writable && (view === 'receipt' || Number(line.remaining_quantity) > 0) && <><p className="text-sm">Outstanding: {quantity(line.remaining_quantity)} {line.unit}. {tab==='issue'?`Current stock: ${stockOnHand(line) == null ? 'check balance' : quantity(stockOnHand(line))} ${line.unit}.`:''}</p><div className="flex flex-wrap gap-3"><label className="grid gap-1 text-sm">{tab==='issue'?'Quantity to issue':'Quantity received'} ({line.unit})<input aria-label="Stock movement quantity" type="number" min="1" max={line.remaining_quantity} step="1" disabled={busy} className={control} value={amount} onChange={e=>{setAmount(e.target.value);setReview(null);}}/></label><label className="grid gap-1 text-sm">Actual movement date<input aria-label="Stock movement date" type="date" min={range.start_date} max={range.end_date<data.today?range.end_date:data.today} value={date} disabled={busy} className={control} onChange={e=>{setDate(e.target.value);setReview(null);}}/></label></div>
               {tab==='receipt'&&<><label className="grid gap-1 text-sm">Delivery note / receipt reference<input aria-label="Delivery reference" maxLength={100} value={delivery} disabled={busy} className={control} placeholder="Supplier delivery note or receipt number" onChange={e=>{setDelivery(e.target.value);setReview(null);}}/></label><label className="flex min-h-11 items-start gap-2 text-sm leading-6"><input className="mt-1" type="checkbox" checked={receivedNew} disabled={busy} onChange={e=>{setReceivedNew(e.target.checked);setReview(null);}}/>These goods were physically received and are not already included in opening stock or another receipt.</label></>}
               {tab==='receipt'&&!Number(line.procurement_id)&&Number(line.purchaseorder_id)>0&&Number(line.requisition_id)>0&&Number(line.requisition_id)!==Number(line.purchaseorder_id)&&<label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={direct} disabled={busy} onChange={e=>{setDirect(e.target.checked);setReview(null);}}/>This delivery directly fulfils the linked requisition. Record receipt and issue together.</label>}
+              {tab === 'receipt' && Number(line.is_perishable) === 1 && <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-1 text-sm">Batch physically received
+                  <input className={control} value={receiptBatch} maxLength={100} disabled={busy}
+                    onChange={event => { setReceiptBatch(event.target.value); setReview(null); }} />
+                </label>
+                <label className="grid gap-1 text-sm">Expiry on delivered Goods
+                  <input className={control} type="date" value={receiptExpiry} disabled={busy}
+                    onChange={event => { setReceiptExpiry(event.target.value); setReview(null); }} />
+                </label>
+                <p className="text-xs sm:col-span-2">Check the delivered batch against Procurement’s recorded details. Expired batches remain held from normal issue.</p>
+              </div>}
               {tab==='receipt' && <ItemEvidencePanel key={line.id} documentId={line.document_id} itemId={line.id} itemName={line.item_name} stockMode initiallyOpen onUploaded={id => {setEvidenceIds(previous => [...new Set([...previous,id])]);setReview(null);}}/>}
               <button disabled={busy || (tab === 'issue' && line.stock_review_finalized_at && !receiptId)} className={button} onClick={reviewMovement}>Review stock {tab==='issue'?'issue':'receipt'}</button>
               </>}

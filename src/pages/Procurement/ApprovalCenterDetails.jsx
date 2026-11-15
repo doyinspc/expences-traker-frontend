@@ -24,6 +24,7 @@ import {
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import ItemRevisionPanel from "../../components/approvals/ItemRevisionPanel";
 import CashMovementPanel from "../../components/approvals/CashMovementPanel";
+import ProcurementBatchPanel from '../../components/inventory/ProcurementBatchPanel';
 import ApprovalActions from "../../components/approvals/ApprovalActions";
 import StepsSidebar from "../../components/approvals/StepsSidebar";
 import WorkflowDrawer from "../../components/approvals/WorkflowDrawer";
@@ -803,6 +804,8 @@ export default function ApprovalCenterDetails() {
                 onSave={(values) => itemRevision.mutateAsync(values)}
               />
             )}
+            {Number(workflow.document_type_id) === 9 && <ProcurementBatchPanel
+              documentId={workflow.document_id} canEdit={!closed && Boolean(workflow.permissions?.can_approve)} />}
             <CashMovementPanel
               key={`cash-${workflow.id}-${workflow.action_version}`}
               workflow={workflow}
