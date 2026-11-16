@@ -759,6 +759,8 @@ test("An over-limit Purchase Order price requires a suitable workflow in the sam
   assert.equal(saved, undefined);
   select.props.onChange({ target: { value: "220" } });
   tree = render();
+  assert.match(JSON.stringify(tree), /Every step in the new workflow must be approved again/);
+  assert.match(JSON.stringify(tree), /Previous decisions are kept in read-only history/);
   await nodes(tree).find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
   assert.equal(saved.unit_price, "150.00");
   assert.equal(saved.replacement_workflow_id, 220);

@@ -769,6 +769,11 @@ export default function ItemRevisionPanel({
                   </p>}
                 </details>
               )}
+              {replacement && (
+                <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm leading-6 text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+                  Changing the workflow restarts approval from its first step. Every step in the new workflow must be approved again. Previous decisions are kept in read-only history; they are not deleted or counted as approvals of the new workflow.
+                </p>
+              )}
               <label className="block text-sm">
                 {Number(workflow.document_type_id) === 2
                   ? "Reason / quotation reference *"
