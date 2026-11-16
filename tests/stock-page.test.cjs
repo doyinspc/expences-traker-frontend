@@ -4,12 +4,12 @@ const {pathToFileURL}=require('node:url');
 const labels=import(pathToFileURL(path.join(root,'src/utils/functions/workflowPresentation.js')).href);
 let workflowPresentation;
 test.before(async()=>{workflowPresentation=await labels;});
-function markup(data,props={},activeView,list){
+function markup(data,props={},activeView){
  const module={exports:{}};const code=require(path.join(root,'node_modules/esbuild')).transformSync(fs.readFileSync(path.join(root,'src/pages/Inventory/StockLedgerPanel.jsx'),'utf8'),{loader:'jsx',format:'cjs',jsx:'automatic'}).code;
  const mocks={
- react:{...React,useState:initial=>React.useState(activeView&&initial==='issue'?activeView:list&&initial==='active'?list:initial)},
+ react:{...React,useState:initial=>React.useState(activeView&&initial==='issue'?activeView:initial)},
  '@tanstack/react-query':{useQuery:options=>{
-   if(activeView && activeView!=='issue')assert.equal(options.queryKey[4],'receipt');
+   if(activeView && !['issue','purchasing'].includes(activeView))assert.equal(options.queryKey[4],'receipt');
    else if(!props.reportOnly)assert.equal(options.queryKey[4],'issue');
    return {data,isPending:false,isFetching:false};
  }},
@@ -25,20 +25,21 @@ function markup(data,props={},activeView,list){
 }
 const period={label:'FY 2026',start_date:'2026-01-01',end_date:'2026-12-31'};
 test('Stock setup tells an administrator what to do before movement buttons become available',()=>{
- const html=markup({schema_ready:false,can_prepare:true});assert.match(html,/Review stock setup/);assert.match(html,/opening balance/);assert.match(html,/aria-label="Stock views"/);
+ const html=markup({schema_ready:false,can_prepare:true});assert.match(html,/Review stock setup/);assert.match(html,/stock quantity history/);assert.match(html,/aria-label="Stock views"/);
 });
 test('Approved Goods can be reviewed before opening without showing a verified stock balance',()=>{
  const html=markup({schema_ready:true,period,years:[],can_open:true,can_write:true,can_review:true,rows:[],
    candidates:[{id:8,document_id:11,item_id:502,item_name:'Keyboards',title:'IT equipment',unit:'pieces',
      quantity:6,requested_quantity:5,remaining_quantity:6,stock_review_id:4,stock_review_stage_id:10}]});
- assert.match(html,/Approved stock requisitions/);
+ assert.match(html,/Active Stock requests/);
+ assert.match(html,/How this section works/);
  assert.match(html,/IT equipment/);
  assert.match(html,/aria-label="Forward to Purchase Order: Keyboards"/);
  assert.match(html,/aria-label="Issue from stock: Keyboards"[^>]*disabled=""/);
  assert.match(html,/<dialog[^>]*aria-label="Stock confirmation"/);
  assert.match(html,/Requested 5/);
  assert.match(html,/Opening stock unconfirmed/);
- for (const label of ['Requisition queue','Receive goods','Stock balances','Movement history','Opening stock']) assert.ok(html.includes('>'+label+'</button>'),label);
+ for (const label of ['Active Stock requests','Waiting on Purchase Order','Receive goods','Stock balances','Movement history','Opening stock']) assert.ok(html.includes('>'+label+'</button>'),label);
  assert.doesNotMatch(html,/0 on hand|Review stock issue/);
 });
 test('Stock separates forwarded lines and paginates active requests by 25',()=>{
@@ -53,10 +54,19 @@ test('Stock separates forwarded lines and paginates active requests by 25',()=>{
  assert.match(queue,/1–25 of 500 items/);
  assert.match(queue,/Active item 24/);
  assert.doesNotMatch(queue,/Active item 25|Forwarded keyboard|Resolved keyboard/);
- const purchasing=markup(data,{},undefined,'purchasing');
+ const purchasing=markup(data,{},'purchasing');
  assert.match(purchasing,/Forwarded keyboard/);
  assert.match(purchasing,/Awaiting receipt/);
+ assert.match(purchasing,/Goods requests with an approved shortfall/);
  assert.doesNotMatch(purchasing,/Active item 0|Resolved keyboard/);
+});
+test('Every Stock tab opens with a heading and a collapsible guide',()=>{
+ const data={schema_ready:true,period,active_period:{closed_at:null},years:[],items:[],rows:[],candidates:[],movements:[],as_of:'2026-11-04'};
+ for(const [view,heading] of [['issue','Active Stock requests'],['purchasing','Waiting on Purchase Order'],['receipt','Receive goods'],['balance','Stock balances'],['history','Movement history'],['opening','Opening stock']]){
+   const html=markup(data,{},view);
+   assert.match(html,new RegExp('<h3[^>]*>'+heading+'<\\/h3>'));
+   assert.match(html,/<details[^>]*open=""[^>]*>.*?How this section works/s);
+ }
 });
 test('Receive goods explains the opening requirement without hiding the tabs',()=>{
  const html=markup({schema_ready:true,period,years:[],items:[]},{},'receipt');
@@ -78,7 +88,7 @@ test('Opening stock offers a category filter and uses the child item ID and unit
 });
 test('A confirmed stock year exposes balance, receipt, issue and history views',()=>{
  const html=markup({schema_ready:true,period,active_period:{closed_at:null},years:[],can_write:true,balances:[],as_of:'2026-11-04'});
- for(const label of ['Stock balances','Receive goods','Requisition queue','Movement history'])assert.ok(html.includes(label),label);
+ for(const label of ['Stock balances','Receive goods','Active Stock requests','Waiting on Purchase Order','Movement history'])assert.ok(html.includes(label),label);
 });
 
 test('Stock menu opens stock operations without the unused document-creation form',()=>{
