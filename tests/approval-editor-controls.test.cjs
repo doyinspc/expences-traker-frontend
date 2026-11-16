@@ -738,7 +738,7 @@ test("An over-limit Purchase Order price requires a suitable workflow in the sam
         workflows: [
           { id: 210, name: "Lower-value orders", max_amount: "650.00" },
           { id: 220, name: "Higher-value orders", max_amount: "1000.00" },
-          { id: 230, name: "Unlimited orders", max_amount: "0.00" },
+          { id: 230, name: "Unlimited final-payment orders", max_amount: "0.00", records_payment: 1 },
         ],
       },
     },
@@ -764,6 +764,29 @@ test("An over-limit Purchase Order price requires a suitable workflow in the sam
   await nodes(tree).find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
   assert.equal(saved.unit_price, "150.00");
   assert.equal(saved.replacement_workflow_id, 220);
+});
+
+test("A reduced Purchase Order total requires the eligible lower amount band", async () => {
+  let saved;
+  const render=interactiveEditor({
+    workflow:{...workflow,purchase_order_routing:{max_amount:"2000.00",can_replace:true,
+      workflows:[{id:210,name:"Routine orders",max_amount:"600.00"},
+        {id:220,name:"Medium orders",max_amount:"1200.00"}]}},
+    editRequest:{itemId:401},onSave:async values=>{saved=values;},
+  });
+  let tree=render();
+  nodes(tree).find(node=>node.props?.name==="approval-unit-price")
+    .props.onChange({target:{value:"80.00"}});
+  tree=render();
+  assert.match(JSON.stringify(tree),/lower Purchase Order amount band/);
+  const select=nodes(tree).find(node=>node.props?.name==="replacement-workflow");
+  assert.equal(select.props.required,true);
+  assert.deepEqual(nodes(select).filter(node=>node.type==="option").map(node=>node.props.value),["",210]);
+  nodes(tree).find(node=>node.type==="textarea").props.onChange({target:{value:"Supplier reduced price"}});
+  select.props.onChange({target:{value:"210"}});
+  tree=render();
+  await nodes(tree).find(node=>node.type==="form").props.onSubmit({preventDefault(){}});
+  assert.equal(saved.replacement_workflow_id,210);
 });
 
 test("A PO-funded Procurement item keeps the account read-only and shows refund and top-up choices", () => {

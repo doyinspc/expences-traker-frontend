@@ -244,10 +244,23 @@ export default function ItemRevisionPanel({
       ? currentTotal - preview.before + preview.after
       : currentTotal;
   const routing = workflow.purchase_order_routing;
-  const exceedsLimit = (limit) => Number(limit) > 0 &&
-    Math.round(newTotal * 100) > Math.round(Number(limit) * 100);
-  const needsReplacement = Boolean(preview && routing && exceedsLimit(routing.max_amount));
-  const workflowOptions = (routing?.workflows || []).filter(option => !exceedsLimit(option.max_amount));
+  // Each maximum is an amount band's upper edge. Choose the smallest eligible ceiling
+  // that covers the revised total, while keeping final-PO-payment routes separate.
+  const ceiling = (limit) => Number(limit) > 0 ? Math.round(Number(limit) * 100) : Infinity;
+  const revisedCents = Math.round(newTotal * 100);
+  const currentPaysAtFinal = Boolean(workflow.finance?.final_order_payment);
+  const routes = routing ? [
+    { id: null, max_amount: routing.max_amount, records_payment: currentPaysAtFinal ? 1 : 0 },
+    ...(routing.workflows || []),
+  ] : [];
+  const bandCeiling = (paysAtFinal) => Math.min(...routes
+    .filter(option => Boolean(Number(option.records_payment)) === paysAtFinal && ceiling(option.max_amount) >= revisedCents)
+    .map(option => ceiling(option.max_amount)));
+  const needsReplacement = Boolean(preview && routing && !workflow.finance?.disbursement &&
+    ceiling(routing.max_amount) !== bandCeiling(currentPaysAtFinal));
+  const workflowOptions = (routing?.workflows || []).filter(option =>
+    ceiling(option.max_amount) >= revisedCents &&
+    ceiling(option.max_amount) === bandCeiling(Boolean(Number(option.records_payment))));
   const replacement = workflowOptions.find(option => String(option.id) === replacementId);
   const routingBlocked = (needsReplacement || Boolean(replacementId)) && !replacement;
   const busy = saving || isLoading || evidenceBusy;
@@ -748,7 +761,10 @@ export default function ItemRevisionPanel({
                     {needsReplacement ? 'Choose a workflow for the revised total' : 'Change Purchase Order workflow'}
                   </summary>
                   {needsReplacement && <p className="mt-2 text-xs">
-                    The revised total exceeds this workflow’s limit of {currency} {money(routing.max_amount)}.
+                    {ceiling(routing.max_amount) < revisedCents
+                      ? `The revised total exceeds this workflow’s limit of ${currency} ${money(routing.max_amount)}.`
+                      : 'The revised total belongs to a lower Purchase Order amount band.'}
+                    {' '}Select a matching workflow to restart approval from its first step.
                   </p>}
                   {routing.can_replace && workflowOptions.length > 0 ? (
                     <label className="mt-3 block text-sm">Replacement workflow
