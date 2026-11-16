@@ -103,6 +103,13 @@ export const navItems: NavItem[] = [
         child_path_number: 1,
       },
       {
+        id: 306,
+        name: "Stock",
+        path: "/procurement/stock",
+        parent_path_number: 3,
+        child_path_number: 6,
+      },
+      {
         id: 302,
         name: PROCUREMENT_DOCUMENT_LABEL,
         path: "/procurement/purchaseorder",
@@ -136,13 +143,6 @@ export const navItems: NavItem[] = [
         path: "/procurement/income",
         parent_path_number: 3,
         child_path_number: 5,
-      },
-      {
-        id: 306,
-        name: "Stock",
-        path: "/procurement/stock",
-        parent_path_number: 3,
-        child_path_number: 6,
       },
       {
         id: 307,
